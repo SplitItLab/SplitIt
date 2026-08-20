@@ -1,10 +1,15 @@
+
+server:
+  port: ${SERVER_PORT}
 spring:
   application:
     name: splitit
   config:
-    import: optional:file:../.env[.properties]
+    import: >-
+      optional:file:.env[.properties],
+      optional:file:../.env[.properties]
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+    url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT:5433}/${POSTGRES_DB}?timezone=America/Argentina/Buenos_Aires
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
