@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+set -e
+
+echo ""
+echo "🔍  Running pre-commit checks..."
+echo ""
+
+#######################################
+# WEB
+#######################################
+if [ -d "web" ]; then
+  echo "📦  Web"
+  cd web
+
+  echo " (pnpm format:check)  → Format check..."
+  if ! pnpm format:check > /dev/null 2>&1; then
+    echo "   ⚠️  Formatting issues found. Fixing..."
+    pnpm format
+    echo "   ❌  Files were reformatted. Please stage the changes and commit again."
+    exit 1
+  fi
+  echo "   ✅  Format OK"
+
+  echo " (pnpm lint)  → Lint..."
+  pnpm lint
+  echo "   ✅  Lint OK"
+
+  echo " (pnpm tsc --noEmit)  → Typecheck..."
+  pnpm tsc --noEmit
+  echo "   ✅  Typecheck OK"
+
+  cd ..
+  echo ""
+fi
+
+#######################################
+# API
+#######################################
+if [ -d "api" ]; then
+  echo "🖥️   API"
+  cd api
+
+  echo " (./gradlew ktlintCheck)  → Format check (ktlint)..."
+  if ! ./gradlew ktlintCheck --quiet; then
+    echo "   ⚠️  Formatting issues found. Fixing..."
+    ./gradlew ktlintFormat --quiet
+    echo "   ❌  Files were reformatted. Please stage the changes and commit again."
+    exit 1
+  fi
+  echo "   ✅  Format OK"
+
+  echo " (./gradlew detekt)  → Static analysis (detekt)..."
+  ./gradlew detekt --quiet
+  echo "   ✅  Static analysis OK"
+
+  echo " (./gradlew compileKotlin)  → Compile..."
+  ./gradlew compileKotlin --quiet
+  echo "   ✅  Compile OK"
+
+  cd ..
+  echo ""
+fi
+
+echo "🎉  All checks passed!"
+echo ""

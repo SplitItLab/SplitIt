@@ -1,0 +1,53 @@
+name: API Pipeline - CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "api/**"
+      - ".github/workflows/api-pipeline.yml"
+  push:
+    branches: [main]
+    paths:
+      - "api/**"
+      - ".github/workflows/api-pipeline.yml"
+
+concurrency:
+  group: api-pipeline-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: Back (format · lint · static · test · build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: api
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: "gradle"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Format check (ktlint)
+        run: ./gradlew ktlintCheck
+
+      - name: Lint + Static analysis (detekt)
+        run: ./gradlew detekt
+
+      - name: Test
+        run: ./gradlew test
+
+      - name: Build
+        run: ./gradlew build -x test
