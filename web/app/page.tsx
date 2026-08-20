@@ -1,3 +1,3 @@
 export default function Home() {
-  return <p>SplitIt</p>;
+  return <p>SplitIt - Home!</p>;
 }
