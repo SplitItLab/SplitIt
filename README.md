@@ -1,4 +1,4 @@
-# SplitIt
+# SplitIt !
 
 Monorepo full-stack: frontend en Next.js, API en Spring Boot + Kotlin, y Postgres atrás.
 
