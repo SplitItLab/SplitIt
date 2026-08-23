@@ -1,0 +1,175 @@
+# Auth — SplitIt API
+#
+# Cómo usar
+#   IntelliJ: Run All en este archivo (env "local"). Los asserts salen en la pestaña Tests.
+#   VS Code: REST Client; ejecutá cada bloque `###`.
+#   La API tiene que estar en {{baseUrl}} (por defecto localhost:8080).
+#
+# Convención de api/http/
+#   Un archivo por recurso: auth.http, groups.http, expenses.http, ...
+#   Asserts compartidos: scripts/assert.js
+#   Host y ambientes: http-client.env.json
+#   Tokens y secretos: http-client.private.env.json (gitignored)
+#
+# Correr de arriba a abajo: el 409 de duplicado asume que la seed ya corrió.
+#
+@baseUrl = http://localhost:8080
+@newEmail = ada-{{$timestamp}}@example.com
+@conflictEmail = ada.conflict@example.com
+
+### Register — success (201)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Ada Lovelace",
+  "email": "{{newEmail}}",
+  "password": "una-clave-segura"
+}
+
+> {%
+import { assertCreatedUser } from './scripts/assert.js'
+
+client.test("creates a user with public fields only", function () {
+    assertCreatedUser(client, response, {
+        name: "Ada Lovelace",
+        emailPattern: /^ada-\d+@example\.com$/,
+    })
+})
+%}
+
+### Register — missing name (400)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "ada@example.com",
+  "password": "una-clave-segura"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects missing name", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### Register — blank name (400)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "   ",
+  "email": "ada@example.com",
+  "password": "una-clave-segura"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects blank name", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### Register — invalid email (400)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Ada Lovelace",
+  "email": "not-an-email",
+  "password": "una-clave-segura"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects invalid email", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### Register — short password (400)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Ada Lovelace",
+  "email": "ada@example.com",
+  "password": "short"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects short password", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### Register — malformed JSON (400)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects malformed JSON", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### Register — seed for duplicate email (201 first time, 409 after)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Ada Lovelace",
+  "email": "Ada.Conflict@example.com",
+  "password": "una-clave-segura"
+}
+
+> {%
+import { assertCreatedUser, assertError } from './scripts/assert.js'
+
+client.test("seeds conflict email or reports it already exists", function () {
+    if (response.status === 201) {
+        assertCreatedUser(client, response, {
+            name: "Ada Lovelace",
+            email: "ada.conflict@example.com",
+        })
+        return
+    }
+    assertError(client, response, 409, "Email already in use")
+})
+%}
+
+### Register — duplicate normalized email (409)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Ada Lovelace",
+  "email": "{{conflictEmail}}",
+  "password": "una-clave-segura"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects duplicate normalized email", function () {
+    assertError(client, response, 409, "Email already in use")
+})
+%}
