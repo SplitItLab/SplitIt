@@ -21,7 +21,26 @@ export class RegisterError extends Error {
   }
 }
 
+const USE_MOCK = process.env.NEXT_PUBLIC_MOCK_AUTH === "true";
+
+async function mockRegister(input: RegisterInput): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 600));
+
+  if (input.email === "taken@example.com") {
+    throw new RegisterError("email-taken", "Ese email ya está registrado.");
+  }
+  if (input.email === "network@example.com") {
+    throw new RegisterError("network", "No pudimos conectar con el servidor.");
+  }
+  if (input.email === "error@example.com") {
+    throw new RegisterError("server-error", "Probá de nuevo en un momento.");
+  }
+}
+
 export async function registerUser(input: RegisterInput): Promise<void> {
+  if (USE_MOCK) {
+    return mockRegister(input);
+  }
   try {
     await request<void>("/auth/register", {
       method: "POST",

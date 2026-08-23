@@ -50,7 +50,7 @@ export default function RegisterPage() {
         <Image src="/register-image.png" alt="" fill className="object-cover" />
       </div>
 
-      <div className="overflow-y-alto flex items-center justify-center p-6">
+      <div className="flex items-center justify-center overflow-y-auto p-6">
         <div className="w-full max-w-sm">
           <h1 className="text-2xl font-bold">Crea una cuenta</h1>
           <p className="text-muted-foreground mb-6 text-sm">
