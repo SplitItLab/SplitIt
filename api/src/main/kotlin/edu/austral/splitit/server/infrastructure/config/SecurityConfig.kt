@@ -35,7 +35,7 @@ class SecurityConfig(
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests {
                 it.dispatcherTypeMatchers(DispatcherType.ERROR, DispatcherType.FORWARD).permitAll()
-                it.requestMatchers("/api/auth/**").permitAll()
+                it.requestMatchers("/auth/**", "/api/auth/**").permitAll()
                 it.anyRequest().authenticated()
             }.httpBasic { it.disable() }
             .formLogin { it.disable() }
