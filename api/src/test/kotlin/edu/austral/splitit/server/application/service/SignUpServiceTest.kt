@@ -4,6 +4,8 @@ import edu.austral.splitit.server.application.exception.EmailAlreadyInUseExcepti
 import edu.austral.splitit.server.domain.model.User
 import edu.austral.splitit.server.domain.service.UserService
 import edu.austral.splitit.server.infrastructure.persistence.UserRepository
+import org.hibernate.exception.ConstraintViolationException
+import org.hibernate.exception.ConstraintViolationException.ConstraintKind
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
@@ -13,6 +15,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.security.crypto.password.PasswordEncoder
+import java.sql.SQLException
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
@@ -77,7 +80,7 @@ class SignUpServiceTest {
     fun `register maps unique constraint violation to email already in use`() {
         whenever(userRepository.existsByEmail("ada@example.com")).thenReturn(false)
         whenever(passwordEncoder.encode("una-clave-segura")).thenReturn("hashed")
-        whenever(userRepository.save(any())).thenThrow(DataIntegrityViolationException("uk_users_email"))
+        whenever(userRepository.save(any())).thenThrow(duplicateEmailViolation())
 
         assertFailsWith<EmailAlreadyInUseException> {
             signUpService.register(
@@ -92,7 +95,7 @@ class SignUpServiceTest {
     fun `register does not map other integrity violations to email already in use`() {
         whenever(userRepository.existsByEmail("ada@example.com")).thenReturn(false)
         whenever(passwordEncoder.encode("una-clave-segura")).thenReturn("hashed")
-        whenever(userRepository.save(any())).thenThrow(DataIntegrityViolationException("value too long"))
+        whenever(userRepository.save(any())).thenThrow(columnTooLongViolation())
 
         assertFailsWith<DataIntegrityViolationException> {
             signUpService.register(
@@ -101,5 +104,27 @@ class SignUpServiceTest {
                 password = "una-clave-segura",
             )
         }
+    }
+
+    private fun duplicateEmailViolation(): DataIntegrityViolationException {
+        val cause =
+            ConstraintViolationException(
+                "duplicate email",
+                SQLException("duplicate key"),
+                ConstraintKind.UNIQUE,
+                "uk_users_email",
+            )
+        return DataIntegrityViolationException("duplicate email", cause)
+    }
+
+    private fun columnTooLongViolation(): DataIntegrityViolationException {
+        val cause =
+            ConstraintViolationException(
+                "value too long",
+                SQLException("value too long"),
+                ConstraintKind.OTHER,
+                null as String?,
+            )
+        return DataIntegrityViolationException("value too long", cause)
     }
 }
