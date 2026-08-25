@@ -19,7 +19,7 @@ import kotlin.test.assertNotEquals
 class SignUpServiceTest {
     private val userRepository: UserRepository = mock()
     private val passwordEncoder: PasswordEncoder = mock()
-    private val signUpService = SignUpService(userRepository, passwordEncoder)
+    private val signUpService = SignUpService(userRepository, passwordEncoder, userService)
 
     @Test
     fun `register saves one user with normalized email and hashed password`() {

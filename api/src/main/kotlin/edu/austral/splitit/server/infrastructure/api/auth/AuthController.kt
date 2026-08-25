@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 
 @RestController
-@RequestMapping("/auth")
-class SignUpController(
+@RequestMapping("/api/auth")
+class AuthController(
     private val signUpService: SignUpService,
 ) {
     @PostMapping("/register")
