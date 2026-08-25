@@ -28,7 +28,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 @WebMvcTest(
-    controllers = [SignUpController::class],
+    controllers = [AuthController::class],
     excludeAutoConfiguration = [
         SecurityAutoConfiguration::class,
         UserDetailsServiceAutoConfiguration::class,
@@ -62,7 +62,7 @@ class SignUpControllerTest(
 
         mockMvc
             .perform(
-                post("/auth/register")
+                post("/api/auth/register")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         """
@@ -95,7 +95,7 @@ class SignUpControllerTest(
     fun `register returns 400 for invalid request data`(body: String) {
         mockMvc
             .perform(
-                post("/auth/register")
+                post("/api/auth/register")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(body),
             ).andExpect(status().isBadRequest)
@@ -110,7 +110,7 @@ class SignUpControllerTest(
 
         mockMvc
             .perform(
-                post("/auth/register")
+                post("/api/auth/register")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(
                         """

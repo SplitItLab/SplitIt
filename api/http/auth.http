@@ -18,7 +18,7 @@
 @conflictEmail = ada.conflict@example.com
 
 ### Register — success (201)
-POST {{baseUrl}}/auth/register
+POST {{baseUrl}}/api/auth/register
 Content-Type: application/json
 Accept: application/json
 
@@ -40,7 +40,7 @@ client.test("creates a user with public fields only", function () {
 %}
 
 ### Register — missing name (400)
-POST {{baseUrl}}/auth/register
+POST {{baseUrl}}/api/auth/register
 Content-Type: application/json
 Accept: application/json
 
@@ -58,7 +58,7 @@ client.test("rejects missing name", function () {
 %}
 
 ### Register — blank name (400)
-POST {{baseUrl}}/auth/register
+POST {{baseUrl}}/api/auth/register
 Content-Type: application/json
 Accept: application/json
 
@@ -77,7 +77,7 @@ client.test("rejects blank name", function () {
 %}
 
 ### Register — invalid email (400)
-POST {{baseUrl}}/auth/register
+POST {{baseUrl}}/api/auth/register
 Content-Type: application/json
 Accept: application/json
 
@@ -96,7 +96,7 @@ client.test("rejects invalid email", function () {
 %}
 
 ### Register — short password (400)
-POST {{baseUrl}}/auth/register
+POST {{baseUrl}}/api/auth/register
 Content-Type: application/json
 Accept: application/json
 
@@ -115,7 +115,7 @@ client.test("rejects short password", function () {
 %}
 
 ### Register — malformed JSON (400)
-POST {{baseUrl}}/auth/register
+POST {{baseUrl}}/api/auth/register
 Content-Type: application/json
 Accept: application/json
 
@@ -130,7 +130,7 @@ client.test("rejects malformed JSON", function () {
 %}
 
 ### Register — seed for duplicate email (201 first time, 409 after)
-POST {{baseUrl}}/auth/register
+POST {{baseUrl}}/api/auth/register
 Content-Type: application/json
 Accept: application/json
 
@@ -156,7 +156,7 @@ client.test("seeds conflict email or reports it already exists", function () {
 %}
 
 ### Register — duplicate normalized email (409)
-POST {{baseUrl}}/auth/register
+POST {{baseUrl}}/api/auth/register
 Content-Type: application/json
 Accept: application/json
 
