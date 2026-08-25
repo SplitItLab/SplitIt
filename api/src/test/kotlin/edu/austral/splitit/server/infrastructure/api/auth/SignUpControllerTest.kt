@@ -4,6 +4,7 @@ import edu.austral.splitit.server.application.exception.EmailAlreadyInUseExcepti
 import edu.austral.splitit.server.application.service.SignUpService
 import edu.austral.splitit.server.domain.model.User
 import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
+import jakarta.servlet.ServletException
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -20,12 +21,15 @@ import org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSec
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 
 @WebMvcTest(
     controllers = [AuthController::class],
@@ -123,5 +127,52 @@ class SignUpControllerTest(
                     ),
             ).andExpect(status().isConflict)
             .andExpect(jsonPath("$.message").value("Email already in use"))
+    }
+
+    @Test
+    fun `unexpected errors return 500 without leaking internals`() {
+        whenever(signUpService.register(any(), any(), any()))
+            .thenThrow(IllegalStateException("jdbc:postgresql://secret-host/splitit"))
+
+        mockMvc
+            .perform(
+                post("/api/auth/register")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {
+                          "name": "Ada Lovelace",
+                          "email": "ada@example.com",
+                          "password": "una-clave-segura"
+                        }
+                        """.trimIndent(),
+                    ),
+            ).andExpect(status().isInternalServerError)
+            .andExpect(jsonPath("$.message").value("Internal server error"))
+    }
+
+    @Test
+    fun `access denied is not mapped to a generic 500`() {
+        whenever(signUpService.register(any(), any(), any())).thenThrow(AccessDeniedException("denied"))
+
+        val thrown =
+            assertFailsWith<ServletException> {
+                mockMvc
+                    .perform(
+                        post("/api/auth/register")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(
+                                """
+                                {
+                                  "name": "Ada Lovelace",
+                                  "email": "ada@example.com",
+                                  "password": "una-clave-segura"
+                                }
+                                """.trimIndent(),
+                            ),
+                    ).andReturn()
+            }
+
+        assertIs<AccessDeniedException>(thrown.cause)
     }
 }

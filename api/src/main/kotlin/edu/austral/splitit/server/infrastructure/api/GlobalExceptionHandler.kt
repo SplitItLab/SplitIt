@@ -19,27 +19,34 @@ class GlobalExceptionHandler {
         HandlerMethodValidationException::class,
         HttpMessageNotReadableException::class,
     )
-    fun handleInvalidRequest(): ResponseEntity<ErrorMessage> =
-        ResponseEntity
-            .status(HttpStatus.BAD_REQUEST)
-            .body(ErrorMessage(INVALID_REQUEST_MESSAGE))
+    fun handleInvalidRequest(exception: Exception): ResponseEntity<ErrorMessage> {
+        logger.warn("Invalid request: {}", exception.message)
+        return error(HttpStatus.BAD_REQUEST, INVALID_REQUEST_MESSAGE)
+    }
 
     @ExceptionHandler(EmailAlreadyInUseException::class)
     fun handleEmailAlreadyInUse(exception: EmailAlreadyInUseException): ResponseEntity<ErrorMessage> =
-        ResponseEntity
-            .status(HttpStatus.CONFLICT)
-            .body(ErrorMessage(exception.message ?: EMAIL_ALREADY_IN_USE_MESSAGE))
+        error(HttpStatus.CONFLICT, exception.message ?: EMAIL_ALREADY_IN_USE_MESSAGE)
 
-    @ExceptionHandler(AccessDeniedException::class, AuthenticationException::class)
-    fun rethrowSecurityException(exception: Exception): Unit = throw exception
+    @ExceptionHandler(AccessDeniedException::class)
+    fun rethrowAccessDenied(exception: AccessDeniedException): Unit = throw exception
+
+    @ExceptionHandler(AuthenticationException::class)
+    fun rethrowAuthentication(exception: AuthenticationException): Unit = throw exception
 
     @ExceptionHandler(Exception::class)
     fun handleUnexpected(exception: Exception): ResponseEntity<ErrorMessage> {
         logger.error("Unhandled exception", exception)
-        return ResponseEntity
-            .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(ErrorMessage(INTERNAL_ERROR_MESSAGE))
+        return error(HttpStatus.INTERNAL_SERVER_ERROR, INTERNAL_ERROR_MESSAGE)
     }
+
+    private fun error(
+        status: HttpStatus,
+        message: String,
+    ): ResponseEntity<ErrorMessage> =
+        ResponseEntity
+            .status(status)
+            .body(ErrorMessage(message))
 
     companion object {
         private val logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
