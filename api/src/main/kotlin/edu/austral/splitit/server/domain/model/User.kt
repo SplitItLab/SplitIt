@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.Table
 import jakarta.persistence.UniqueConstraint
+import jakarta.validation.constraints.Size
 
 @Entity
 @Table(
@@ -18,11 +19,20 @@ import jakarta.persistence.UniqueConstraint
 class User(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long? = null,
+    var id: Long? = null,
     @Column(nullable = false)
-    val name: String,
+    @field:Size(min = NAME_MIN, max = NAME_MAX)
+    var name: String,
     @Column(nullable = false)
-    val email: String,
+    var email: String,
     @Column(nullable = false)
-    val passwordHash: String,
-)
+    var passwordHash: String,
+) {
+    companion object {
+        const val NAME_MIN = 2
+        const val NAME_MAX = 50
+
+        const val PASSWORD_MIN = 8
+        const val PASSWORD_MAX = 100
+    }
+}
