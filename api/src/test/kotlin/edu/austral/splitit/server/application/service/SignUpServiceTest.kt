@@ -2,6 +2,7 @@ package edu.austral.splitit.server.application.service
 
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
 import edu.austral.splitit.server.domain.model.User
+import edu.austral.splitit.server.domain.service.UserService
 import edu.austral.splitit.server.infrastructure.persistence.UserRepository
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -19,6 +20,7 @@ import kotlin.test.assertNotEquals
 class SignUpServiceTest {
     private val userRepository: UserRepository = mock()
     private val passwordEncoder: PasswordEncoder = mock()
+    private val userService = UserService()
     private val signUpService = SignUpService(userRepository, passwordEncoder, userService)
 
     @Test
@@ -78,6 +80,21 @@ class SignUpServiceTest {
         whenever(userRepository.save(any())).thenThrow(DataIntegrityViolationException("uk_users_email"))
 
         assertFailsWith<EmailAlreadyInUseException> {
+            signUpService.register(
+                name = "Ada Lovelace",
+                email = "ada@example.com",
+                password = "una-clave-segura",
+            )
+        }
+    }
+
+    @Test
+    fun `register does not map other integrity violations to email already in use`() {
+        whenever(userRepository.existsByEmail("ada@example.com")).thenReturn(false)
+        whenever(passwordEncoder.encode("una-clave-segura")).thenReturn("hashed")
+        whenever(userRepository.save(any())).thenThrow(DataIntegrityViolationException("value too long"))
+
+        assertFailsWith<DataIntegrityViolationException> {
             signUpService.register(
                 name = "Ada Lovelace",
                 email = "ada@example.com",

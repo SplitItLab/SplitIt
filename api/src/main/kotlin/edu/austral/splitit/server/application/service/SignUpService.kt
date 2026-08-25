@@ -38,10 +38,33 @@ class SignUpService(
                 passwordHash = passwordHash,
             )
 
-        return try {
+        return saveNewUser(user)
+    }
+
+    private fun saveNewUser(user: User): User =
+        try {
             userRepository.save(user)
-        } catch (_: DataIntegrityViolationException) {
+        } catch (exception: DataIntegrityViolationException) {
+            if (!isEmailUniqueConstraintViolation(exception)) {
+                throw exception
+            }
             throw EmailAlreadyInUseException()
         }
+
+    private fun isEmailUniqueConstraintViolation(exception: DataIntegrityViolationException): Boolean {
+        var current: Throwable? = exception
+        val seen = mutableSetOf<Throwable>()
+        while (current != null && seen.add(current)) {
+            val message = current.message
+            if (message != null && message.contains(EMAIL_UNIQUE_CONSTRAINT, ignoreCase = true)) {
+                return true
+            }
+            current = current.cause
+        }
+        return false
+    }
+
+    private companion object {
+        const val EMAIL_UNIQUE_CONSTRAINT = "uk_users_email"
     }
 }
