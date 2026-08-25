@@ -30,11 +30,11 @@ class GlobalExceptionHandler {
             .status(HttpStatus.CONFLICT)
             .body(ErrorMessage(exception.message ?: EMAIL_ALREADY_IN_USE_MESSAGE))
 
+    @ExceptionHandler(AccessDeniedException::class, AuthenticationException::class)
+    fun rethrowSecurityException(exception: Exception): Unit = throw exception
+
     @ExceptionHandler(Exception::class)
     fun handleUnexpected(exception: Exception): ResponseEntity<ErrorMessage> {
-        if (exception is AccessDeniedException || exception is AuthenticationException) {
-            throw exception
-        }
         logger.error("Unhandled exception", exception)
         return ResponseEntity
             .status(HttpStatus.INTERNAL_SERVER_ERROR)
