@@ -4,6 +4,7 @@ import edu.austral.splitit.server.application.exception.EmailAlreadyInUseExcepti
 import edu.austral.splitit.server.domain.model.User
 import edu.austral.splitit.server.domain.service.UserService
 import edu.austral.splitit.server.infrastructure.persistence.UserRepository
+import org.hibernate.exception.ConstraintViolationException
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -45,23 +46,16 @@ class SignUpService(
         try {
             userRepository.save(user)
         } catch (exception: DataIntegrityViolationException) {
-            if (!isEmailUniqueConstraintViolation(exception)) {
+            if (!isDuplicateEmailConstraint(exception)) {
                 throw exception
             }
             throw EmailAlreadyInUseException()
         }
 
-    private fun isEmailUniqueConstraintViolation(exception: DataIntegrityViolationException): Boolean {
-        var current: Throwable? = exception
-        val seen = mutableSetOf<Throwable>()
-        while (current != null && seen.add(current)) {
-            val message = current.message
-            if (message != null && message.contains(EMAIL_UNIQUE_CONSTRAINT, ignoreCase = true)) {
-                return true
-            }
-            current = current.cause
-        }
-        return false
+    private fun isDuplicateEmailConstraint(exception: DataIntegrityViolationException): Boolean {
+        val violation = exception.cause as? ConstraintViolationException ?: return false
+        return violation.kind == ConstraintViolationException.ConstraintKind.UNIQUE &&
+            violation.constraintName.equals(EMAIL_UNIQUE_CONSTRAINT, ignoreCase = true)
     }
 
     private companion object {
