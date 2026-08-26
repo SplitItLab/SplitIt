@@ -16,7 +16,7 @@
 @baseUrl = http://localhost:8080
 @newEmail = ada-{{$timestamp}}@example.com
 @conflictEmail = ada.conflict@example.com
-@loginEmail = ada-login-{{$timestamp}}@example.com
+@loginEmail = ada.login@example.com
 @loginPassword = una-clave-segura
 
 ### Register — success (201)
@@ -176,7 +176,7 @@ client.test("rejects duplicate normalized email", function () {
 })
 %}
 
-### Register — seed for login (201 first time)
+### Register — seed for login (201 first time, 409 after)
 POST {{baseUrl}}/api/auth/register
 Content-Type: application/json
 Accept: application/json
@@ -188,13 +188,17 @@ Accept: application/json
 }
 
 > {%
-import { assertCreatedUser } from './scripts/assert.js'
+import { assertCreatedUser, assertError } from './scripts/assert.js'
 
 client.test("seeds a user that can log in", function () {
-    assertCreatedUser(client, response, {
-        name: "Ada Lovelace",
-        emailPattern: /^ada-login-\d+@example\.com$/,
-    })
+    if (response.status === 201) {
+        assertCreatedUser(client, response, {
+            name: "Ada Lovelace",
+            email: "ada.login@example.com",
+        })
+        return
+    }
+    assertError(client, response, 409, "Email already in use")
 })
 %}
 
@@ -209,15 +213,16 @@ Accept: application/json
 }
 
 > {%
-import { assertSessionUser, assertSetCookieHttpOnly } from './scripts/assert.js'
+import { assertSessionUser, assertSetCookieHttpOnly, saveAuthToken } from './scripts/assert.js'
 
 client.test("creates a session with public fields only", function () {
     assertSessionUser(client, response, {
         name: "Ada Lovelace",
-        emailPattern: /^ada-login-\d+@example\.com$/,
+        email: "ada.login@example.com",
     })
     assertSetCookieHttpOnly(client, response, "auth_token")
 })
+saveAuthToken(client, response, "auth_token")
 %}
 
 ### Login — missing email (400)
@@ -293,6 +298,7 @@ client.test("rejects wrong password with the same message as unknown email", fun
 ### Session — valid cookie from login (200)
 GET {{baseUrl}}/api/auth/session
 Accept: application/json
+Cookie: auth_token={{authToken}}
 
 > {%
 import { assertSessionUser } from './scripts/assert.js'
@@ -300,7 +306,7 @@ import { assertSessionUser } from './scripts/assert.js'
 client.test("restores the public user from the session cookie", function () {
     assertSessionUser(client, response, {
         name: "Ada Lovelace",
-        emailPattern: /^ada-login-\d+@example\.com$/,
+        email: "ada.login@example.com",
     })
 })
 %}
