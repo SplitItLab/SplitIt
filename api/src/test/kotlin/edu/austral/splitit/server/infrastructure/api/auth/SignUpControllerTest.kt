@@ -1,9 +1,12 @@
 package edu.austral.splitit.server.infrastructure.api.auth
 
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
+import edu.austral.splitit.server.application.port.TokenProvider
+import edu.austral.splitit.server.application.service.LoginService
 import edu.austral.splitit.server.application.service.SignUpService
 import edu.austral.splitit.server.domain.model.User
 import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
+import edu.austral.splitit.server.infrastructure.security.SessionCookieWriter
 import jakarta.servlet.ServletException
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -46,6 +49,15 @@ class SignUpControllerTest(
 ) {
     @MockitoBean
     private lateinit var signUpService: SignUpService
+
+    @MockitoBean
+    private lateinit var loginService: LoginService
+
+    @MockitoBean
+    private lateinit var tokenProvider: TokenProvider
+
+    @MockitoBean
+    private lateinit var sessionCookieWriter: SessionCookieWriter
 
     @Test
     fun `register returns 201 with public user fields only`() {

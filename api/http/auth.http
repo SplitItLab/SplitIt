@@ -16,6 +16,8 @@
 @baseUrl = http://localhost:8080
 @newEmail = ada-{{$timestamp}}@example.com
 @conflictEmail = ada.conflict@example.com
+@loginEmail = ada-login-{{$timestamp}}@example.com
+@loginPassword = una-clave-segura
 
 ### Register — success (201)
 POST {{baseUrl}}/api/auth/register
@@ -171,5 +173,174 @@ import { assertError } from './scripts/assert.js'
 
 client.test("rejects duplicate normalized email", function () {
     assertError(client, response, 409, "Email already in use")
+})
+%}
+
+### Register — seed for login (201 first time)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Ada Lovelace",
+  "email": "{{loginEmail}}",
+  "password": "{{loginPassword}}"
+}
+
+> {%
+import { assertCreatedUser } from './scripts/assert.js'
+
+client.test("seeds a user that can log in", function () {
+    assertCreatedUser(client, response, {
+        name: "Ada Lovelace",
+        emailPattern: /^ada-login-\d+@example\.com$/,
+    })
+})
+%}
+
+### Login — success (200 + HttpOnly cookie)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{loginEmail}}",
+  "password": "{{loginPassword}}"
+}
+
+> {%
+import { assertSessionUser, assertSetCookieHttpOnly } from './scripts/assert.js'
+
+client.test("creates a session with public fields only", function () {
+    assertSessionUser(client, response, {
+        name: "Ada Lovelace",
+        emailPattern: /^ada-login-\d+@example\.com$/,
+    })
+    assertSetCookieHttpOnly(client, response, "auth_token")
+})
+%}
+
+### Login — missing email (400)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "password": "una-clave-segura"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects missing email", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### Login — missing password (400)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "ada@example.com"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects missing password", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### Login — unknown email (401)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "nobody-{{$timestamp}}@example.com",
+  "password": "una-clave-segura"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects unknown email without leaking existence", function () {
+    assertError(client, response, 401, "Invalid credentials")
+})
+%}
+
+### Login — wrong password (401)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{loginEmail}}",
+  "password": "clave-incorrecta"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects wrong password with the same message as unknown email", function () {
+    assertError(client, response, 401, "Invalid credentials")
+})
+%}
+
+### Session — valid cookie from login (200)
+GET {{baseUrl}}/api/auth/session
+Accept: application/json
+
+> {%
+import { assertSessionUser } from './scripts/assert.js'
+
+client.test("restores the public user from the session cookie", function () {
+    assertSessionUser(client, response, {
+        name: "Ada Lovelace",
+        emailPattern: /^ada-login-\d+@example\.com$/,
+    })
+})
+%}
+
+### Session — no cookie (401)
+# @no-cookie-jar
+GET {{baseUrl}}/api/auth/session
+Accept: application/json
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects a private route without a session", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### Session — tampered cookie (401)
+# @no-cookie-jar
+GET {{baseUrl}}/api/auth/session
+Accept: application/json
+Cookie: auth_token=tampered.token.value
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects a manipulated session without an internal error", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### Private route — no session (401)
+# @no-cookie-jar
+GET {{baseUrl}}/api/private
+Accept: application/json
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects an unknown private endpoint without a session", function () {
+    assertError(client, response, 401, "Unauthorized")
 })
 %}

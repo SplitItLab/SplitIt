@@ -52,3 +52,25 @@ export function assertCreatedUser(client, response, expected) {
     client.assert(body != null && typeof body === "object", "Expected a JSON body")
     assertPublicUser(client, body.user, expected)
 }
+
+export function assertSessionUser(client, response, expected) {
+    assertStatus(client, response, 200)
+    const body = jsonBody(response)
+    client.assert(body != null && typeof body === "object", "Expected a JSON body")
+    assertPublicUser(client, body, expected)
+    client.assert(body.user === undefined, "session/login body must not wrap the user")
+    client.assert(body.token === undefined, "token must not appear in the JSON body")
+}
+
+export function assertSetCookieHttpOnly(client, response, cookieName) {
+    const raw = response.headers.valueOf("Set-Cookie")
+    client.assert(raw != null, "Expected Set-Cookie header")
+    const header = Array.isArray(raw) ? raw.join("\n") : String(raw)
+    client.assert(
+        header.toLowerCase().includes(cookieName.toLowerCase() + "="),
+        "Expected cookie " + cookieName,
+    )
+    client.assert(/httponly/i.test(header), "Cookie must be HttpOnly")
+    client.assert(/samesite/i.test(header), "Cookie must set SameSite")
+    client.assert(!/password/i.test(header), "Cookie header must not contain password")
+}
