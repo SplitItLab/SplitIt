@@ -1,6 +1,7 @@
 package edu.austral.splitit.server.infrastructure.api
 
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
+import edu.austral.splitit.server.application.exception.InvalidCredentialsException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -28,6 +29,10 @@ class GlobalExceptionHandler {
     fun handleEmailAlreadyInUse(exception: EmailAlreadyInUseException): ResponseEntity<ErrorMessage> =
         error(HttpStatus.CONFLICT, exception.message ?: EMAIL_ALREADY_IN_USE_MESSAGE)
 
+    @ExceptionHandler(InvalidCredentialsException::class)
+    fun handleInvalidCredentials(exception: InvalidCredentialsException): ResponseEntity<ErrorMessage> =
+        error(HttpStatus.UNAUTHORIZED, exception.message ?: INVALID_CREDENTIALS_MESSAGE)
+
     @ExceptionHandler(AccessDeniedException::class)
     fun rethrowAccessDenied(exception: AccessDeniedException): Unit = throw exception
 
@@ -52,6 +57,7 @@ class GlobalExceptionHandler {
         private val logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
         private const val INVALID_REQUEST_MESSAGE = "Invalid request data"
         private const val EMAIL_ALREADY_IN_USE_MESSAGE = "Email already in use"
+        private const val INVALID_CREDENTIALS_MESSAGE = "Invalid credentials"
         private const val INTERNAL_ERROR_MESSAGE = "Internal server error"
     }
 }

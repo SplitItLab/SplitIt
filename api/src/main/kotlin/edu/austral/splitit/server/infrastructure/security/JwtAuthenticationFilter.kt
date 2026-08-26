@@ -17,6 +17,7 @@ const val BEARER_PREFIX = "Bearer "
 
 class JwtAuthenticationFilter(
     private val tokenProvider: TokenProvider,
+    private val cookieName: String,
     private val securityContextRepository: SecurityContextRepository = RequestAttributeSecurityContextRepository(),
 ) : OncePerRequestFilter() {
     override fun doFilterInternal(
@@ -24,9 +25,8 @@ class JwtAuthenticationFilter(
         response: HttpServletResponse,
         filterChain: FilterChain,
     ) {
-        val header = request.getHeader(HttpHeaders.AUTHORIZATION)
-        if (header != null && header.startsWith(BEARER_PREFIX)) {
-            val token = header.substring(BEARER_PREFIX.length)
+        val token = extractToken(request)
+        if (token != null) {
             val authenticatedUser = tokenProvider.parse(token)
             if (authenticatedUser != null) {
                 val authentication =
@@ -43,5 +43,22 @@ class JwtAuthenticationFilter(
             }
         }
         filterChain.doFilter(request, response)
+    }
+
+    private fun extractToken(request: HttpServletRequest): String? {
+        val cookieToken =
+            request.cookies
+                ?.firstOrNull { it.name == cookieName }
+                ?.value
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+        val headerToken =
+            request
+                .getHeader(HttpHeaders.AUTHORIZATION)
+                ?.takeIf { it.startsWith(BEARER_PREFIX) }
+                ?.substring(BEARER_PREFIX.length)
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+        return cookieToken ?: headerToken
     }
 }

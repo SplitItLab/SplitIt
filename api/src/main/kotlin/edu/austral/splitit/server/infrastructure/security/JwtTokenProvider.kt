@@ -35,6 +35,7 @@ class JwtTokenProvider(
             .builder()
             .subject(user.id.toString())
             .claim(USERNAME_CLAIM, user.username)
+            .claim(NAME_CLAIM, user.name)
             .claim(ROLES_CLAIM, user.roles.toList())
             .issuedAt(Date.from(now))
             .expiration(Date.from(now.plus(expirationHours, ChronoUnit.HOURS)))
@@ -52,12 +53,14 @@ class JwtTokenProvider(
                     .parseSignedClaims(token)
                     .payload
             val username = claims[USERNAME_CLAIM] as? String ?: return null
+            val name = claims[NAME_CLAIM] as? String ?: return null
             val roles = rolesFromClaim(claims[ROLES_CLAIM]) ?: return null
             AuthUser(
                 id = claims.subject.toLong(),
                 username = username,
                 password = "",
                 roles = roles,
+                name = name,
             )
         } catch (_: JwtException) {
             null
@@ -77,6 +80,7 @@ class JwtTokenProvider(
 
     companion object {
         private const val USERNAME_CLAIM = "username"
+        private const val NAME_CLAIM = "name"
         private const val ROLES_CLAIM = "roles"
     }
 }

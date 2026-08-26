@@ -20,3 +20,12 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
   expiration-hours: ${JWT_EXPIRATION_HOURS:8}
+
+auth:
+  cookie:
+    name: ${AUTH_COOKIE_NAME:auth_token}
+    secure: ${AUTH_COOKIE_SECURE:false}
+    same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000}
