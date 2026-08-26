@@ -9,7 +9,7 @@ spring:
       optional:file:.env[.properties],
       optional:file:../.env[.properties]
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT:5433}/${POSTGRES_DB}?timezone=America/Argentina/Buenos_Aires
+    url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT:5433}/${POSTGRES_DB}
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
