@@ -25,27 +25,25 @@ class JwtAuthenticationFilter(
         response: HttpServletResponse,
         filterChain: FilterChain,
     ) {
-        val token = extractToken(request)
-        if (token != null) {
-            val authenticatedUser = tokenProvider.parse(token)
-            if (authenticatedUser != null) {
-                val authentication =
-                    UsernamePasswordAuthenticationToken(
-                        authenticatedUser,
-                        null,
-                        authenticatedUser.roles.map { SimpleGrantedAuthority("ROLE_$it") },
-                    )
-                authentication.details = WebAuthenticationDetailsSource().buildDetails(request)
-                val context = SecurityContextHolder.createEmptyContext()
-                context.authentication = authentication
-                SecurityContextHolder.setContext(context)
-                securityContextRepository.saveContext(context, request, response)
-            }
+        val authenticatedUser =
+            extractTokens(request).firstNotNullOfOrNull { tokenProvider.parse(it) }
+        if (authenticatedUser != null) {
+            val authentication =
+                UsernamePasswordAuthenticationToken(
+                    authenticatedUser,
+                    null,
+                    authenticatedUser.roles.map { SimpleGrantedAuthority("ROLE_$it") },
+                )
+            authentication.details = WebAuthenticationDetailsSource().buildDetails(request)
+            val context = SecurityContextHolder.createEmptyContext()
+            context.authentication = authentication
+            SecurityContextHolder.setContext(context)
+            securityContextRepository.saveContext(context, request, response)
         }
         filterChain.doFilter(request, response)
     }
 
-    private fun extractToken(request: HttpServletRequest): String? {
+    private fun extractTokens(request: HttpServletRequest): List<String> {
         val cookieToken =
             request.cookies
                 ?.firstOrNull { it.name == cookieName }
@@ -59,6 +57,6 @@ class JwtAuthenticationFilter(
                 ?.substring(BEARER_PREFIX.length)
                 ?.trim()
                 ?.takeIf { it.isNotEmpty() }
-        return cookieToken ?: headerToken
+        return listOfNotNull(cookieToken, headerToken)
     }
 }

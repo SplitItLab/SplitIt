@@ -78,6 +78,25 @@ client.test("rejects blank name", function () {
 })
 %}
 
+### Register — name too short after trim (400)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": " A ",
+  "email": "ada@example.com",
+  "password": "una-clave-segura"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects a name that is too short after trim", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
 ### Register — invalid email (400)
 POST {{baseUrl}}/api/auth/register
 Content-Type: application/json

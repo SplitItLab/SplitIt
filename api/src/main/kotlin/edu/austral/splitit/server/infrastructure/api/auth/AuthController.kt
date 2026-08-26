@@ -28,14 +28,14 @@ class AuthController(
     @ResponseStatus(HttpStatus.CREATED)
     fun register(
         @Valid @RequestBody request: SignUpRequest,
-    ): SignUpResponse {
+    ): UserResponse {
         val user =
             signUpService.register(
                 name = request.name,
                 email = request.email,
                 password = request.password,
             )
-        return SignUpResponse.of(user)
+        return UserResponse.of(user)
     }
 
     @PostMapping("/login")

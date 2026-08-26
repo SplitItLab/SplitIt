@@ -61,6 +61,24 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    fun `valid bearer token authenticates when the session cookie is stale`() {
+        whenever(tokenProvider.parse("bad-token")).thenReturn(null)
+        whenever(tokenProvider.parse("good-token")).thenReturn(adaAuthUser())
+        val chain = mock<FilterChain>()
+        val request = MockHttpServletRequest()
+        request.setCookies(Cookie(COOKIE_NAME, "bad-token"))
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer good-token")
+        val response = MockHttpServletResponse()
+
+        filter.doFilter(request, response, chain)
+
+        val authentication = SecurityContextHolder.getContext().authentication
+        assertNotNull(authentication)
+        assertEquals(adaAuthUser(), authentication.principal)
+        verify(chain).doFilter(request, response)
+    }
+
+    @Test
     fun `expired or tampered token leaves the request unauthenticated`() {
         whenever(tokenProvider.parse("bad-token")).thenReturn(null)
         val chain = mock<FilterChain>()
