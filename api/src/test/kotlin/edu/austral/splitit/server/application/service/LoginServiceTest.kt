@@ -5,6 +5,7 @@ import edu.austral.splitit.server.domain.model.User
 import edu.austral.splitit.server.infrastructure.persistence.UserRepository
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
@@ -49,17 +50,20 @@ class LoginServiceTest {
 
         assertEquals(unknownEmail.message, wrongPassword.message)
         assertEquals("Invalid credentials", unknownEmail.message)
+        verify(passwordEncoder).matches(eq("una-clave-segura"), any())
+        verify(passwordEncoder).matches(eq("wrong-password"), eq("hashed"))
     }
 
     @Test
-    fun `unknown email does not invoke the password encoder`() {
+    fun `unknown email still verifies the password against a dummy hash`() {
         whenever(userRepository.findByEmail("missing@example.com")).thenReturn(null)
+        whenever(passwordEncoder.matches(any(), any())).thenReturn(true)
 
         assertFailsWith<InvalidCredentialsException> {
             loginService.login("missing@example.com", "una-clave-segura")
         }
 
-        verify(passwordEncoder, never()).matches(any(), any())
+        verify(passwordEncoder).matches(eq("una-clave-segura"), any())
     }
 
     private fun ada(): User =

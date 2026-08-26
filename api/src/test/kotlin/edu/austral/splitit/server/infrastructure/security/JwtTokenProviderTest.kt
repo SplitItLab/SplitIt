@@ -3,6 +3,7 @@ package edu.austral.splitit.server.infrastructure.security
 import edu.austral.splitit.server.application.port.AuthUser
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 
 class JwtTokenProviderTest {
@@ -24,8 +25,13 @@ class JwtTokenProviderTest {
     @Test
     fun `parse returns null for a tampered token`() {
         val issued = provider.issue(adaAuthUser())
+        val parts = issued.split('.')
+        // Signing input is "header.payload". Changing leftover Base64URL bits on the
+        // last signature character can leave the decoded HMAC unchanged (~1/16).
+        val tampered = "${parts[0]}.${parts[1]}x.${parts[2]}"
 
-        assertNull(provider.parse(issued.dropLast(1) + "x"))
+        assertNotEquals(issued, tampered)
+        assertNull(provider.parse(tampered))
     }
 
     @Test

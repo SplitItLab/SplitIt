@@ -17,9 +17,17 @@ class LoginService(
     ): User {
         val normalizedEmail = email.trim().lowercase()
         val user = userRepository.findByEmail(normalizedEmail)
-        if (user == null || !passwordEncoder.matches(password, user.passwordHash)) {
+        val passwordHash = user?.passwordHash ?: DUMMY_PASSWORD_HASH
+        val passwordMatches = passwordEncoder.matches(password, passwordHash)
+        if (user == null || !passwordMatches) {
             throw InvalidCredentialsException()
         }
         return user
+    }
+
+    private companion object {
+        // Valid BCrypt hash so unknown emails still pay the same verification cost.
+        private const val DUMMY_PASSWORD_HASH =
+            "\$2a\$10\$wwreR4a82.lyd33Ns7XFRuDHwhHZvpa0Z/JFKECz8OPIKmI3qALNW"
     }
 }

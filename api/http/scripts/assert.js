@@ -76,7 +76,9 @@ export function assertCreatedUser(client, response, expected) {
     assertStatus(client, response, 201)
     const body = jsonBody(response)
     client.assert(body != null && typeof body === "object", "Expected a JSON body")
-    assertPublicUser(client, body.user, expected)
+    assertPublicUser(client, body, expected)
+    client.assert(body.user === undefined, "register body must not wrap the user")
+    client.assert(body.token === undefined, "token must not appear in the JSON body")
 }
 
 export function assertSessionUser(client, response, expected) {

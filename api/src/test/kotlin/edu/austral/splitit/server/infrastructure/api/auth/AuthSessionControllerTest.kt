@@ -106,6 +106,21 @@ class AuthSessionControllerTest(
             .andExpect(jsonPath("$.email").value("ada@example.com"))
     }
 
+    @Test
+    fun `session accepts a bearer token when the session cookie is stale`() {
+        whenever(tokenProvider.parse("tampered")).thenReturn(null)
+        whenever(tokenProvider.parse("good-token")).thenReturn(adaAuthUser())
+
+        mockMvc
+            .perform(
+                get("/api/auth/session")
+                    .cookie(Cookie("auth_token", "tampered"))
+                    .header("Authorization", "Bearer good-token")
+                    .accept(MediaType.APPLICATION_JSON),
+            ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.email").value("ada@example.com"))
+    }
+
     private fun adaAuthUser(): AuthUser =
         AuthUser(
             id = 1L,

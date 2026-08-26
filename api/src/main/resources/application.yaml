@@ -24,7 +24,7 @@ jwt:
 auth:
   cookie:
     name: ${AUTH_COOKIE_NAME:auth_token}
-    secure: ${AUTH_COOKIE_SECURE:false}
+    secure: ${AUTH_COOKIE_SECURE:true}
     same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
 
 cors:

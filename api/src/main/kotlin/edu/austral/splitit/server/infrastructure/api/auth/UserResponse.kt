@@ -24,11 +24,3 @@ data class UserResponse(
             )
     }
 }
-
-data class SignUpResponse(
-    val user: UserResponse,
-) {
-    companion object {
-        fun of(user: User): SignUpResponse = SignUpResponse(user = UserResponse.of(user))
-    }
-}
