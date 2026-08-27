@@ -1,3 +1,29 @@
+function toPlainJson(value) {
+    if (value == null || typeof value !== "object") {
+        return value
+    }
+    let plain
+    try {
+        plain = JSON.parse(JSON.stringify(value))
+    } catch (e) {
+        plain = {}
+        const keys = Object.keys(value)
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i]
+            const nested = value[key]
+            if (key === "onEachLine" || key === "onEachMessage" || typeof nested === "function") {
+                continue
+            }
+            plain[key] = nested
+        }
+    }
+    if (plain != null && typeof plain === "object") {
+        delete plain.onEachLine
+        delete plain.onEachMessage
+    }
+    return plain
+}
+
 export function jsonBody(response) {
     if (response.body == null) {
         return null
@@ -9,7 +35,7 @@ export function jsonBody(response) {
             return null
         }
     }
-    return response.body
+    return toPlainJson(response.body)
 }
 
 export function assertStatus(client, response, expected) {
@@ -50,5 +76,67 @@ export function assertCreatedUser(client, response, expected) {
     assertStatus(client, response, 201)
     const body = jsonBody(response)
     client.assert(body != null && typeof body === "object", "Expected a JSON body")
-    assertPublicUser(client, body.user, expected)
+    assertPublicUser(client, body, expected)
+    client.assert(body.user === undefined, "register body must not wrap the user")
+    client.assert(body.token === undefined, "token must not appear in the JSON body")
+}
+
+export function assertSessionUser(client, response, expected) {
+    assertStatus(client, response, 200)
+    const body = jsonBody(response)
+    client.assert(body != null && typeof body === "object", "Expected a JSON body")
+    assertPublicUser(client, body, expected)
+    client.assert(body.user === undefined, "session/login body must not wrap the user")
+    client.assert(body.token === undefined, "token must not appear in the JSON body")
+}
+
+export function setCookieHeader(response) {
+    const headers = response.headers
+    if (headers == null) {
+        return ""
+    }
+    const collected = []
+    if (typeof headers.valuesOf === "function") {
+        const values = headers.valuesOf("Set-Cookie")
+        if (values != null) {
+            if (Array.isArray(values)) collected.push.apply(collected, values)
+            else collected.push(values)
+        }
+    }
+    if (collected.length === 0 && typeof headers.valueOf === "function") {
+        const value = headers.valueOf("Set-Cookie")
+        if (value != null) collected.push(value)
+    }
+    if (collected.length === 0) {
+        const fallback = headers["Set-Cookie"] || headers["set-cookie"]
+        if (fallback != null) {
+            if (Array.isArray(fallback)) collected.push.apply(collected, fallback)
+            else collected.push(fallback)
+        }
+    }
+    return collected.map(String).join("\n")
+}
+
+export function authTokenFromSetCookie(response, cookieName) {
+    const header = setCookieHeader(response)
+    const match = header.match(new RegExp("(?:^|[\\n,])\\s*" + cookieName + "=([^;\\n]+)"))
+    return match ? match[1].trim() : null
+}
+
+export function assertSetCookieHttpOnly(client, response, cookieName) {
+    const header = setCookieHeader(response)
+    client.assert(header.length > 0, "Expected Set-Cookie header")
+    client.assert(
+        header.toLowerCase().includes(cookieName.toLowerCase() + "="),
+        "Expected cookie " + cookieName,
+    )
+    client.assert(/httponly/i.test(header), "Cookie must be HttpOnly")
+    client.assert(/samesite/i.test(header), "Cookie must set SameSite")
+    client.assert(!/password/i.test(header), "Cookie header must not contain password")
+}
+
+export function saveAuthToken(client, response, cookieName) {
+    const token = authTokenFromSetCookie(response, cookieName)
+    client.assert(token != null && token.length > 0, "Expected auth token in Set-Cookie")
+    client.global.set("authToken", token)
 }

@@ -5,4 +5,5 @@ data class AuthUser(
     val username: String,
     val password: String,
     val roles: Collection<String>,
+    val name: String,
 )

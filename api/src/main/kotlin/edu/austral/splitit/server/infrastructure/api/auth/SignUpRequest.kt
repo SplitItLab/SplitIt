@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Size
 
 data class SignUpRequest(
     @field:NotBlank
-    @field:Size(min = NAME_MIN, max = NAME_MAX)
+    @field:TrimmedSize(min = NAME_MIN, max = NAME_MAX)
     val name: String,
     @field:NotBlank
     @field:Email

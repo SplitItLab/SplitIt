@@ -1,9 +1,12 @@
 package edu.austral.splitit.server.infrastructure.api.auth
 
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
+import edu.austral.splitit.server.application.port.TokenProvider
+import edu.austral.splitit.server.application.service.LoginService
 import edu.austral.splitit.server.application.service.SignUpService
 import edu.austral.splitit.server.domain.model.User
 import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
+import edu.austral.splitit.server.infrastructure.security.SessionCookieWriter
 import jakarta.servlet.ServletException
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -47,6 +50,15 @@ class SignUpControllerTest(
     @MockitoBean
     private lateinit var signUpService: SignUpService
 
+    @MockitoBean
+    private lateinit var loginService: LoginService
+
+    @MockitoBean
+    private lateinit var tokenProvider: TokenProvider
+
+    @MockitoBean
+    private lateinit var sessionCookieWriter: SessionCookieWriter
+
     @Test
     fun `register returns 201 with public user fields only`() {
         whenever(
@@ -79,12 +91,12 @@ class SignUpControllerTest(
                     ),
             ).andExpect(status().isCreated)
             .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.user.id").value(1))
-            .andExpect(jsonPath("$.user.name").value("Ada Lovelace"))
-            .andExpect(jsonPath("$.user.email").value("ada@example.com"))
-            .andExpect(jsonPath("$.user.password").doesNotExist())
-            .andExpect(jsonPath("$.user.passwordHash").doesNotExist())
+            .andExpect(jsonPath("$.id").value(1))
+            .andExpect(jsonPath("$.name").value("Ada Lovelace"))
+            .andExpect(jsonPath("$.email").value("ada@example.com"))
+            .andExpect(jsonPath("$.user").doesNotExist())
             .andExpect(jsonPath("$.password").doesNotExist())
+            .andExpect(jsonPath("$.passwordHash").doesNotExist())
     }
 
     @ParameterizedTest
@@ -92,6 +104,8 @@ class SignUpControllerTest(
         strings = [
             """{"email":"ada@example.com","password":"una-clave-segura"}""",
             """{"name":"   ","email":"ada@example.com","password":"una-clave-segura"}""",
+            """{"name":" A ","email":"ada@example.com","password":"una-clave-segura"}""",
+            """{"name":" Ada Lovelace ","email":"ada@example.com","password":"una-clave-segura"}""",
             """{"name":"Ada Lovelace","email":"not-an-email","password":"una-clave-segura"}""",
             """{"name":"Ada Lovelace","email":"ada@example.com","password":"short"}""",
         ],
