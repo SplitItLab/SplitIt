@@ -111,3 +111,7 @@ ktlint {
 detekt {
     buildUponDefaultConfig = true
 }
+
+tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
+    jvmArgs = listOf("-Duser.timezone=America/Argentina/Buenos_Aires")
+}
