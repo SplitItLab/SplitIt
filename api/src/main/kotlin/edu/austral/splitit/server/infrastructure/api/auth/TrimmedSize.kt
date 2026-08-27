@@ -32,7 +32,8 @@ annotation class TrimmedSize(
             if (value == null) {
                 return true
             }
-            return value.trim().length in min..max
+            val trimmed = value.trim()
+            return value == trimmed && trimmed.length in min..max
         }
     }
 }

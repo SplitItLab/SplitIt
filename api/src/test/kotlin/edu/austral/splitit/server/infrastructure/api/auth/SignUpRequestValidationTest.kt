@@ -20,4 +20,18 @@ class SignUpRequestValidationTest {
 
         assertTrue(violations.any { it.propertyPath.toString() == "name" })
     }
+
+    @Test
+    fun `padded name with valid trimmed length violates the name property`() {
+        val violations =
+            validator.validate(
+                SignUpRequest(
+                    name = " Ada Lovelace ",
+                    email = "ada@example.com",
+                    password = "una-clave-segura",
+                ),
+            )
+
+        assertTrue(violations.any { it.propertyPath.toString() == "name" })
+    }
 }
