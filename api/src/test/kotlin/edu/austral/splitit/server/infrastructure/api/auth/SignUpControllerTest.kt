@@ -105,6 +105,7 @@ class SignUpControllerTest(
             """{"email":"ada@example.com","password":"una-clave-segura"}""",
             """{"name":"   ","email":"ada@example.com","password":"una-clave-segura"}""",
             """{"name":" A ","email":"ada@example.com","password":"una-clave-segura"}""",
+            """{"name":" Ada Lovelace ","email":"ada@example.com","password":"una-clave-segura"}""",
             """{"name":"Ada Lovelace","email":"not-an-email","password":"una-clave-segura"}""",
             """{"name":"Ada Lovelace","email":"ada@example.com","password":"short"}""",
         ],
