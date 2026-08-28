@@ -1,0 +1,288 @@
+# Account — SplitIt API
+#
+# Cómo usar
+#   IntelliJ: Run All en este archivo (env "local"). Los asserts salen en la pestaña Tests.
+#   VS Code: REST Client; ejecutá cada bloque `###`.
+#   La API tiene que estar en {{baseUrl}} (por defecto localhost:8080).
+#
+# Correr de arriba a abajo: el PATCH de email y el login posterior asumen
+# que el seed de este archivo ya corrió.
+#
+@baseUrl = http://localhost:8080
+@meEmail = ada.me.owner@example.com
+@mePassword = una-clave-segura
+@takenEmail = ada.me.taken@example.com
+@updatedEmail = ada.me.updated-{{$timestamp}}@example.com
+
+### Seed — account owner (201 first time, 409 after)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Ada Lovelace",
+  "email": "{{meEmail}}",
+  "password": "{{mePassword}}"
+}
+
+> {%
+import { assertCreatedUser, assertError } from './scripts/assert.js'
+
+client.test("seeds the account owner or reports it already exists", function () {
+    if (response.status === 201) {
+        assertCreatedUser(client, response, {
+            name: "Ada Lovelace",
+            email: "ada.me.owner@example.com",
+        })
+        return
+    }
+    assertError(client, response, 409, "Email already in use")
+})
+%}
+
+### Seed — taken email (201 first time, 409 after)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Other User",
+  "email": "{{takenEmail}}",
+  "password": "{{mePassword}}"
+}
+
+> {%
+import { assertCreatedUser, assertError } from './scripts/assert.js'
+
+client.test("seeds a second account to occupy an email", function () {
+    if (response.status === 201) {
+        assertCreatedUser(client, response, {
+            name: "Other User",
+            email: "ada.me.taken@example.com",
+        })
+        return
+    }
+    assertError(client, response, 409, "Email already in use")
+})
+%}
+
+### Login — account owner (200 + HttpOnly cookie)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{meEmail}}",
+  "password": "{{mePassword}}"
+}
+
+> {%
+import { assertSessionUser, assertSetCookieHttpOnly, saveAuthToken } from './scripts/assert.js'
+
+client.test("creates a session for the account owner", function () {
+    assertSessionUser(client, response, {
+        name: response.body.name,
+        email: "ada.me.owner@example.com",
+    })
+    assertSetCookieHttpOnly(client, response, "auth_token")
+    client.global.set("meId", String(response.body.id))
+    client.global.set("meName", response.body.name)
+})
+saveAuthToken(client, response, "auth_token")
+%}
+
+### Me — GET current account (200)
+GET {{baseUrl}}/api/me?id=99
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertSessionUser } from './scripts/assert.js'
+
+client.test("returns the authenticated account and ignores a client-supplied id", function () {
+    assertSessionUser(client, response, {
+        name: client.global.get("meName"),
+        email: "ada.me.owner@example.com",
+    })
+    client.assert(String(response.body.id) === client.global.get("meId"), "Expected the session user id")
+})
+%}
+
+### Me — GET without cookie (401)
+# @no-cookie-jar
+GET {{baseUrl}}/api/me
+Accept: application/json
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects profile access without a session", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### Me — PATCH name (200)
+PATCH {{baseUrl}}/api/me
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "id": 99,
+  "name": "  Ada Byron Lovelace  ",
+  "email": "{{meEmail}}"
+}
+
+> {%
+import { assertSessionUser, assertSetCookieHttpOnly, saveAuthToken } from './scripts/assert.js'
+
+client.test("updates the name, trims it, and renews the session cookie", function () {
+    assertSessionUser(client, response, {
+        name: "Ada Byron Lovelace",
+        email: client.global.get("meEmail"),
+    })
+    client.assert(String(response.body.id) === client.global.get("meId"), "Expected the session user id")
+    assertSetCookieHttpOnly(client, response, "auth_token")
+})
+saveAuthToken(client, response, "auth_token")
+%}
+
+### Me — PATCH blank name (400)
+PATCH {{baseUrl}}/api/me
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "   ",
+  "email": "{{meEmail}}"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects a blank name", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### Me — PATCH invalid email (400)
+PATCH {{baseUrl}}/api/me
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Ada Byron Lovelace",
+  "email": "not-an-email"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects an invalid email", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### Me — PATCH email already in use (409)
+PATCH {{baseUrl}}/api/me
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Ada Byron Lovelace",
+  "email": "{{takenEmail}}"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects an email owned by another account", function () {
+    assertError(client, response, 409, "Email already in use")
+})
+%}
+
+### Me — PATCH email (200)
+PATCH {{baseUrl}}/api/me
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Ada Byron Lovelace",
+  "email": "{{updatedEmail}}"
+}
+
+> {%
+import { assertSessionUser, assertSetCookieHttpOnly, saveAuthToken } from './scripts/assert.js'
+
+client.test("updates the email and returns the persisted account", function () {
+    assertSessionUser(client, response, {
+        name: "Ada Byron Lovelace",
+        emailPattern: /^ada\.me\.updated-\d+@example\.com$/,
+    })
+    client.global.set("updatedEmail", response.body.email)
+    assertSetCookieHttpOnly(client, response, "auth_token")
+})
+saveAuthToken(client, response, "auth_token")
+%}
+
+### Me — GET after update (200)
+GET {{baseUrl}}/api/me
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertSessionUser } from './scripts/assert.js'
+
+client.test("returns the persisted name and email after the update", function () {
+    assertSessionUser(client, response, {
+        name: "Ada Byron Lovelace",
+        email: client.global.get("updatedEmail"),
+    })
+})
+%}
+
+### Me — PATCH without cookie (401)
+# @no-cookie-jar
+PATCH {{baseUrl}}/api/me
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Ada Lovelace",
+  "email": "ada@example.com"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects a profile update without a session", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### Login — new email after profile update (200)
+# @no-cookie-jar
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{updatedEmail}}",
+  "password": "{{mePassword}}"
+}
+
+> {%
+import { assertSessionUser, assertSetCookieHttpOnly } from './scripts/assert.js'
+
+client.test("logs in with the updated email", function () {
+    assertSessionUser(client, response, {
+        name: "Ada Byron Lovelace",
+        email: client.global.get("updatedEmail"),
+    })
+    assertSetCookieHttpOnly(client, response, "auth_token")
+})
+%}

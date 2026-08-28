@@ -1,6 +1,7 @@
 package edu.austral.splitit.server.domain.service
 
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
+import edu.austral.splitit.server.application.exception.UserNotFoundException
 import edu.austral.splitit.server.domain.model.User
 import edu.austral.splitit.server.infrastructure.persistence.UserRepository
 import org.hibernate.exception.ConstraintViolationException
@@ -23,14 +24,32 @@ class UserService(
                 passwordHash = passwordHash,
             )
 
-        return saveNewUser(newUser)
+        return persist(newUser)
     }
 
     fun findByEmail(email: String): User? = userRepository.findByEmail(email)
 
-    private fun saveNewUser(user: User): User =
+    fun findById(id: Long): User? = userRepository.findById(id).orElse(null)
+
+    fun update(
+        id: Long,
+        name: String,
+        email: String,
+    ): User {
+        val user = findById(id) ?: throw UserNotFoundException()
+        val normalizedEmail = email.trim().lowercase()
+
+        if (userRepository.existsByEmailAndIdNot(normalizedEmail, id)) {
+            throw EmailAlreadyInUseException()
+        }
+
+        user.updateProfile(name = name, email = normalizedEmail)
+        return persist(user)
+    }
+
+    private fun persist(user: User): User =
         try {
-            userRepository.save(user)
+            userRepository.saveAndFlush(user)
         } catch (exception: DataIntegrityViolationException) {
             if (!isDuplicateEmailConstraint(exception)) {
                 throw exception

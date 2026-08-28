@@ -53,4 +53,18 @@ class User(
             )
         }
     }
+
+    fun updateProfile(
+        name: String,
+        email: String,
+    ) {
+        val normalizedName = name.trim()
+
+        require(normalizedName.length in NAME_MIN..NAME_MAX) {
+            "El nombre debe tener entre $NAME_MIN y $NAME_MAX caracteres"
+        }
+
+        this.name = normalizedName
+        this.email = email.lowercase().trim()
+    }
 }
