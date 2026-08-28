@@ -2,12 +2,11 @@ package edu.austral.splitit.server.application.service
 
 import edu.austral.splitit.server.application.exception.InvalidCredentialsException
 import edu.austral.splitit.server.domain.model.User
-import edu.austral.splitit.server.infrastructure.persistence.UserRepository
+import edu.austral.splitit.server.domain.service.UserService
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -15,13 +14,14 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class LoginServiceTest {
-    private val userRepository: UserRepository = mock()
+    private val userService: UserService = mock()
     private val passwordEncoder: PasswordEncoder = mock()
-    private val loginService = LoginService(userRepository, passwordEncoder)
+
+    private val loginService = LoginService(passwordEncoder, userService)
 
     @Test
     fun `login returns the user when email is normalized and the password matches`() {
-        whenever(userRepository.findByEmail("ada@example.com")).thenReturn(ada())
+        whenever(userService.findByEmail("ada@example.com")).thenReturn(ada())
         whenever(passwordEncoder.matches("una-clave-segura", "hashed")).thenReturn(true)
 
         val result = loginService.login("  Ada@Example.com  ", "una-clave-segura")
@@ -30,13 +30,12 @@ class LoginServiceTest {
         assertEquals("Ada Lovelace", result.name)
         assertEquals("ada@example.com", result.email)
         verify(passwordEncoder).matches("una-clave-segura", "hashed")
-        verify(userRepository, never()).save(any())
     }
 
     @Test
     fun `unknown email and wrong password raise the same exception`() {
-        whenever(userRepository.findByEmail("missing@example.com")).thenReturn(null)
-        whenever(userRepository.findByEmail("ada@example.com")).thenReturn(ada())
+        whenever(userService.findByEmail("missing@example.com")).thenReturn(null)
+        whenever(userService.findByEmail("ada@example.com")).thenReturn(ada())
         whenever(passwordEncoder.matches("wrong-password", "hashed")).thenReturn(false)
 
         val unknownEmail =
@@ -56,7 +55,7 @@ class LoginServiceTest {
 
     @Test
     fun `unknown email still verifies the password against a dummy hash`() {
-        whenever(userRepository.findByEmail("missing@example.com")).thenReturn(null)
+        whenever(userService.findByEmail("missing@example.com")).thenReturn(null)
         whenever(passwordEncoder.matches(any(), any())).thenReturn(true)
 
         assertFailsWith<InvalidCredentialsException> {
