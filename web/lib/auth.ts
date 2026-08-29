@@ -52,7 +52,7 @@ export async function login(input: LoginInput): Promise<void> {
     return mockLogin(input);
   }
   try {
-    await request<void>("/auth/login", {
+    await request<void>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify(input),
     });
@@ -75,7 +75,7 @@ export async function getSession(): Promise<SessionUser | null> {
     return mockGetSession();
   }
   try {
-    const user = await request<SessionUser | null>("/auth/session");
+    const user = await request<SessionUser | null>("/api/auth/session");
     return user ?? null;
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) {
