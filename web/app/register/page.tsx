@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { registerUser, RegisterError, RegisterInput, registerSchema } from "@/lib/auth";
+import { showAppToast } from "@/lib/toast";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function RegisterPage() {
     setGeneralError(null);
     try {
       await registerUser(data);
+      showAppToast("success", "¡Cuenta creada con éxito!");
       router.push("/login");
     } catch (err) {
       if (err instanceof RegisterError) {
@@ -36,6 +38,7 @@ export default function RegisterPage() {
         } else {
           setGeneralError(err.message);
         }
+        showAppToast("error", err.message);
       }
     }
   };

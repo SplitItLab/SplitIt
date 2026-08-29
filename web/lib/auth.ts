@@ -42,7 +42,7 @@ export async function registerUser(input: RegisterInput): Promise<void> {
     return mockRegister(input);
   }
   try {
-    await request<void>("/auth/register", {
+    await request<void>("/api/auth/register", {
       method: "POST",
       body: JSON.stringify(input),
     });
