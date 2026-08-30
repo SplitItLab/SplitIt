@@ -1,7 +1,7 @@
 package edu.austral.splitit.server.domain.service
 
+import edu.austral.splitit.server.application.exception.AuthenticatedUserMissingException
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
-import edu.austral.splitit.server.application.exception.UserNotFoundException
 import edu.austral.splitit.server.domain.model.user.Email
 import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.infrastructure.persistence.UserRepository
@@ -67,7 +67,7 @@ class UserService(
 
     fun findByEmail(email: Email): User? = userRepository.findByEmail(email.value)
 
-    fun getById(id: Long): User = findById(id) ?: throw UserNotFoundException()
+    fun getById(id: Long): User = findById(id) ?: throw AuthenticatedUserMissingException()
 
     private companion object {
         const val EMAIL_UNIQUE_CONSTRAINT = "uk_users_email"

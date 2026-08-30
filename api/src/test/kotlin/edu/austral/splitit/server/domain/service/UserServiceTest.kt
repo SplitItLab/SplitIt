@@ -1,8 +1,8 @@
 package edu.austral.splitit.server.domain.service
 
 import edu.austral.splitit.server.Helpers
+import edu.austral.splitit.server.application.exception.AuthenticatedUserMissingException
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
-import edu.austral.splitit.server.application.exception.UserNotFoundException
 import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.infrastructure.persistence.UserRepository
 import org.hibernate.exception.ConstraintViolationException
@@ -204,7 +204,7 @@ class UserServiceTest {
     fun `update rejects a missing account`() {
         whenever(userRepository.findById(99L)).thenReturn(Optional.empty())
 
-        assertFailsWith<UserNotFoundException> {
+        assertFailsWith<AuthenticatedUserMissingException> {
             userService.update(
                 id = 99L,
                 name = "Ada Lovelace",

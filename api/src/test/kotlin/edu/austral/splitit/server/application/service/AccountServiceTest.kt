@@ -1,7 +1,7 @@
 package edu.austral.splitit.server.application.service
 
 import edu.austral.splitit.server.Helpers
-import edu.austral.splitit.server.application.exception.UserNotFoundException
+import edu.austral.splitit.server.application.exception.AuthenticatedUserMissingException
 import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.domain.service.UserService
 import org.junit.jupiter.api.Test
@@ -27,9 +27,9 @@ class AccountServiceTest {
 
     @Test
     fun `get raises when the account no longer exists`() {
-        whenever(userService.getById(1L)).thenThrow(UserNotFoundException())
+        whenever(userService.getById(1L)).thenThrow(AuthenticatedUserMissingException())
 
-        assertFailsWith<UserNotFoundException> {
+        assertFailsWith<AuthenticatedUserMissingException> {
             accountService.get(1L)
         }
     }

@@ -1,8 +1,8 @@
 package edu.austral.splitit.server.infrastructure.api.me
 
 import edu.austral.splitit.server.Helpers
+import edu.austral.splitit.server.application.exception.AuthenticatedUserMissingException
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
-import edu.austral.splitit.server.application.exception.UserNotFoundException
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.AccountService
@@ -108,7 +108,7 @@ class MeControllerTest(
     @Test
     fun `get returns 401 when the authenticated account no longer exists`() {
         whenever(tokenProvider.parse("good-token")).thenReturn(staleAuthUser())
-        whenever(accountService.get(1L)).thenThrow(UserNotFoundException())
+        whenever(accountService.get(1L)).thenThrow(AuthenticatedUserMissingException())
 
         mockMvc
             .perform(get("/api/me").cookie(Cookie("auth_token", "good-token")))

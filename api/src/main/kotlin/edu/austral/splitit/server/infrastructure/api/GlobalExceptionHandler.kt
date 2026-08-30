@@ -1,8 +1,8 @@
 package edu.austral.splitit.server.infrastructure.api
 
+import edu.austral.splitit.server.application.exception.AuthenticatedUserMissingException
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
 import edu.austral.splitit.server.application.exception.InvalidCredentialsException
-import edu.austral.splitit.server.application.exception.UserNotFoundException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -34,8 +34,8 @@ class GlobalExceptionHandler {
     fun handleInvalidCredentials(exception: InvalidCredentialsException): ResponseEntity<ErrorMessage> =
         error(HttpStatus.UNAUTHORIZED, exception.message ?: INVALID_CREDENTIALS_MESSAGE)
 
-    @ExceptionHandler(UserNotFoundException::class)
-    fun handleUserNotFound(exception: UserNotFoundException): ResponseEntity<ErrorMessage> =
+    @ExceptionHandler(AuthenticatedUserMissingException::class)
+    fun handleAuthenticatedUserMissing(exception: AuthenticatedUserMissingException): ResponseEntity<ErrorMessage> =
         error(HttpStatus.UNAUTHORIZED, exception.message ?: UNAUTHORIZED_MESSAGE)
 
     @ExceptionHandler(AccessDeniedException::class)
