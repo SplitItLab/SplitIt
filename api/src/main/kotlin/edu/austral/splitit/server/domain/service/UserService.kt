@@ -62,8 +62,7 @@ class UserService(
         val violation = exception.cause as? ConstraintViolationException ?: return false
 
         return violation.kind == ConstraintViolationException.ConstraintKind.UNIQUE &&
-            violation.constraintName
-                .equals(EMAIL_UNIQUE_CONSTRAINT, ignoreCase = true)
+            EMAIL_UNIQUE_CONSTRAINT.equals(violation.constraintName, ignoreCase = true)
     }
 
     private companion object {

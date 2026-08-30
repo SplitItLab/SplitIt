@@ -139,7 +139,7 @@ import { assertSessionUser, assertSetCookieHttpOnly, saveAuthToken } from './scr
 client.test("updates the name, trims it, and renews the session cookie", function () {
     assertSessionUser(client, response, {
         name: "Ada Byron Lovelace",
-        email: client.global.get("meEmail"),
+        email: "ada.me.owner@example.com",
     })
     client.assert(String(response.body.id) === client.global.get("meId"), "Expected the session user id")
     assertSetCookieHttpOnly(client, response, "auth_token")
@@ -223,7 +223,7 @@ client.test("updates the email and returns the persisted account", function () {
         name: "Ada Byron Lovelace",
         emailPattern: /^ada\.me\.updated-\d+@example\.com$/,
     })
-    client.global.set("updatedEmail", response.body.email)
+    client.global.set("persistedEmail", response.body.email)
     assertSetCookieHttpOnly(client, response, "auth_token")
 })
 saveAuthToken(client, response, "auth_token")
@@ -240,7 +240,7 @@ import { assertSessionUser } from './scripts/assert.js'
 client.test("returns the persisted name and email after the update", function () {
     assertSessionUser(client, response, {
         name: "Ada Byron Lovelace",
-        email: client.global.get("updatedEmail"),
+        email: client.global.get("persistedEmail"),
     })
 })
 %}
@@ -271,7 +271,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "email": "{{updatedEmail}}",
+  "email": "{{persistedEmail}}",
   "password": "{{mePassword}}"
 }
 
@@ -281,7 +281,7 @@ import { assertSessionUser, assertSetCookieHttpOnly } from './scripts/assert.js'
 client.test("logs in with the updated email", function () {
     assertSessionUser(client, response, {
         name: "Ada Byron Lovelace",
-        email: client.global.get("updatedEmail"),
+        email: client.global.get("persistedEmail"),
     })
     assertSetCookieHttpOnly(client, response, "auth_token")
 })

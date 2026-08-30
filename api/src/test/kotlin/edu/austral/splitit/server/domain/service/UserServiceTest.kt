@@ -93,6 +93,19 @@ class UserServiceTest {
     }
 
     @Test
+    fun `save does not map unique violation without constraint name to email already in use`() {
+        whenever(userRepository.saveAndFlush(any())).thenThrow(uniqueViolationWithoutName())
+
+        assertFailsWith<DataIntegrityViolationException> {
+            userService.save(
+                name = "Ada Lovelace",
+                email = "ada@example.com",
+                passwordHash = "hashed",
+            )
+        }
+    }
+
+    @Test
     fun `findById returns the persisted user`() {
         whenever(userRepository.findById(1L)).thenReturn(Optional.of(ada()))
 
@@ -245,5 +258,16 @@ class UserServiceTest {
                 null as String?,
             )
         return DataIntegrityViolationException("value too long", cause)
+    }
+
+    private fun uniqueViolationWithoutName(): DataIntegrityViolationException {
+        val cause =
+            ConstraintViolationException(
+                "duplicate email",
+                SQLException("duplicate key"),
+                ConstraintKind.UNIQUE,
+                null as String?,
+            )
+        return DataIntegrityViolationException("duplicate email", cause)
     }
 }
