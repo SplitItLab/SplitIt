@@ -1,8 +1,9 @@
 package edu.austral.splitit.server.domain.service
 
+import edu.austral.splitit.server.Helpers
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
 import edu.austral.splitit.server.application.exception.UserNotFoundException
-import edu.austral.splitit.server.domain.model.User
+import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.infrastructure.persistence.UserRepository
 import org.hibernate.exception.ConstraintViolationException
 import org.hibernate.exception.ConstraintViolationException.ConstraintKind
@@ -39,7 +40,7 @@ class UserServiceTest {
         val user =
             userService.save(
                 name = "  Ada Lovelace  ",
-                email = "  Ada@Example.com  ",
+                email = Helpers.emailOf("  Ada@Example.com  "),
                 passwordHash = "hashed",
             )
 
@@ -60,7 +61,7 @@ class UserServiceTest {
         assertFailsWith<IllegalArgumentException> {
             userService.save(
                 name = " A ",
-                email = "ada@example.com",
+                email = Helpers.emailOf("ada@example.com"),
                 passwordHash = "hashed",
             )
         }
@@ -73,7 +74,7 @@ class UserServiceTest {
         assertFailsWith<EmailAlreadyInUseException> {
             userService.save(
                 name = "Ada Lovelace",
-                email = "ada@example.com",
+                email = Helpers.emailOf("ada@example.com"),
                 passwordHash = "hashed",
             )
         }
@@ -86,7 +87,7 @@ class UserServiceTest {
         assertFailsWith<DataIntegrityViolationException> {
             userService.save(
                 name = "Ada Lovelace",
-                email = "ada@example.com",
+                email = Helpers.emailOf("ada@example.com"),
                 passwordHash = "hashed",
             )
         }
@@ -99,7 +100,7 @@ class UserServiceTest {
         assertFailsWith<DataIntegrityViolationException> {
             userService.save(
                 name = "Ada Lovelace",
-                email = "ada@example.com",
+                email = Helpers.emailOf("ada@example.com"),
                 passwordHash = "hashed",
             )
         }
@@ -134,7 +135,7 @@ class UserServiceTest {
             userService.update(
                 id = 1L,
                 name = "  Ada Byron Lovelace  ",
-                email = "  Ada.Lovelace@Example.com  ",
+                email = Helpers.emailOf("  Ada.Lovelace@Example.com  "),
             )
 
         val saved = argumentCaptor<User>()
@@ -160,7 +161,7 @@ class UserServiceTest {
             userService.update(
                 id = 1L,
                 name = "Ada Byron Lovelace",
-                email = "Ada@Example.com",
+                email = Helpers.emailOf("Ada@Example.com"),
             )
 
         assertEquals("Ada Byron Lovelace", user.name)
@@ -177,7 +178,7 @@ class UserServiceTest {
             userService.update(
                 id = 1L,
                 name = "Ada Lovelace",
-                email = "taken@example.com",
+                email = Helpers.emailOf("taken@example.com"),
             )
         }
 
@@ -194,7 +195,7 @@ class UserServiceTest {
             userService.update(
                 id = 1L,
                 name = "Ada Byron Lovelace",
-                email = "ada.lovelace@example.com",
+                email = Helpers.emailOf("ada.lovelace@example.com"),
             )
         }
     }
@@ -207,7 +208,7 @@ class UserServiceTest {
             userService.update(
                 id = 99L,
                 name = "Ada Lovelace",
-                email = "ada@example.com",
+                email = Helpers.emailOf("ada@example.com"),
             )
         }
 
@@ -223,7 +224,7 @@ class UserServiceTest {
             userService.update(
                 id = 1L,
                 name = " A ",
-                email = "ada@example.com",
+                email = Helpers.emailOf("ada@example.com"),
             )
         }
 

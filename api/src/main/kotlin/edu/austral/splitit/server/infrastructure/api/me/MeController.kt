@@ -3,6 +3,7 @@ package edu.austral.splitit.server.infrastructure.api.me
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.AccountService
+import edu.austral.splitit.server.domain.model.user.Email
 import edu.austral.splitit.server.infrastructure.api.auth.UserResponse
 import edu.austral.splitit.server.infrastructure.security.SessionCookieWriter
 import jakarta.servlet.http.HttpServletResponse
@@ -32,12 +33,17 @@ class MeController(
         @Valid @RequestBody request: UpdateMeRequest,
         response: HttpServletResponse,
     ): UserResponse {
+        val email =
+            Email.create(request.email).getOrNull()
+                ?: throw IllegalArgumentException("Invalid email format")
+
         val updated =
             accountService.update(
                 userId = user.id,
                 name = request.name,
-                email = request.email,
+                email = email,
             )
+
         val token =
             tokenProvider.issue(
                 AuthUser(
@@ -48,6 +54,7 @@ class MeController(
                     name = updated.name,
                 ),
             )
+
         sessionCookieWriter.write(response, token)
         return UserResponse.of(updated)
     }

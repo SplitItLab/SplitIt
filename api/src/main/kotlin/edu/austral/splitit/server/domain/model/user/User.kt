@@ -1,4 +1,4 @@
-package edu.austral.splitit.server.domain.model
+package edu.austral.splitit.server.domain.model.user
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -37,12 +37,12 @@ class User(
 
         fun create(
             name: String,
-            email: String,
+            email: Email,
             passwordHash: String,
         ): User =
             User(
                 name = normalizeName(name),
-                email = normalizeEmail(email),
+                email = email.value,
                 passwordHash = passwordHash,
             )
 
@@ -55,15 +55,13 @@ class User(
 
             return normalizedName
         }
-
-        private fun normalizeEmail(email: String): String = email.trim().lowercase()
     }
 
     fun updateProfile(
         name: String,
-        email: String,
+        email: Email,
     ) {
         this.name = normalizeName(name)
-        this.email = normalizeEmail(email)
+        this.email = email.value
     }
 }

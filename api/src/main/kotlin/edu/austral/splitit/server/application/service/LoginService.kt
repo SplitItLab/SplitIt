@@ -1,7 +1,8 @@
 package edu.austral.splitit.server.application.service
 
 import edu.austral.splitit.server.application.exception.InvalidCredentialsException
-import edu.austral.splitit.server.domain.model.User
+import edu.austral.splitit.server.domain.model.user.Email
+import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.domain.service.UserService
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
@@ -12,11 +13,10 @@ class LoginService(
     private val userService: UserService,
 ) {
     fun login(
-        email: String,
+        email: Email,
         password: String,
     ): User {
-        val normalizedEmail = email.trim().lowercase()
-        val user = userService.findByEmail(normalizedEmail)
+        val user = userService.findByEmail(email)
 
         val passwordHash = user?.passwordHash ?: DUMMY_PASSWORD_HASH
         val passwordMatches =

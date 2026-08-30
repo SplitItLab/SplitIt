@@ -1,10 +1,11 @@
 package edu.austral.splitit.server.infrastructure.api.auth
 
+import edu.austral.splitit.server.Helpers
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.LoginService
 import edu.austral.splitit.server.application.service.SignUpService
-import edu.austral.splitit.server.domain.model.User
+import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
 import edu.austral.splitit.server.infrastructure.security.SessionCookieWriter
 import jakarta.servlet.ServletException
@@ -12,7 +13,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.kotlin.any
-import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -63,9 +63,9 @@ class SignUpControllerTest(
     fun `register returns 201 with public user fields only`() {
         whenever(
             signUpService.register(
-                eq("Ada Lovelace"),
-                eq("ada@example.com"),
-                eq("una-clave-segura"),
+                "Ada Lovelace",
+                Helpers.emailOf("ada@example.com"),
+                "una-clave-segura",
             ),
         ).thenReturn(
             User(

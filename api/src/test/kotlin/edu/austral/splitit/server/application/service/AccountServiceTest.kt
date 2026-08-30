@@ -1,7 +1,8 @@
 package edu.austral.splitit.server.application.service
 
+import edu.austral.splitit.server.Helpers
 import edu.austral.splitit.server.application.exception.UserNotFoundException
-import edu.austral.splitit.server.domain.model.User
+import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.domain.service.UserService
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
@@ -15,7 +16,7 @@ class AccountServiceTest {
 
     @Test
     fun `get returns the persisted account`() {
-        whenever(userService.findById(1L)).thenReturn(ada())
+        whenever(userService.getById(1L)).thenReturn(ada())
 
         val user = accountService.get(1L)
 
@@ -26,7 +27,7 @@ class AccountServiceTest {
 
     @Test
     fun `get raises when the account no longer exists`() {
-        whenever(userService.findById(1L)).thenReturn(null)
+        whenever(userService.getById(1L)).thenThrow(UserNotFoundException())
 
         assertFailsWith<UserNotFoundException> {
             accountService.get(1L)
@@ -39,7 +40,7 @@ class AccountServiceTest {
             userService.update(
                 id = 1L,
                 name = "Ada Byron Lovelace",
-                email = "ada.lovelace@example.com",
+                email = Helpers.emailOf("ada.lovelace@example.com"),
             ),
         ).thenReturn(
             User(
@@ -54,7 +55,7 @@ class AccountServiceTest {
             accountService.update(
                 userId = 1L,
                 name = "Ada Byron Lovelace",
-                email = "ada.lovelace@example.com",
+                email = Helpers.emailOf("ada.lovelace@example.com"),
             )
 
         assertEquals("Ada Byron Lovelace", user.name)

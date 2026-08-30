@@ -1,11 +1,12 @@
 package edu.austral.splitit.server.infrastructure.api.me
 
+import edu.austral.splitit.server.Helpers
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
 import edu.austral.splitit.server.application.exception.UserNotFoundException
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.AccountService
-import edu.austral.splitit.server.domain.model.User
+import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
 import edu.austral.splitit.server.infrastructure.config.SecurityConfig
 import edu.austral.splitit.server.infrastructure.security.SessionCookieWriter
@@ -122,7 +123,7 @@ class MeControllerTest(
             accountService.update(
                 userId = 1L,
                 name = "  Ada Byron Lovelace  ",
-                email = "ada.lovelace@example.com",
+                email = Helpers.emailOf("ada.lovelace@example.com"),
             ),
         ).thenReturn(
             User(
@@ -158,7 +159,7 @@ class MeControllerTest(
             .andExpect(jsonPath("$.passwordHash").doesNotExist())
             .andExpect(jsonPath("$.token").doesNotExist())
 
-        verify(accountService).update(1L, "  Ada Byron Lovelace  ", "ada.lovelace@example.com")
+        verify(accountService).update(1L, "  Ada Byron Lovelace  ", Helpers.emailOf("ada.lovelace@example.com"))
         verify(tokenProvider).issue(
             check {
                 assertEquals(1L, it.id)

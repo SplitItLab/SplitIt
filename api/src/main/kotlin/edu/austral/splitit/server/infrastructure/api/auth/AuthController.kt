@@ -4,6 +4,7 @@ import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.LoginService
 import edu.austral.splitit.server.application.service.SignUpService
+import edu.austral.splitit.server.domain.model.user.Email
 import edu.austral.splitit.server.infrastructure.security.SessionCookieWriter
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.validation.Valid
@@ -29,12 +30,17 @@ class AuthController(
     fun register(
         @Valid @RequestBody request: SignUpRequest,
     ): UserResponse {
+        val email =
+            Email.create(request.email).getOrNull()
+                ?: throw IllegalArgumentException("Invalid email format")
+
         val user =
             signUpService.register(
                 name = request.name,
-                email = request.email,
+                email = email,
                 password = request.password,
             )
+
         return UserResponse.of(user)
     }
 
@@ -43,7 +49,12 @@ class AuthController(
         @Valid @RequestBody request: LoginRequest,
         response: HttpServletResponse,
     ): UserResponse {
-        val user = loginService.login(request.email, request.password)
+        val email =
+            Email.create(request.email).getOrNull()
+                ?: throw IllegalArgumentException("Invalid email format")
+
+        val user = loginService.login(email, request.password)
+
         val token =
             tokenProvider.issue(
                 AuthUser(

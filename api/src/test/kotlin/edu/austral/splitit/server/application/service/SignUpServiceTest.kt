@@ -1,7 +1,8 @@
 package edu.austral.splitit.server.application.service
 
+import edu.austral.splitit.server.Helpers
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
-import edu.austral.splitit.server.domain.model.User
+import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.domain.service.UserService
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -21,9 +22,9 @@ class SignUpServiceTest {
 
     @Test
     fun `register saves one user with normalized email and hashed password`() {
-        whenever(userService.findByEmail("ada@example.com")).thenReturn(null)
+        whenever(userService.findByEmail(Helpers.emailOf("ada@example.com"))).thenReturn(null)
         whenever(passwordEncoder.encode("una-clave-segura")).thenReturn("hashed")
-        whenever(userService.save("Ada Lovelace", "ada@example.com", "hashed")).thenReturn(
+        whenever(userService.save("Ada Lovelace", Helpers.emailOf("ada@example.com"), "hashed")).thenReturn(
             User(
                 id = 1L,
                 name = "Ada Lovelace",
@@ -35,12 +36,12 @@ class SignUpServiceTest {
         val result =
             signUpService.register(
                 name = "Ada Lovelace",
-                email = "  Ada@Example.com  ",
+                email = Helpers.emailOf("  Ada@Example.com  "),
                 password = "una-clave-segura",
             )
 
         verify(passwordEncoder).encode("una-clave-segura")
-        verify(userService).save("Ada Lovelace", "ada@example.com", "hashed")
+        verify(userService).save("Ada Lovelace", Helpers.emailOf("ada@example.com"), "hashed")
 
         assertEquals(1L, result.id)
         assertEquals("Ada Lovelace", result.name)
@@ -51,7 +52,7 @@ class SignUpServiceTest {
 
     @Test
     fun `register rejects mixed-case email that already exists`() {
-        whenever(userService.findByEmail("ada@example.com")).thenReturn(
+        whenever(userService.findByEmail(Helpers.emailOf("ada@example.com"))).thenReturn(
             User(
                 id = 1L,
                 name = "Ada Lovelace",
@@ -63,7 +64,7 @@ class SignUpServiceTest {
         assertFailsWith<EmailAlreadyInUseException> {
             signUpService.register(
                 name = "Ada Lovelace",
-                email = "Ada@Example.com",
+                email = Helpers.emailOf("Ada@Example.com"),
                 password = "una-clave-segura",
             )
         }
