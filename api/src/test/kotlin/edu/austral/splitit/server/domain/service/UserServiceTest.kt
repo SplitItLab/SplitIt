@@ -8,6 +8,8 @@ import edu.austral.splitit.server.infrastructure.persistence.UserRepository
 import org.hibernate.exception.ConstraintViolationException
 import org.hibernate.exception.ConstraintViolationException.ConstraintKind
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.mock
@@ -65,6 +67,26 @@ class UserServiceTest {
                 passwordHash = "hashed",
             )
         }
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings = [
+            "user@-example.com",
+            "user@example..com",
+            "user@.",
+        ],
+    )
+    fun `save does not persist emails with invalid domain labels`(email: String) {
+        assertFailsWith<IllegalArgumentException> {
+            userService.save(
+                name = "Ada Lovelace",
+                email = Helpers.emailOf(email),
+                passwordHash = "hashed",
+            )
+        }
+
+        verify(userRepository, never()).saveAndFlush(any())
     }
 
     @Test
