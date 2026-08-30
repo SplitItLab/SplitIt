@@ -3,6 +3,7 @@ package edu.austral.splitit.server.infrastructure.api
 import edu.austral.splitit.server.application.exception.AuthenticatedUserMissingException
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
 import edu.austral.splitit.server.application.exception.InvalidCredentialsException
+import edu.austral.splitit.server.application.exception.InvalidRequestException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -20,6 +21,7 @@ class GlobalExceptionHandler {
         MethodArgumentNotValidException::class,
         HandlerMethodValidationException::class,
         HttpMessageNotReadableException::class,
+        InvalidRequestException::class,
     )
     fun handleInvalidRequest(exception: Exception): ResponseEntity<ErrorMessage> {
         logger.warn("Invalid request: {}", exception.message)

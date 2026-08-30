@@ -199,6 +199,31 @@ class MeControllerTest(
     }
 
     @Test
+    fun `patch returns 400 when Email create rejects the address`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(staleAuthUser())
+
+        mockMvc
+            .perform(
+                patch("/api/me")
+                    .cookie(Cookie("auth_token", "good-token"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {
+                          "name": "Ada Lovelace",
+                          "email": "user@exam_ple.com"
+                        }
+                        """.trimIndent(),
+                    ),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").value("Invalid request data"))
+
+        verify(accountService, never()).update(any(), any(), any())
+        verify(tokenProvider, never()).issue(any())
+        verify(sessionCookieWriter, never()).write(any(), any())
+    }
+
+    @Test
     fun `patch returns 409 when the email belongs to another account`() {
         whenever(tokenProvider.parse("good-token")).thenReturn(staleAuthUser())
         whenever(accountService.update(any(), any(), any())).thenThrow(EmailAlreadyInUseException())

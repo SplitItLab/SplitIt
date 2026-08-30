@@ -1,5 +1,6 @@
 package edu.austral.splitit.server.infrastructure.api.me
 
+import edu.austral.splitit.server.application.exception.InvalidRequestException
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.AccountService
@@ -35,7 +36,7 @@ class MeController(
     ): UserResponse {
         val email =
             Email.create(request.email).getOrNull()
-                ?: throw IllegalArgumentException("Invalid email format")
+                ?: throw InvalidRequestException()
 
         val updated =
             accountService.update(
