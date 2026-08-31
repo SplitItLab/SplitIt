@@ -17,6 +17,7 @@ const val BEARER_PREFIX = "Bearer "
 
 class JwtAuthenticationFilter(
     private val tokenProvider: TokenProvider,
+    private val cookieName: String,
     private val securityContextRepository: SecurityContextRepository = RequestAttributeSecurityContextRepository(),
 ) : OncePerRequestFilter() {
     override fun doFilterInternal(
@@ -24,24 +25,38 @@ class JwtAuthenticationFilter(
         response: HttpServletResponse,
         filterChain: FilterChain,
     ) {
-        val header = request.getHeader(HttpHeaders.AUTHORIZATION)
-        if (header != null && header.startsWith(BEARER_PREFIX)) {
-            val token = header.substring(BEARER_PREFIX.length)
-            val authenticatedUser = tokenProvider.parse(token)
-            if (authenticatedUser != null) {
-                val authentication =
-                    UsernamePasswordAuthenticationToken(
-                        authenticatedUser,
-                        null,
-                        authenticatedUser.roles.map { SimpleGrantedAuthority("ROLE_$it") },
-                    )
-                authentication.details = WebAuthenticationDetailsSource().buildDetails(request)
-                val context = SecurityContextHolder.createEmptyContext()
-                context.authentication = authentication
-                SecurityContextHolder.setContext(context)
-                securityContextRepository.saveContext(context, request, response)
-            }
+        val authenticatedUser =
+            extractTokens(request).firstNotNullOfOrNull { tokenProvider.parse(it) }
+        if (authenticatedUser != null) {
+            val authentication =
+                UsernamePasswordAuthenticationToken(
+                    authenticatedUser,
+                    null,
+                    authenticatedUser.roles.map { SimpleGrantedAuthority("ROLE_$it") },
+                )
+            authentication.details = WebAuthenticationDetailsSource().buildDetails(request)
+            val context = SecurityContextHolder.createEmptyContext()
+            context.authentication = authentication
+            SecurityContextHolder.setContext(context)
+            securityContextRepository.saveContext(context, request, response)
         }
         filterChain.doFilter(request, response)
+    }
+
+    private fun extractTokens(request: HttpServletRequest): List<String> {
+        val cookieToken =
+            request.cookies
+                ?.firstOrNull { it.name == cookieName }
+                ?.value
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+        val headerToken =
+            request
+                .getHeader(HttpHeaders.AUTHORIZATION)
+                ?.takeIf { it.startsWith(BEARER_PREFIX) }
+                ?.substring(BEARER_PREFIX.length)
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+        return listOfNotNull(cookieToken, headerToken)
     }
 }

@@ -75,6 +75,7 @@ dependencies {
 
     // ========== Test ==========
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -110,4 +111,8 @@ ktlint {
 // Configuración de detekt
 detekt {
     buildUponDefaultConfig = true
+}
+
+tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
+    jvmArgs = listOf("-Duser.timezone=America/Argentina/Buenos_Aires")
 }
