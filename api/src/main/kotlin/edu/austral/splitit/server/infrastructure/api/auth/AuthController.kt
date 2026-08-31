@@ -1,5 +1,6 @@
 package edu.austral.splitit.server.infrastructure.api.auth
 
+import edu.austral.splitit.server.application.exception.InvalidRequestException
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.LoginService
@@ -32,7 +33,7 @@ class AuthController(
     ): UserResponse {
         val email =
             Email.create(request.email).getOrNull()
-                ?: throw IllegalArgumentException("Invalid email format")
+                ?: throw InvalidRequestException()
 
         val user =
             signUpService.register(
@@ -51,7 +52,7 @@ class AuthController(
     ): UserResponse {
         val email =
             Email.create(request.email).getOrNull()
-                ?: throw IllegalArgumentException("Invalid email format")
+                ?: throw InvalidRequestException()
 
         val user = loginService.login(email, request.password)
 

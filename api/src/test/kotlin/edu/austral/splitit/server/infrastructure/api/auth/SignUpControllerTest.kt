@@ -123,6 +123,27 @@ class SignUpControllerTest(
     }
 
     @Test
+    fun `register returns 400 when Email create rejects the address`() {
+        mockMvc
+            .perform(
+                post("/api/auth/register")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {
+                          "name": "Ada Lovelace",
+                          "email": "user@exam_ple.com",
+                          "password": "una-clave-segura"
+                        }
+                        """.trimIndent(),
+                    ),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").value("Invalid request data"))
+
+        verify(signUpService, never()).register(any(), any(), any())
+    }
+
+    @Test
     fun `register returns 409 when email is already in use`() {
         whenever(signUpService.register(any(), any(), any())).thenThrow(EmailAlreadyInUseException())
 

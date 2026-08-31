@@ -130,6 +130,27 @@ class LoginControllerTest(
         verify(tokenProvider, never()).issue(any())
     }
 
+    @Test
+    fun `login returns 400 when Email create rejects the address`() {
+        mockMvc
+            .perform(
+                post("/api/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {
+                          "email": "user@exam_ple.com",
+                          "password": "una-clave-segura"
+                        }
+                        """.trimIndent(),
+                    ),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").value("Invalid request data"))
+
+        verify(loginService, never()).login(any(), any())
+        verify(tokenProvider, never()).issue(any())
+    }
+
     @ParameterizedTest
     @CsvSource(
         "nobody@example.com, una-clave-segura",
