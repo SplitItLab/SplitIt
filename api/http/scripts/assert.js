@@ -135,6 +135,35 @@ export function assertSetCookieHttpOnly(client, response, cookieName) {
     client.assert(!/password/i.test(header), "Cookie header must not contain password")
 }
 
+export function assertNoContent(client, response) {
+    assertStatus(client, response, 204)
+    const body = jsonBody(response)
+    if (body == null) {
+        return
+    }
+    client.assert(
+        typeof body === "object" && Object.keys(body).length === 0,
+        "204 must not include a JSON body",
+    )
+    client.assert(body.token === undefined, "token must not appear in the JSON body")
+    client.assert(body.user === undefined, "user must not appear in the JSON body")
+    client.assert(body.password === undefined, "password must not appear in the JSON body")
+}
+
+export function assertSessionCookieCleared(client, response, cookieName) {
+    const header = setCookieHeader(response)
+    client.assert(header.length > 0, "Expected Set-Cookie header")
+    client.assert(
+        new RegExp("(?:^|[\\n,])\\s*" + cookieName + "=;").test(header),
+        "Expected empty cookie " + cookieName,
+    )
+    client.assert(/max-age=0/i.test(header), "Cookie must expire (Max-Age=0)")
+    client.assert(/httponly/i.test(header), "Cookie must be HttpOnly")
+    client.assert(/samesite/i.test(header), "Cookie must set SameSite")
+    client.assert(/path=\//i.test(header), "Cookie must keep Path=/")
+    client.assert(!/password/i.test(header), "Cookie header must not contain password")
+}
+
 export function saveAuthToken(client, response, cookieName) {
     const token = authTokenFromSetCookie(response, cookieName)
     client.assert(token != null && token.length > 0, "Expected auth token in Set-Cookie")

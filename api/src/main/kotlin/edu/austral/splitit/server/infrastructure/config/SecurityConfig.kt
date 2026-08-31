@@ -43,6 +43,7 @@ class SecurityConfig(
                         HttpMethod.POST,
                         "/api/auth/login",
                         "/api/auth/register",
+                        "/api/auth/logout",
                     ).permitAll()
                 it.anyRequest().authenticated()
             }.httpBasic { it.disable() }

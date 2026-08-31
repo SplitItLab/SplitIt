@@ -18,14 +18,26 @@ class SessionCookieWriter(
         response: HttpServletResponse,
         token: String,
     ) {
+        addCookie(response, token, Duration.ofHours(expirationHours))
+    }
+
+    fun clear(response: HttpServletResponse) {
+        addCookie(response, "", Duration.ZERO)
+    }
+
+    private fun addCookie(
+        response: HttpServletResponse,
+        value: String,
+        maxAge: Duration,
+    ) {
         val cookie =
             ResponseCookie
-                .from(cookieName, token)
+                .from(cookieName, value)
                 .httpOnly(true)
                 .secure(secure)
                 .sameSite(sameSite)
                 .path("/")
-                .maxAge(Duration.ofHours(expirationHours))
+                .maxAge(maxAge)
                 .build()
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString())
     }

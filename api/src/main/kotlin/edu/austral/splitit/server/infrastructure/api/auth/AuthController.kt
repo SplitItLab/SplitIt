@@ -74,4 +74,10 @@ class AuthController(
     fun session(
         @AuthenticationPrincipal user: AuthUser,
     ): UserResponse = UserResponse.of(user)
+
+    @PostMapping("/logout")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun logout(response: HttpServletResponse) {
+        sessionCookieWriter.clear(response)
+    }
 }
