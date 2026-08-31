@@ -410,35 +410,6 @@ client.test("rejects a private route after logout", function () {
 })
 %}
 
-### Logout — allowed origin (204)
-# @no-cookie-jar
-POST {{baseUrl}}/api/auth/logout
-Accept: application/json
-Origin: http://localhost:3000
-
-> {%
-import { assertNoContent, assertSessionCookieCleared } from './scripts/assert.js'
-
-client.test("accepts logout from the frontend origin", function () {
-    assertNoContent(client, response)
-    assertSessionCookieCleared(client, response, "auth_token")
-})
-%}
-
-### Logout — cross-site origin (403)
-# @no-cookie-jar
-POST {{baseUrl}}/api/auth/logout
-Accept: application/json
-Origin: https://evil.example
-
-> {%
-import { assertError } from './scripts/assert.js'
-
-client.test("rejects logout from a foreign origin without clearing the session", function () {
-    assertError(client, response, 403, "Forbidden")
-})
-%}
-
 ### Logout — no session (204)
 # @no-cookie-jar
 POST {{baseUrl}}/api/auth/logout

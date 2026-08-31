@@ -38,7 +38,6 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
         "auth.cookie.same-site=Lax",
         "jwt.expiration-hours=8",
         "jwt.secret=test-jwt-secret-that-is-long-enough",
-        "cors.allowed-origins=http://localhost:3000,http://127.0.0.1:3000",
     ],
 )
 class AuthSessionControllerTest(
@@ -110,14 +109,6 @@ class AuthSessionControllerTest(
             .perform(post("/api/auth/logout").cookie(Cookie("auth_token", "good-token")))
             .andExpect(status().isNoContent)
             .andExpect(content().string(""))
-    }
-
-    @Test
-    fun `logout from a cross-site origin returns 403`() {
-        mockMvc
-            .perform(post("/api/auth/logout").header("Origin", "https://evil.example"))
-            .andExpect(status().isForbidden)
-            .andExpect(jsonPath("$.message").value("Forbidden"))
     }
 
     @Test

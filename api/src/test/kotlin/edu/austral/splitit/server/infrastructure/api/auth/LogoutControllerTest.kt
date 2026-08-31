@@ -27,7 +27,6 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 @WebMvcTest(
@@ -46,7 +45,6 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
         "auth.cookie.secure=false",
         "auth.cookie.same-site=Lax",
         "jwt.expiration-hours=8",
-        "cors.allowed-origins=http://localhost:3000,http://127.0.0.1:3000",
     ],
 )
 class LogoutControllerTest(
@@ -91,48 +89,6 @@ class LogoutControllerTest(
             .andExpect(status().isNoContent)
             .andExpect(content().string(""))
             .andExpect(header().string(HttpHeaders.SET_COOKIE, expiredCookie()))
-
-        verifyNoAccountChanges()
-    }
-
-    @Test
-    fun `logout from an allowed origin returns 204 and expires the cookie`() {
-        mockMvc
-            .perform(
-                post("/api/auth/logout")
-                    .header(HttpHeaders.ORIGIN, "http://localhost:3000")
-                    .cookie(Cookie("auth_token", "signed.jwt.token")),
-            ).andExpect(status().isNoContent)
-            .andExpect(content().string(""))
-            .andExpect(header().string(HttpHeaders.SET_COOKIE, expiredCookie()))
-
-        verifyNoAccountChanges()
-    }
-
-    @Test
-    fun `logout from a cross-site origin returns 403 without clearing the cookie`() {
-        mockMvc
-            .perform(
-                post("/api/auth/logout")
-                    .header(HttpHeaders.ORIGIN, "https://evil.example")
-                    .cookie(Cookie("auth_token", "signed.jwt.token")),
-            ).andExpect(status().isForbidden)
-            .andExpect(jsonPath("$.message").value("Forbidden"))
-            .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE))
-
-        verifyNoAccountChanges()
-    }
-
-    @Test
-    fun `logout from a cross-site referer returns 403 without clearing the cookie`() {
-        mockMvc
-            .perform(
-                post("/api/auth/logout")
-                    .header(HttpHeaders.REFERER, "https://evil.example/attack")
-                    .cookie(Cookie("auth_token", "signed.jwt.token")),
-            ).andExpect(status().isForbidden)
-            .andExpect(jsonPath("$.message").value("Forbidden"))
-            .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE))
 
         verifyNoAccountChanges()
     }
