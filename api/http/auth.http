@@ -1,0 +1,462 @@
+# Auth — SplitIt API
+#
+# Cómo usar
+#   IntelliJ: Run All en este archivo (env "local"). Los asserts salen en la pestaña Tests.
+#   VS Code: REST Client; ejecutá cada bloque `###`.
+#   La API tiene que estar en {{baseUrl}} (por defecto localhost:8080).
+#
+# Convención de api/http/
+#   Un archivo por recurso: auth.http, groups.http, expenses.http, ...
+#   Asserts compartidos: scripts/assert.js
+#   Host y ambientes: http-client.env.json
+#   Tokens y secretos: http-client.private.env.json (gitignored)
+#
+# Correr de arriba a abajo: el 409 de duplicado asume que la seed ya corrió.
+#
+@baseUrl = http://localhost:8080
+@newEmail = ada-{{$timestamp}}@example.com
+@conflictEmail = ada.conflict@example.com
+@loginEmail = ada.login@example.com
+@loginPassword = una-clave-segura
+
+### Register — success (201)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Ada Lovelace",
+  "email": "{{newEmail}}",
+  "password": "una-clave-segura"
+}
+
+> {%
+import { assertCreatedUser } from './scripts/assert.js'
+
+client.test("creates a user with public fields only", function () {
+    assertCreatedUser(client, response, {
+        name: "Ada Lovelace",
+        emailPattern: /^ada-\d+@example\.com$/,
+    })
+})
+%}
+
+### Register — missing name (400)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "ada@example.com",
+  "password": "una-clave-segura"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects missing name", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### Register — blank name (400)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "   ",
+  "email": "ada@example.com",
+  "password": "una-clave-segura"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects blank name", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### Register — name too short after trim (400)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": " A ",
+  "email": "ada@example.com",
+  "password": "una-clave-segura"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects a name that is too short after trim", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### Register — invalid email (400)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Ada Lovelace",
+  "email": "not-an-email",
+  "password": "una-clave-segura"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects invalid email", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### Register — short password (400)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Ada Lovelace",
+  "email": "ada@example.com",
+  "password": "short"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects short password", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### Register — malformed JSON (400)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects malformed JSON", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### Register — seed for duplicate email (201 first time, 409 after)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Ada Lovelace",
+  "email": "Ada.Conflict@example.com",
+  "password": "una-clave-segura"
+}
+
+> {%
+import { assertCreatedUser, assertError } from './scripts/assert.js'
+
+client.test("seeds conflict email or reports it already exists", function () {
+    if (response.status === 201) {
+        assertCreatedUser(client, response, {
+            name: "Ada Lovelace",
+            email: "ada.conflict@example.com",
+        })
+        return
+    }
+    assertError(client, response, 409, "Email already in use")
+})
+%}
+
+### Register — duplicate normalized email (409)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Ada Lovelace",
+  "email": "{{conflictEmail}}",
+  "password": "una-clave-segura"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects duplicate normalized email", function () {
+    assertError(client, response, 409, "Email already in use")
+})
+%}
+
+### Register — seed for login (201 first time, 409 after)
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Ada Lovelace",
+  "email": "{{loginEmail}}",
+  "password": "{{loginPassword}}"
+}
+
+> {%
+import { assertCreatedUser, assertError } from './scripts/assert.js'
+
+client.test("seeds a user that can log in", function () {
+    if (response.status === 201) {
+        assertCreatedUser(client, response, {
+            name: "Ada Lovelace",
+            email: "ada.login@example.com",
+        })
+        return
+    }
+    assertError(client, response, 409, "Email already in use")
+})
+%}
+
+### Login — success (200 + HttpOnly cookie)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{loginEmail}}",
+  "password": "{{loginPassword}}"
+}
+
+> {%
+import { assertSessionUser, assertSetCookieHttpOnly, saveAuthToken } from './scripts/assert.js'
+
+client.test("creates a session with public fields only", function () {
+    assertSessionUser(client, response, {
+        name: "Ada Lovelace",
+        email: "ada.login@example.com",
+    })
+    assertSetCookieHttpOnly(client, response, "auth_token")
+})
+saveAuthToken(client, response, "auth_token")
+%}
+
+### Login — missing email (400)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "password": "una-clave-segura"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects missing email", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### Login — missing password (400)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "ada@example.com"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects missing password", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### Login — unknown email (401)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "nobody-{{$timestamp}}@example.com",
+  "password": "una-clave-segura"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects unknown email without leaking existence", function () {
+    assertError(client, response, 401, "Invalid credentials")
+})
+%}
+
+### Login — wrong password (401)
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{loginEmail}}",
+  "password": "clave-incorrecta"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects wrong password with the same message as unknown email", function () {
+    assertError(client, response, 401, "Invalid credentials")
+})
+%}
+
+### Session — valid cookie from login (200)
+GET {{baseUrl}}/api/auth/session
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertSessionUser } from './scripts/assert.js'
+
+client.test("restores the public user from the session cookie", function () {
+    assertSessionUser(client, response, {
+        name: "Ada Lovelace",
+        email: "ada.login@example.com",
+    })
+})
+%}
+
+### Session — no cookie (401)
+# @no-cookie-jar
+GET {{baseUrl}}/api/auth/session
+Accept: application/json
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects a private route without a session", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### Session — tampered cookie (401)
+# @no-cookie-jar
+GET {{baseUrl}}/api/auth/session
+Accept: application/json
+Cookie: auth_token=tampered.token.value
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects a manipulated session without an internal error", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### Private route — no session (401)
+# @no-cookie-jar
+GET {{baseUrl}}/api/private
+Accept: application/json
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects an unknown private endpoint without a session", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### Logout — success (204)
+POST {{baseUrl}}/api/auth/logout
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertNoContent, assertSessionCookieCleared } from './scripts/assert.js'
+
+client.test("expires the session cookie without a body", function () {
+    assertNoContent(client, response)
+    assertSessionCookieCleared(client, response, "auth_token")
+})
+%}
+
+### Session — after logout (401)
+# @no-cookie-jar
+GET {{baseUrl}}/api/auth/session
+Accept: application/json
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects the session once the cookie is gone", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### Private route — after logout (401)
+# @no-cookie-jar
+GET {{baseUrl}}/api/private
+Accept: application/json
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects a private route after logout", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### Logout — no session (204)
+# @no-cookie-jar
+POST {{baseUrl}}/api/auth/logout
+Accept: application/json
+
+> {%
+import { assertNoContent, assertSessionCookieCleared } from './scripts/assert.js'
+
+client.test("logs out without an active session", function () {
+    assertNoContent(client, response)
+    assertSessionCookieCleared(client, response, "auth_token")
+})
+%}
+
+### Logout — again (204)
+# @no-cookie-jar
+POST {{baseUrl}}/api/auth/logout
+Accept: application/json
+
+> {%
+import { assertNoContent, assertSessionCookieCleared } from './scripts/assert.js'
+
+client.test("logout stays idempotent", function () {
+    assertNoContent(client, response)
+    assertSessionCookieCleared(client, response, "auth_token")
+})
+%}
+
+### Login — after logout (200 + HttpOnly cookie)
+# @no-cookie-jar
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{loginEmail}}",
+  "password": "{{loginPassword}}"
+}
+
+> {%
+import { assertSessionUser, assertSetCookieHttpOnly } from './scripts/assert.js'
+
+client.test("logs in again with the same account after logout", function () {
+    assertSessionUser(client, response, {
+        name: "Ada Lovelace",
+        email: "ada.login@example.com",
+    })
+    assertSetCookieHttpOnly(client, response, "auth_token")
+})
+%}
