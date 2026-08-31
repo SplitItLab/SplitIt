@@ -6,10 +6,15 @@ import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.LoginService
 import edu.austral.splitit.server.application.service.SignUpService
 import edu.austral.splitit.server.domain.model.user.Email
+import edu.austral.splitit.server.infrastructure.api.ErrorMessage
 import edu.austral.splitit.server.infrastructure.security.SessionCookieWriter
+import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.validation.Valid
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
@@ -17,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import java.net.URI
 
 @RestController
 @RequestMapping("/api/auth")
@@ -25,7 +31,15 @@ class AuthController(
     private val loginService: LoginService,
     private val tokenProvider: TokenProvider,
     private val sessionCookieWriter: SessionCookieWriter,
+    @Value("\${cors.allowed-origins}") allowedOriginsValue: String,
 ) {
+    private val allowedOrigins =
+        allowedOriginsValue
+            .split(",")
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .toSet()
+
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     fun register(
@@ -76,8 +90,34 @@ class AuthController(
     ): UserResponse = UserResponse.of(user)
 
     @PostMapping("/logout")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    fun logout(response: HttpServletResponse) {
+    fun logout(
+        request: HttpServletRequest,
+        response: HttpServletResponse,
+    ): ResponseEntity<ErrorMessage> {
+        if (!isTrustedOrigin(request)) {
+            return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(ErrorMessage("Forbidden"))
+        }
+
         sessionCookieWriter.clear(response)
+        return ResponseEntity.noContent().build()
+    }
+
+    private fun isTrustedOrigin(request: HttpServletRequest): Boolean {
+        val origin = request.getHeader(HttpHeaders.ORIGIN)?.trim().orEmpty()
+        val referer = request.getHeader(HttpHeaders.REFERER)?.trim().orEmpty()
+        return when {
+            origin.isNotEmpty() -> origin in allowedOrigins
+            referer.isNotEmpty() -> originFromReferer(referer) in allowedOrigins
+            else -> true
+        }
+    }
+
+    private fun originFromReferer(referer: String): String? {
+        val uri = runCatching { URI(referer) }.getOrNull()
+        val scheme = uri?.scheme
+        val authority = uri?.authority
+        return if (scheme != null && authority != null) "$scheme://$authority" else null
     }
 }
