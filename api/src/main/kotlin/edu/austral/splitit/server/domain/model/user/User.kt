@@ -1,4 +1,4 @@
-package edu.austral.splitit.server.domain.model
+package edu.austral.splitit.server.domain.model.user
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -34,5 +34,34 @@ class User(
 
         const val PASSWORD_MIN = 8
         const val PASSWORD_MAX = 100
+
+        fun create(
+            name: String,
+            email: Email,
+            passwordHash: String,
+        ): User =
+            User(
+                name = normalizeName(name),
+                email = email.value,
+                passwordHash = passwordHash,
+            )
+
+        private fun normalizeName(name: String): String {
+            val normalizedName = name.trim()
+
+            require(normalizedName.length in NAME_MIN..NAME_MAX) {
+                "El nombre debe tener entre $NAME_MIN y $NAME_MAX caracteres"
+            }
+
+            return normalizedName
+        }
+    }
+
+    fun updateProfile(
+        name: String,
+        email: Email,
+    ) {
+        this.name = normalizeName(name)
+        this.email = email.value
     }
 }

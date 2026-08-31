@@ -1,7 +1,9 @@
 package edu.austral.splitit.server.infrastructure.api
 
+import edu.austral.splitit.server.application.exception.AuthenticatedUserMissingException
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
 import edu.austral.splitit.server.application.exception.InvalidCredentialsException
+import edu.austral.splitit.server.application.exception.InvalidRequestException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -19,6 +21,7 @@ class GlobalExceptionHandler {
         MethodArgumentNotValidException::class,
         HandlerMethodValidationException::class,
         HttpMessageNotReadableException::class,
+        InvalidRequestException::class,
     )
     fun handleInvalidRequest(exception: Exception): ResponseEntity<ErrorMessage> {
         logger.warn("Invalid request: {}", exception.message)
@@ -32,6 +35,10 @@ class GlobalExceptionHandler {
     @ExceptionHandler(InvalidCredentialsException::class)
     fun handleInvalidCredentials(exception: InvalidCredentialsException): ResponseEntity<ErrorMessage> =
         error(HttpStatus.UNAUTHORIZED, exception.message ?: INVALID_CREDENTIALS_MESSAGE)
+
+    @ExceptionHandler(AuthenticatedUserMissingException::class)
+    fun handleAuthenticatedUserMissing(exception: AuthenticatedUserMissingException): ResponseEntity<ErrorMessage> =
+        error(HttpStatus.UNAUTHORIZED, exception.message ?: UNAUTHORIZED_MESSAGE)
 
     @ExceptionHandler(AccessDeniedException::class)
     fun rethrowAccessDenied(exception: AccessDeniedException): Unit = throw exception
@@ -58,6 +65,7 @@ class GlobalExceptionHandler {
         private const val INVALID_REQUEST_MESSAGE = "Invalid request data"
         private const val EMAIL_ALREADY_IN_USE_MESSAGE = "Email already in use"
         private const val INVALID_CREDENTIALS_MESSAGE = "Invalid credentials"
+        private const val UNAUTHORIZED_MESSAGE = "Unauthorized"
         private const val INTERNAL_ERROR_MESSAGE = "Internal server error"
     }
 }
