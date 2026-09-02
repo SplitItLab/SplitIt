@@ -18,6 +18,5 @@ WORKDIR /app
 
 COPY --from=build /app/app.jar app.jar
 
-EXPOSE 8080
-
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# En lugar de hardcodear 8080, le indicamos a Spring Boot que lea la variable $PORT que inyecta Vercel
+ENTRYPOINT ["sh", "-c", "java -Dserver.port=${PORT:-8080} -jar app.jar"]
