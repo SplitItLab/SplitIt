@@ -6,7 +6,7 @@ dotenvConfig({ path: "../.env" });
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname, "../"),
-  output: "standalone",
+  ...(!process.env.VERCEL ? { output: "standalone" as const } : {}),
 };
 
 export default nextConfig;
