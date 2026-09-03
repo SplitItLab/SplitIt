@@ -50,6 +50,18 @@ export type SessionUser = {
   email: string;
 };
 
+export type LogoutErrorType = "network" | "server-error";
+
+export class LogoutError extends Error {
+  constructor(
+    public type: LogoutErrorType,
+    message: string
+  ) {
+    super(message);
+    this.name = "LogoutError";
+  }
+}
+
 async function mockRegister(input: RegisterInput): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 600));
 
@@ -79,6 +91,11 @@ async function mockGetSession(): Promise<SessionUser | null> {
   await new Promise((resolve) => setTimeout(resolve, 300));
   const raw = sessionStorage.getItem(MOCK_SESSION_KEY);
   return raw ? (JSON.parse(raw) as SessionUser) : null;
+}
+
+async function mockLogout(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  sessionStorage.removeItem(MOCK_SESSION_KEY);
 }
 
 export async function registerUser(input: RegisterInput): Promise<void> {
@@ -143,6 +160,23 @@ export async function getSession(): Promise<SessionUser | null> {
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) {
       return null;
+    }
+    throw err;
+  }
+}
+
+export async function logout(): Promise<void> {
+  if (USE_MOCK) {
+    return mockLogout();
+  }
+  try {
+    await request<void>("/api/auth/logout", { method: "POST" });
+  } catch (err) {
+    if (err instanceof ApiError) {
+      if (err.status === 0) {
+        throw new LogoutError("network", "No pudimos conectar con el servidor.");
+      }
+      throw new LogoutError("server-error", "No pudimos cerrar la sesión. Probá de nuevo.");
     }
     throw err;
   }

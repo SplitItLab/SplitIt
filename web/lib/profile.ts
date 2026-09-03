@@ -86,7 +86,7 @@ export async function getProfile(): Promise<Profile> {
     return mockGetProfile();
   }
   try {
-    return await request<Profile>("/me");
+    return await request<Profile>("/api/me");
   } catch (err) {
     toProfileError(err);
   }
@@ -97,7 +97,7 @@ export async function updateProfile(input: ProfileInput): Promise<Profile> {
     return mockUpdateProfile(input);
   }
   try {
-    return await request<Profile>("/me", {
+    return await request<Profile>("/api/me", {
       method: "PATCH",
       body: JSON.stringify(input),
     });
