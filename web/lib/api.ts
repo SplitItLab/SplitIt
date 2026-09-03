@@ -9,12 +9,9 @@ export class ApiError extends Error {
   }
 }
 
-function apiUrl(path: string) {
-  const base = process.env.NEXT_PUBLIC_API_URL;
-  if (!base) {
-    throw new ApiError(0, "Falta configurar NEXT_PUBLIC_API_URL");
-  }
-  return `${base.replace(/\/$/, "")}${path}`;
+export function apiUrl(path: string) {
+  const base = (process.env.NEXT_PUBLIC_API_URL ?? "").replace(/\/$/, "");
+  return `${base}${path}`;
 }
 
 async function readError(response: Response): Promise<{ message: string; field?: string }> {
@@ -46,7 +43,7 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     response = await fetch(apiUrl(path), {
       ...init,
-      credentials: "include",
+      credentials: init?.credentials ?? "include",
       headers: {
         Accept: "application/json",
         ...(init?.body ? { "Content-Type": "application/json" } : {}),

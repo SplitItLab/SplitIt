@@ -45,6 +45,9 @@ class SecurityConfig(
                         "/api/auth/register",
                         "/api/auth/logout",
                     ).permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/status")
+                    .permitAll()
+
                 it.anyRequest().authenticated()
             }.httpBasic { it.disable() }
             .formLogin { it.disable() }
