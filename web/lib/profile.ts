@@ -1,19 +1,16 @@
 import { z } from "zod";
 import { request, ApiError } from "@/lib/api";
+import { SessionUser } from "@/lib/auth";
 
 const USE_MOCK = process.env.NEXT_PUBLIC_MOCK_AUTH === "true";
 const MOCK_PROFILE_KEY = "mock_profile_user";
 
-export type Profile = {
-  id: string;
-  name: string;
-  email: string;
-};
+export type Profile = SessionUser;
 
 function readMockProfile(): Profile {
   const raw = sessionStorage.getItem(MOCK_PROFILE_KEY);
   if (raw) return JSON.parse(raw) as Profile;
-  return { id: "1", name: "Ada Lovelace", email: "ada@example.com" };
+  return { id: 1, name: "Ada Lovelace", email: "ada@example.com" };
 }
 
 async function mockGetProfile(): Promise<Profile> {
@@ -52,6 +49,17 @@ export class ProfileError extends Error {
   }
 }
 
+function toKnownField(field?: string): "name" | "email" | undefined {
+  if (field === "name" || field === "email") return field;
+  return undefined;
+}
+
+function guessFieldFromMessage(message: string): "name" | "email" | undefined {
+  if (/e-?mail|correo/i.test(message)) return "email";
+  if (/nombre|name/i.test(message)) return "name";
+  return undefined;
+}
+
 function toProfileError(err: unknown): never {
   if (err instanceof ApiError) {
     if (err.status === 401) {
@@ -62,7 +70,7 @@ function toProfileError(err: unknown): never {
     }
     if (err.status === 400) {
       const message = err.message || "Revisá los datos ingresados.";
-      const field = /email/i.test(message) ? "email" : /nombre/i.test(message) ? "name" : undefined;
+      const field = toKnownField(err.field) ?? guessFieldFromMessage(message);
       throw new ProfileError("validation", message, field);
     }
     if (err.status === 0) {

@@ -1,7 +1,8 @@
 export class ApiError extends Error {
   constructor(
     public status: number,
-    message: string
+    message: string,
+    public field?: string
   ) {
     super(message);
     this.name = "ApiError";
@@ -16,20 +17,27 @@ function apiUrl(path: string) {
   return `${base.replace(/\/$/, "")}${path}`;
 }
 
-async function readErrorMessage(response: Response) {
+async function readError(response: Response): Promise<{ message: string; field?: string }> {
   const text = await response.text();
-  if (!text) return response.statusText || `Error ${response.status}`;
+  if (!text) return { message: response.statusText || `Error ${response.status}` };
 
   try {
-    const body = JSON.parse(text) as { message?: string };
-    if (body.message && !body.message.includes("\n")) {
-      return body.message;
+    const body = JSON.parse(text) as {
+      message?: string;
+      field?: string;
+      errors?: { field?: string; message?: string }[];
+    };
+    const fromErrors = body.errors?.find((e) => e.field);
+    const message = fromErrors?.message ?? body.message;
+    const field = body.field ?? fromErrors?.field;
+    if (message && !message.includes("\n")) {
+      return { message, field };
     }
   } catch {
-    if (text.length < 180) return text;
+    if (text.length < 180) return { message: text };
   }
 
-  return `Error ${response.status}`;
+  return { message: `Error ${response.status}` };
 }
 
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -50,7 +58,8 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
-    throw new ApiError(response.status, await readErrorMessage(response));
+    const { message, field } = await readError(response);
+    throw new ApiError(response.status, message, field);
   }
 
   if (response.status === 204) {

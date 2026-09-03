@@ -40,7 +40,7 @@ describe("getProfile", () => {
   });
 
   it("devuelve el perfil del usuario autenticado", async () => {
-    const profile = { id: "1", name: "Ada Lovelace", email: "ada@example.com" };
+    const profile = { id: 1, name: "Ada Lovelace", email: "ada@example.com" };
     vi.mocked(request).mockResolvedValueOnce(profile);
     await expect(getProfile()).resolves.toEqual(profile);
   });
@@ -59,7 +59,7 @@ describe("updateProfile", () => {
   });
 
   it("devuelve el perfil actualizado", async () => {
-    const profile = { id: "1", ...input };
+    const profile = { id: 1, ...input };
     vi.mocked(request).mockResolvedValueOnce(profile);
     await expect(updateProfile(input)).resolves.toEqual(profile);
   });
@@ -75,6 +75,30 @@ describe("updateProfile", () => {
   it("traduce un 401 a unauthorized", async () => {
     vi.mocked(request).mockRejectedValueOnce(new ApiError(401, "unauthorized"));
     await expect(updateProfile(input)).rejects.toMatchObject({ type: "unauthorized" });
+  });
+
+  it("traduce un 400 usando el campo estructurado del backend", async () => {
+    vi.mocked(request).mockRejectedValueOnce(new ApiError(400, "Invalid request data", "email"));
+    await expect(updateProfile(input)).rejects.toMatchObject({
+      type: "validation",
+      field: "email",
+    });
+  });
+
+  it("traduce un 400 infiriendo el campo del mensaje cuando el backend no lo estructura", async () => {
+    vi.mocked(request).mockRejectedValueOnce(new ApiError(400, "El nombre no puede estar vacío"));
+    await expect(updateProfile(input)).rejects.toMatchObject({
+      type: "validation",
+      field: "name",
+    });
+  });
+
+  it("traduce un 400 sin campo cuando no hay pistas en el mensaje", async () => {
+    vi.mocked(request).mockRejectedValueOnce(new ApiError(400, "Invalid request data"));
+    await expect(updateProfile(input)).rejects.toMatchObject({
+      type: "validation",
+      field: undefined,
+    });
   });
 
   it("traduce un fallo de conexión a network", async () => {
