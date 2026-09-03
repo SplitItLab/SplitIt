@@ -19,6 +19,8 @@ import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
@@ -91,6 +93,22 @@ class AuthSessionControllerTest(
             .perform(get("/api/private"))
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.message").value("Unauthorized"))
+    }
+
+    @Test
+    fun `logout returns 204 without a session cookie`() {
+        mockMvc
+            .perform(post("/api/auth/logout"))
+            .andExpect(status().isNoContent)
+            .andExpect(content().string(""))
+    }
+
+    @Test
+    fun `logout returns 204 with a session cookie`() {
+        mockMvc
+            .perform(post("/api/auth/logout").cookie(Cookie("auth_token", "good-token")))
+            .andExpect(status().isNoContent)
+            .andExpect(content().string(""))
     }
 
     @Test

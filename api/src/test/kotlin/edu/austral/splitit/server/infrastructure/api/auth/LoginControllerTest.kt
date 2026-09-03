@@ -1,10 +1,11 @@
 package edu.austral.splitit.server.infrastructure.api.auth
 
+import edu.austral.splitit.server.Helpers
 import edu.austral.splitit.server.application.exception.InvalidCredentialsException
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.LoginService
 import edu.austral.splitit.server.application.service.SignUpService
-import edu.austral.splitit.server.domain.model.User
+import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
 import edu.austral.splitit.server.infrastructure.security.SessionCookieWriter
 import org.hamcrest.Matchers.allOf
@@ -68,7 +69,7 @@ class LoginControllerTest(
 
     @Test
     fun `login returns 200 with public user fields and an HttpOnly session cookie`() {
-        whenever(loginService.login("ada@example.com", "una-clave-segura")).thenReturn(ada())
+        whenever(loginService.login(Helpers.emailOf("ada@example.com"), "una-clave-segura")).thenReturn(ada())
         whenever(tokenProvider.issue(any())).thenReturn("signed.jwt.token")
 
         mockMvc
@@ -122,6 +123,27 @@ class LoginControllerTest(
                 post("/api/auth/login")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(body),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").value("Invalid request data"))
+
+        verify(loginService, never()).login(any(), any())
+        verify(tokenProvider, never()).issue(any())
+    }
+
+    @Test
+    fun `login returns 400 when Email create rejects the address`() {
+        mockMvc
+            .perform(
+                post("/api/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {
+                          "email": "user@exam_ple.com",
+                          "password": "una-clave-segura"
+                        }
+                        """.trimIndent(),
+                    ),
             ).andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.message").value("Invalid request data"))
 

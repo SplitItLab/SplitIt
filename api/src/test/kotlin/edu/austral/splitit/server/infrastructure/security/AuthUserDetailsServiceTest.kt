@@ -1,6 +1,6 @@
 package edu.austral.splitit.server.infrastructure.security
 
-import edu.austral.splitit.server.domain.model.User
+import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.infrastructure.persistence.UserRepository
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock

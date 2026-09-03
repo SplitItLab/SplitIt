@@ -369,3 +369,94 @@ client.test("rejects an unknown private endpoint without a session", function ()
     assertError(client, response, 401, "Unauthorized")
 })
 %}
+
+### Logout — success (204)
+POST {{baseUrl}}/api/auth/logout
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertNoContent, assertSessionCookieCleared } from './scripts/assert.js'
+
+client.test("expires the session cookie without a body", function () {
+    assertNoContent(client, response)
+    assertSessionCookieCleared(client, response, "auth_token")
+})
+%}
+
+### Session — after logout (401)
+# @no-cookie-jar
+GET {{baseUrl}}/api/auth/session
+Accept: application/json
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects the session once the cookie is gone", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### Private route — after logout (401)
+# @no-cookie-jar
+GET {{baseUrl}}/api/private
+Accept: application/json
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects a private route after logout", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### Logout — no session (204)
+# @no-cookie-jar
+POST {{baseUrl}}/api/auth/logout
+Accept: application/json
+
+> {%
+import { assertNoContent, assertSessionCookieCleared } from './scripts/assert.js'
+
+client.test("logs out without an active session", function () {
+    assertNoContent(client, response)
+    assertSessionCookieCleared(client, response, "auth_token")
+})
+%}
+
+### Logout — again (204)
+# @no-cookie-jar
+POST {{baseUrl}}/api/auth/logout
+Accept: application/json
+
+> {%
+import { assertNoContent, assertSessionCookieCleared } from './scripts/assert.js'
+
+client.test("logout stays idempotent", function () {
+    assertNoContent(client, response)
+    assertSessionCookieCleared(client, response, "auth_token")
+})
+%}
+
+### Login — after logout (200 + HttpOnly cookie)
+# @no-cookie-jar
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{loginEmail}}",
+  "password": "{{loginPassword}}"
+}
+
+> {%
+import { assertSessionUser, assertSetCookieHttpOnly } from './scripts/assert.js'
+
+client.test("logs in again with the same account after logout", function () {
+    assertSessionUser(client, response, {
+        name: "Ada Lovelace",
+        email: "ada.login@example.com",
+    })
+    assertSetCookieHttpOnly(client, response, "auth_token")
+})
+%}

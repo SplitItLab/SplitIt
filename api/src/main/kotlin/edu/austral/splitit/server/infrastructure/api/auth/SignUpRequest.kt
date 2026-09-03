@@ -1,9 +1,9 @@
 package edu.austral.splitit.server.infrastructure.api.auth
 
-import edu.austral.splitit.server.domain.model.User.Companion.NAME_MAX
-import edu.austral.splitit.server.domain.model.User.Companion.NAME_MIN
-import edu.austral.splitit.server.domain.model.User.Companion.PASSWORD_MAX
-import edu.austral.splitit.server.domain.model.User.Companion.PASSWORD_MIN
+import edu.austral.splitit.server.domain.model.user.User.Companion.NAME_MAX
+import edu.austral.splitit.server.domain.model.user.User.Companion.NAME_MIN
+import edu.austral.splitit.server.domain.model.user.User.Companion.PASSWORD_MAX
+import edu.austral.splitit.server.domain.model.user.User.Companion.PASSWORD_MIN
 import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size

@@ -1,7 +1,7 @@
 package edu.austral.splitit.server.infrastructure.api.auth
 
 import edu.austral.splitit.server.application.port.AuthUser
-import edu.austral.splitit.server.domain.model.User
+import edu.austral.splitit.server.domain.model.user.User
 
 data class UserResponse(
     val id: Long,
