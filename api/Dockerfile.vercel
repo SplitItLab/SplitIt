@@ -13,6 +13,9 @@ WORKDIR /app
 COPY --from=build /app/build/libs/*.jar app.jar
 ENV PORT=8080
 ENV JAVA_TOOL_OPTIONS="-XX:TieredStopAtLevel=1"
+ENV SPRING_LAZY_INIT=true
+ENV JPA_DDL_AUTO=none
+ENV JPA_BOOTSTRAP_MODE=lazy
 EXPOSE 8080
 
 CMD ["/opt/java/openjdk/bin/java", \
