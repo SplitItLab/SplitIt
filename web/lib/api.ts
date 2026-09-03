@@ -1,5 +1,3 @@
-import { clearSession, getAuthToken } from "@/lib/auth-storage";
-
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -33,7 +31,6 @@ async function readErrorMessage(response: Response) {
 
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
-  const token = getAuthToken();
 
   try {
     response = await fetch(apiUrl(path), {
@@ -42,7 +39,6 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
       headers: {
         Accept: "application/json",
         ...(init?.body ? { "Content-Type": "application/json" } : {}),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...init?.headers,
       },
     });
@@ -51,9 +47,6 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
-    if (response.status === 401 && !path.startsWith("/api/auth/")) {
-      clearSession();
-    }
     throw new ApiError(response.status, await readErrorMessage(response));
   }
 
