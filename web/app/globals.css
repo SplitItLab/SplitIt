@@ -46,6 +46,9 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --color-text-primary: var(--Text-Primary);
+  --color-text-secondary: var(--Text-Secondary);
+  --background: var(--Stale-Gray);
 }
 
 :root {
@@ -56,6 +59,9 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
   --primary: #28c49e;
+  --Text-Primary: #001625;
+  --Text-Secondary: #868992;
+  --Stale-Gray: #f1f5f9;
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
