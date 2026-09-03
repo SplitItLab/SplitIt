@@ -2,6 +2,7 @@ package edu.austral.splitit.server.infrastructure.api
 
 import edu.austral.splitit.server.application.exception.AuthenticatedUserMissingException
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
+import edu.austral.splitit.server.application.exception.EventNotFoundException
 import edu.austral.splitit.server.application.exception.InvalidCredentialsException
 import edu.austral.splitit.server.application.exception.InvalidRequestException
 import org.slf4j.LoggerFactory
@@ -22,6 +23,7 @@ class GlobalExceptionHandler {
         HandlerMethodValidationException::class,
         HttpMessageNotReadableException::class,
         InvalidRequestException::class,
+        IllegalArgumentException::class,
     )
     fun handleInvalidRequest(exception: Exception): ResponseEntity<ErrorMessage> {
         logger.warn("Invalid request: {}", exception.message)
@@ -39,6 +41,10 @@ class GlobalExceptionHandler {
     @ExceptionHandler(AuthenticatedUserMissingException::class)
     fun handleAuthenticatedUserMissing(exception: AuthenticatedUserMissingException): ResponseEntity<ErrorMessage> =
         error(HttpStatus.UNAUTHORIZED, exception.message ?: UNAUTHORIZED_MESSAGE)
+
+    @ExceptionHandler(EventNotFoundException::class)
+    fun handleEventNotFound(exception: EventNotFoundException): ResponseEntity<ErrorMessage> =
+        error(HttpStatus.NOT_FOUND, exception.message ?: EVENT_NOT_FOUND_MESSAGE)
 
     @ExceptionHandler(AccessDeniedException::class)
     fun rethrowAccessDenied(exception: AccessDeniedException): Unit = throw exception
@@ -66,6 +72,7 @@ class GlobalExceptionHandler {
         private const val EMAIL_ALREADY_IN_USE_MESSAGE = "Email already in use"
         private const val INVALID_CREDENTIALS_MESSAGE = "Invalid credentials"
         private const val UNAUTHORIZED_MESSAGE = "Unauthorized"
+        private const val EVENT_NOT_FOUND_MESSAGE = "Event not found"
         private const val INTERNAL_ERROR_MESSAGE = "Internal server error"
     }
 }

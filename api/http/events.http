@@ -1,0 +1,194 @@
+# Events — SplitIt API
+#
+# Cómo usar
+#   IntelliJ: Run All en este archivo (env "local"). Los asserts salen en la pestaña Tests.
+#   VS Code: REST Client; ejecutá cada bloque `###`.
+#   La API tiene que estar en {{baseUrl}} (por defecto localhost:8080).
+#
+@baseUrl = http://localhost:8080
+@eventOwnerEmail = event.owner-{{$timestamp}}@example.com
+@eventOwnerPassword = una-clave-segura
+
+### 1. Seed — Crear cuenta de prueba para el dueño
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Owner User",
+  "email": "{{eventOwnerEmail}}",
+  "password": "{{eventOwnerPassword}}"
+}
+
+> {%
+import { assertStatus } from './scripts/assert.js'
+
+client.test("crea usuario para pruebas de eventos", function () {
+    assertStatus(client, response, 201)
+})
+%}
+
+### 2. Login — Iniciar sesión y capturar cookie de autenticación
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{eventOwnerEmail}}",
+  "password": "{{eventOwnerPassword}}"
+}
+
+> {%
+import { assertStatus, assertSetCookieHttpOnly, saveAuthToken } from './scripts/assert.js'
+
+client.test("inicia sesión exitosamente", function () {
+    assertStatus(client, response, 200)
+    assertSetCookieHttpOnly(client, response, "auth_token")
+})
+saveAuthToken(client, response, "auth_token")
+%}
+
+### 3. Events — POST crear evento completo con participantes (201)
+POST {{baseUrl}}/api/events
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Viaje a Bariloche",
+  "description": "Vacaciones de verano",
+  "iconKey": "plane",
+  "baseCurrency": "ARS",
+  "participantNames": ["Ana", "Juan"]
+}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("crea un evento con participantes adicionales y devuelve memberCount = 3", function () {
+    assertStatus(client, response, 201)
+    const body = jsonBody(response)
+    client.assert(body.id !== undefined && body.id !== null, "Expected event id")
+    client.assert(body.name === "Viaje a Bariloche", "Expected event name")
+    client.assert(body.description === "Vacaciones de verano", "Expected description")
+    client.assert(body.iconKey === "plane", "Expected iconKey")
+    client.assert(body.baseCurrency === "ARS", "Expected baseCurrency")
+    client.assert(body.memberCount === 3, "Expected memberCount = 3 (dueño + 2 participantes)")
+    client.global.set("firstEventId", String(body.id))
+})
+%}
+
+### 4. Events — POST crear evento mínimo sin participantes (201)
+POST {{baseUrl}}/api/events
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Asado",
+  "baseCurrency": "ARS"
+}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("crea un evento sin participantes adicionales y devuelve memberCount = 1", function () {
+    assertStatus(client, response, 201)
+    const body = jsonBody(response)
+    client.assert(body.id !== undefined && body.id !== null, "Expected event id")
+    client.assert(body.name === "Asado", "Expected event name")
+    client.assert(body.description === null, "Expected description null")
+    client.assert(body.iconKey === null, "Expected iconKey null")
+    client.assert(body.baseCurrency === "ARS", "Expected baseCurrency")
+    client.assert(body.memberCount === 1, "Expected memberCount = 1 (solo el dueño)")
+})
+%}
+
+### 5. Events — POST sin autenticación (401)
+# @no-cookie-jar
+POST {{baseUrl}}/api/events
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Sin Permiso",
+  "baseCurrency": "ARS"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza la creación de evento sin sesión", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### 6. Events — POST nombre en blanco (400)
+POST {{baseUrl}}/api/events
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "   ",
+  "baseCurrency": "ARS"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza la creación de evento con nombre en blanco", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### 7. Events — POST moneda inválida (400)
+POST {{baseUrl}}/api/events
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Viaje",
+  "baseCurrency": "PESOS"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza la creación de evento con moneda que no tiene 3 caracteres", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### 8. Events — GET listar eventos del usuario (200)
+GET {{baseUrl}}/api/events
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("lista los eventos del usuario autenticado", function () {
+    assertStatus(client, response, 200)
+    const list = jsonBody(response)
+    client.assert(Array.isArray(list), "Expected array of events")
+    client.assert(list.length >= 2, "Expected at least 2 events")
+    const found = list.find(e => String(e.id) === client.global.get("firstEventId"))
+    client.assert(found !== undefined, "Expected created event in list")
+    client.assert(found.memberCount === 3, "Expected memberCount = 3")
+})
+%}
+
+### 9. Events — GET sin autenticación (401)
+# @no-cookie-jar
+GET {{baseUrl}}/api/events
+Accept: application/json
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza listar eventos sin sesión", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
