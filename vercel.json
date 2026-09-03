@@ -4,8 +4,8 @@
     "frontend": {
       "root": "web",
       "framework": "nextjs",
-      "installCommand": "npm ci"
-    },
+      "installCommand": "corepack enable && pnpm install --frozen-lockfile"
+    }
     "backend": {
       "root": "api",
       "runtime": "container",
