@@ -12,21 +12,21 @@ if [ -d "web" ]; then
   echo "📦  Web"
   cd web
 
-  echo " (pnpm format:check)  → Format check..."
-  if ! pnpm format:check > /dev/null 2>&1; then
+  echo " (npm run format:check)  → Format check..."
+  if ! npm run format:check > /dev/null 2>&1; then
     echo "   ⚠️  Formatting issues found. Fixing..."
-    pnpm format
+    npm run format
     echo "   ❌  Files were reformatted. Please stage the changes and commit again."
     exit 1
   fi
   echo "   ✅  Format OK"
 
-  echo " (pnpm lint)  → Lint..."
-  pnpm lint
+  echo " (npm run lint)  → Lint..."
+  npm run lint
   echo "   ✅  Lint OK"
 
-  echo " (pnpm tsc --noEmit)  → Typecheck..."
-  pnpm tsc --noEmit
+  echo " (npm run tsc --noEmit)  → Typecheck..."
+  npx tsc --noEmit
   echo "   ✅  Typecheck OK"
 
   cd ..
