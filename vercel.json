@@ -1,27 +1,17 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
   "services": {
-    "web": {
-      "root": "web"
+    "frontend": {
+      "root": "web/",
+      "framework": "nextjs"
     },
-    "api": {
-      "root": "api",
-      "entrypoint": "Dockerfile.vercel",
-      "runtime": "container"
+    "backend": {
+      "root": "api/",
+      "runtime": "container",
+      "entrypoint": "Dockerfile.vercel"
     }
   },
   "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": {
-        "service": "api"
-      }
-    },
-    {
-      "source": "/(.*)",
-      "destination": {
-        "service": "web"
-      }
-    }
+    { "source": "/api/(.*)", "destination": { "service": "backend" } },
+    { "source": "/(.*)", "destination": { "service": "frontend" } }
   ]
 }
