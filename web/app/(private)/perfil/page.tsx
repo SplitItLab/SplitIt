@@ -14,6 +14,7 @@ import {
   ProfileInput,
   profileSchema,
 } from "@/lib/profile";
+import { logout, LogoutError } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Field, FieldLabel, FieldError, FieldGroup } from "@/components/ui/field";
@@ -28,6 +29,8 @@ export default function ProfilePage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
 
   const {
     register,
@@ -88,6 +91,19 @@ export default function ProfilePage() {
         return;
       }
       throw err;
+    }
+  };
+
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    setLogoutError(null);
+    try {
+      await logout();
+      router.replace("/login");
+    } catch (err) {
+      setLogoutError(err instanceof LogoutError ? err.message : "Ocurrió un error inesperado.");
+      setLoggingOut(false);
     }
   };
 
@@ -212,16 +228,28 @@ export default function ProfilePage() {
                   Salir de tu cuenta en este dispositivo
                 </p>
               </div>
-              {/* Sin comportamiento todavía: la acción de cerrar sesión se implementa en SPT-50 */}
               <Button
                 type="button"
                 variant="ghost"
+                onClick={handleLogout}
+                disabled={loggingOut}
                 className="border-border h-11 gap-2.5 rounded-md border bg-[#F1F5F9] px-4 text-black hover:bg-[#F1F5F9]"
               >
-                Cerrar sesión
-                <LogOut className="size-4" />
+                {loggingOut ? (
+                  <Spinner />
+                ) : (
+                  <>
+                    Cerrar sesión
+                    <LogOut className="size-4" />
+                  </>
+                )}
               </Button>
             </div>
+            {logoutError && (
+              <Alert variant="destructive">
+                <AlertDescription>{logoutError}</AlertDescription>
+              </Alert>
+            )}
           </div>
         </CardContent>
       </Card>

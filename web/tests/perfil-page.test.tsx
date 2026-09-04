@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ProfilePage from "../app/(private)/perfil/page";
 import { ProfileError } from "../lib/profile";
+import { LogoutError } from "../lib/auth";
 
 const replace = vi.fn();
 
@@ -19,7 +20,16 @@ vi.mock("@/lib/profile", async (importOriginal) => {
   };
 });
 
+vi.mock("@/lib/auth", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/auth")>();
+  return {
+    ...actual,
+    logout: vi.fn(),
+  };
+});
+
 import { getProfile, updateProfile } from "@/lib/profile";
+import { logout } from "@/lib/auth";
 
 const profile = { id: 1, name: "Ada Lovelace", email: "ada@example.com" };
 
@@ -28,6 +38,7 @@ describe("ProfilePage", () => {
     replace.mockReset();
     vi.mocked(getProfile).mockReset();
     vi.mocked(updateProfile).mockReset();
+    vi.mocked(logout).mockReset();
   });
 
   it("muestra un estado de carga y luego el nombre, email e iniciales", async () => {
@@ -150,5 +161,63 @@ describe("ProfilePage", () => {
 
     expect(await screen.findByText("Ocurrió un error. Probá de nuevo.")).toBeInTheDocument();
     expect(screen.getByLabelText("Nombre completo")).toHaveValue("Ada Byron Lovelace");
+  });
+
+  it("llama a logout una única vez al hacer click en 'Cerrar sesión'", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profile);
+    vi.mocked(logout).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+
+    await user.click(await screen.findByRole("button", { name: /Cerrar sesión/ }));
+
+    expect(logout).toHaveBeenCalledTimes(1);
+  });
+
+  it("deshabilita 'Cerrar sesión' mientras la petición está pendiente", async () => {
+    let resolveLogout: () => void = () => {};
+    vi.mocked(getProfile).mockResolvedValue(profile);
+    vi.mocked(logout).mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveLogout = resolve;
+      })
+    );
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+
+    const logoutButton = await screen.findByRole("button", { name: /Cerrar sesión/ });
+    await user.click(logoutButton);
+
+    expect(logoutButton).toBeDisabled();
+
+    resolveLogout();
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/login"));
+  });
+
+  it("redirige a /login cuando logout se resuelve exitosamente", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profile);
+    vi.mocked(logout).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+
+    await user.click(await screen.findByRole("button", { name: /Cerrar sesión/ }));
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/login"));
+  });
+
+  it("muestra el error y rehabilita el botón si logout falla", async () => {
+    vi.mocked(getProfile).mockResolvedValue(profile);
+    vi.mocked(logout).mockRejectedValueOnce(
+      new LogoutError("network", "No pudimos conectar con el servidor.")
+    );
+    const user = userEvent.setup();
+    render(<ProfilePage />);
+
+    const logoutButton = await screen.findByRole("button", { name: /Cerrar sesión/ });
+    await user.click(logoutButton);
+
+    expect(await screen.findByText("No pudimos conectar con el servidor.")).toBeInTheDocument();
+    expect(logoutButton).not.toBeDisabled();
+    expect(replace).not.toHaveBeenCalledWith("/login");
   });
 });
