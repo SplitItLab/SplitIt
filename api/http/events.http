@@ -161,7 +161,46 @@ client.test("rechaza la creación de evento con moneda que no tiene 3 caracteres
 })
 %}
 
-### 8. Events — GET listar eventos del usuario (200)
+### 8. Events — POST participante vacío (400)
+POST {{baseUrl}}/api/events
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Viaje",
+  "baseCurrency": "ARS",
+  "participantNames": ["Ana", ""]
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza la creación de evento con nombre de participante vacío", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### 9. Events — POST moneda que no son tres letras (400)
+POST {{baseUrl}}/api/events
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Viaje",
+  "baseCurrency": "123"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza la creación de evento con moneda que no tiene tres letras", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### 10. Events — GET listar eventos del usuario (200)
 GET {{baseUrl}}/api/events
 Accept: application/json
 Cookie: auth_token={{authToken}}
@@ -180,7 +219,7 @@ client.test("lista los eventos del usuario autenticado", function () {
 })
 %}
 
-### 9. Events — GET sin autenticación (401)
+### 11. Events — GET sin autenticación (401)
 # @no-cookie-jar
 GET {{baseUrl}}/api/events
 Accept: application/json
