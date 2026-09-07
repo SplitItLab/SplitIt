@@ -87,4 +87,90 @@ class ExpenseTest {
             )
         }
     }
+
+    @Test
+    fun `create expense fails if paidByMember belongs to a different unsaved event`() {
+        val otherEvent = Event.create(owner = owner, name = "Otro Evento", baseCurrency = "USD")
+        val otherMember = EventMember.create(event = otherEvent, displayName = "Otro")
+
+        assertFailsWith<IllegalArgumentException> {
+            Expense.create(
+                event = event,
+                paidByMember = otherMember,
+                name = "Cena",
+                originalAmount = BigDecimal("100.00"),
+                originalCurrency = "USD",
+                baseAmount = BigDecimal("100.00"),
+                expenseDate = LocalDate.now(),
+            )
+        }
+    }
+
+    @Test
+    fun `create expense fails when currency is not three letters`() {
+        assertFailsWith<IllegalArgumentException> {
+            Expense.create(
+                event = event,
+                paidByMember = member,
+                name = "Cena",
+                originalAmount = BigDecimal("100.00"),
+                originalCurrency = "123",
+                baseAmount = BigDecimal("100.00"),
+                expenseDate = LocalDate.now(),
+            )
+        }
+
+        assertFailsWith<IllegalArgumentException> {
+            Expense.create(
+                event = event,
+                paidByMember = member,
+                name = "Cena",
+                originalAmount = BigDecimal("100.00"),
+                originalCurrency = "AR",
+                baseAmount = BigDecimal("100.00"),
+                expenseDate = LocalDate.now(),
+            )
+        }
+    }
+
+    @Test
+    fun `create expense fails when amounts exceed column scale or precision`() {
+        assertFailsWith<IllegalArgumentException> {
+            Expense.create(
+                event = event,
+                paidByMember = member,
+                name = "Cena",
+                originalAmount = BigDecimal("1.23456"),
+                originalCurrency = "ARS",
+                baseAmount = BigDecimal("1.23"),
+                expenseDate = LocalDate.now(),
+            )
+        }
+
+        assertFailsWith<IllegalArgumentException> {
+            Expense.create(
+                event = event,
+                paidByMember = member,
+                name = "Cena",
+                originalAmount = BigDecimal("1.23"),
+                originalCurrency = "ARS",
+                exchangeRate = BigDecimal("1.1234567"),
+                baseAmount = BigDecimal("1.23"),
+                expenseDate = LocalDate.now(),
+            )
+        }
+
+        val tooManyIntegerDigits = BigDecimal("1".repeat(16))
+        assertFailsWith<IllegalArgumentException> {
+            Expense.create(
+                event = event,
+                paidByMember = member,
+                name = "Cena",
+                originalAmount = tooManyIntegerDigits,
+                originalCurrency = "ARS",
+                baseAmount = BigDecimal("1.23"),
+                expenseDate = LocalDate.now(),
+            )
+        }
+    }
 }

@@ -53,6 +53,10 @@ class Expense(
         const val NAME_MIN = 1
         const val NAME_MAX = 150
         const val CURRENCY_LENGTH = 3
+        const val AMOUNT_PRECISION = 19
+        const val AMOUNT_SCALE = 4
+        const val RATE_PRECISION = 19
+        const val RATE_SCALE = 6
 
         fun create(
             event: Event,
@@ -64,7 +68,10 @@ class Expense(
             baseAmount: BigDecimal,
             expenseDate: LocalDate,
         ): Expense {
-            require(paidByMember.event == event || paidByMember.event.id == event.id) {
+            require(
+                paidByMember.event === event ||
+                    (paidByMember.event.id != null && paidByMember.event.id == event.id),
+            ) {
                 "El integrante que paga debe pertenecer al mismo evento"
             }
             require(originalAmount > BigDecimal.ZERO) {
@@ -76,10 +83,18 @@ class Expense(
             require(exchangeRate > BigDecimal.ZERO) {
                 "La tasa de cambio debe ser mayor que cero"
             }
+            requireFitsNumeric(originalAmount, AMOUNT_PRECISION, AMOUNT_SCALE, "El monto original")
+            requireFitsNumeric(baseAmount, AMOUNT_PRECISION, AMOUNT_SCALE, "El monto base")
+            requireFitsNumeric(exchangeRate, RATE_PRECISION, RATE_SCALE, "La tasa de cambio")
 
             val normalizedName = name.trim()
             require(normalizedName.length in NAME_MIN..NAME_MAX) {
                 "El nombre del gasto debe tener entre $NAME_MIN y $NAME_MAX caracteres"
+            }
+
+            val normalizedCurrency = originalCurrency.trim().uppercase()
+            require(normalizedCurrency.matches(Regex("^[A-Z]{$CURRENCY_LENGTH}$"))) {
+                "La moneda original debe ser un código ISO 4217 de $CURRENCY_LENGTH caracteres"
             }
 
             val now = Instant.now()
@@ -88,13 +103,28 @@ class Expense(
                 paidByMember = paidByMember,
                 name = normalizedName,
                 originalAmount = originalAmount,
-                originalCurrency = originalCurrency.trim().uppercase(),
+                originalCurrency = normalizedCurrency,
                 exchangeRate = exchangeRate,
                 baseAmount = baseAmount,
                 expenseDate = expenseDate,
                 createdAt = now,
                 updatedAt = now,
             )
+        }
+
+        private fun requireFitsNumeric(
+            value: BigDecimal,
+            precision: Int,
+            scale: Int,
+            label: String,
+        ) {
+            require(value.scale() <= scale) {
+                "$label no puede tener más de $scale decimales"
+            }
+            val integerDigits = value.precision() - value.scale()
+            require(integerDigits <= precision - scale) {
+                "$label excede la precisión de $precision dígitos"
+            }
         }
     }
 }
