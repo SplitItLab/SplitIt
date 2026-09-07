@@ -8,12 +8,14 @@ import edu.austral.splitit.server.domain.service.EventService
 import edu.austral.splitit.server.domain.service.UserService
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class EventApplicationServiceTest {
     private val userService: UserService = mock()
@@ -118,6 +120,33 @@ class EventApplicationServiceTest {
         assertEquals(1L, summary.memberCount)
 
         verify(eventMemberService).addMember(createdEvent, "Mateo", user)
+        verify(eventMemberService, never()).addMembers(any(), any())
+    }
+
+    @Test
+    fun `createEvent rejects blank participant names before persisting`() {
+        whenever(userService.getById(1L)).thenReturn(user)
+
+        val command =
+            CreateEventCommand(
+                userId = 1L,
+                name = "Viaje",
+                baseCurrency = "ARS",
+                participantNames = listOf("Ana", "   "),
+            )
+
+        assertFailsWith<IllegalArgumentException> {
+            eventApplicationService.createEvent(command)
+        }
+
+        verify(eventService, never()).save(
+            owner = any(),
+            name = any(),
+            description = anyOrNull(),
+            iconKey = anyOrNull(),
+            baseCurrency = any(),
+        )
+        verify(eventMemberService, never()).addMember(any(), any(), anyOrNull())
         verify(eventMemberService, never()).addMembers(any(), any())
     }
 

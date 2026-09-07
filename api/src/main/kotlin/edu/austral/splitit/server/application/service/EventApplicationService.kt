@@ -34,6 +34,15 @@ class EventApplicationService(
     fun createEvent(command: CreateEventCommand): EventSummary {
         val owner = userService.getById(command.userId)
 
+        val normalizedAdditionalNames =
+            command.participantNames.map { name ->
+                val trimmed = name.trim()
+                require(trimmed.isNotEmpty()) {
+                    "El nombre del participante no puede estar vacío"
+                }
+                trimmed
+            }
+
         val event =
             eventService.save(
                 owner = owner,
@@ -49,16 +58,11 @@ class EventApplicationService(
             user = owner,
         )
 
-        val validAdditionalNames =
-            command.participantNames
-                .map { it.trim() }
-                .filter { it.isNotEmpty() }
-
-        if (validAdditionalNames.isNotEmpty()) {
-            eventMemberService.addMembers(event, validAdditionalNames)
+        if (normalizedAdditionalNames.isNotEmpty()) {
+            eventMemberService.addMembers(event, normalizedAdditionalNames)
         }
 
-        val totalMembers = 1L + validAdditionalNames.size
+        val totalMembers = 1L + normalizedAdditionalNames.size
 
         return EventSummary(
             id = requireNotNull(event.id),

@@ -74,4 +74,15 @@ class EventTest {
             )
         }
     }
+
+    @Test
+    fun `create fails when currency is not three letters`() {
+        assertFailsWith<IllegalArgumentException> {
+            Event.create(
+                owner = owner,
+                name = "Viaje",
+                baseCurrency = "123",
+            )
+        }
+    }
 }

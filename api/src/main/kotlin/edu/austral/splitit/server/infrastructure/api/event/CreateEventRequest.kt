@@ -4,8 +4,11 @@ import edu.austral.splitit.server.domain.model.event.Event.Companion.CURRENCY_LE
 import edu.austral.splitit.server.domain.model.event.Event.Companion.ICON_KEY_MAX
 import edu.austral.splitit.server.domain.model.event.Event.Companion.NAME_MAX
 import edu.austral.splitit.server.domain.model.event.Event.Companion.NAME_MIN
+import edu.austral.splitit.server.domain.model.event.EventMember.Companion.DISPLAY_NAME_MAX
+import edu.austral.splitit.server.domain.model.event.EventMember.Companion.DISPLAY_NAME_MIN
 import edu.austral.splitit.server.infrastructure.api.auth.TrimmedSize
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 
 data class CreateEventRequest(
@@ -17,6 +20,15 @@ data class CreateEventRequest(
     val iconKey: String? = null,
     @field:NotBlank
     @field:TrimmedSize(min = CURRENCY_LENGTH, max = CURRENCY_LENGTH)
+    @field:Pattern(regexp = "^[A-Za-z]{3}$")
     val baseCurrency: String,
-    val participantNames: List<String> = emptyList(),
+    val participantNames: List<
+        @NotBlank
+        @TrimmedSize(
+            min = DISPLAY_NAME_MIN,
+            max = DISPLAY_NAME_MAX,
+            allowSurroundingWhitespace = true,
+        )
+        String,
+    > = emptyList(),
 )

@@ -135,6 +135,22 @@ class EventControllerTest(
         verify(eventApplicationService, never()).createEvent(any())
     }
 
+    @Test
+    fun `post returns 401 for a tampered cookie`() {
+        whenever(tokenProvider.parse("tampered")).thenReturn(null)
+
+        mockMvc
+            .perform(
+                post("/api/events")
+                    .cookie(Cookie("auth_token", "tampered"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"name":"Viaje","baseCurrency":"ARS"}"""),
+            ).andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.message").value("Unauthorized"))
+
+        verify(eventApplicationService, never()).createEvent(any())
+    }
+
     @ParameterizedTest
     @ValueSource(
         strings = [
@@ -144,6 +160,9 @@ class EventControllerTest(
             """{"name":"Viaje","baseCurrency":""}""",
             """{"name":"Viaje","baseCurrency":"AR"}""",
             """{"name":"Viaje","baseCurrency":"PESOS"}""",
+            """{"name":"Viaje","baseCurrency":"ARS","participantNames":[""]}""",
+            """{"name":"Viaje","baseCurrency":"ARS","participantNames":["   "]}""",
+            """{"name":"Viaje","baseCurrency":"123"}""",
         ],
     )
     fun `post returns 400 for invalid body`(body: String) {

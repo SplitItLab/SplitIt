@@ -59,7 +59,7 @@ class Event(
             }
 
             val normalizedCurrency = baseCurrency.trim().uppercase()
-            require(normalizedCurrency.length == CURRENCY_LENGTH) {
+            require(normalizedCurrency.matches(Regex("^[A-Z]{$CURRENCY_LENGTH}$"))) {
                 "La moneda base debe ser un código ISO 4217 de $CURRENCY_LENGTH caracteres"
             }
 
