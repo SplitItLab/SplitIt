@@ -69,7 +69,6 @@ class Expense private constructor(
             originalAmount: BigDecimal,
             originalCurrency: String,
             exchangeRate: BigDecimal = BigDecimal.ONE,
-            baseAmount: BigDecimal,
             expenseDate: LocalDate,
         ): Expense {
             require(
@@ -80,11 +79,10 @@ class Expense private constructor(
             }
 
             validateNotZero(originalAmount)
-            validateNotZero(baseAmount)
             validateNotZero(exchangeRate)
 
             requireFitsNumeric(originalAmount, AMOUNT_PRECISION, AMOUNT_SCALE, "Original amount")
-            requireFitsNumeric(baseAmount, AMOUNT_PRECISION, AMOUNT_SCALE, "Base amount")
+
             requireFitsNumeric(exchangeRate, RATE_PRECISION, RATE_SCALE, "Exchange rate")
 
             val normalizedName = name.trim()
@@ -105,12 +103,17 @@ class Expense private constructor(
                 originalAmount = originalAmount,
                 originalCurrency = currency.get(),
                 exchangeRate = exchangeRate,
-                baseAmount = baseAmount,
+                baseAmount = calculateBaseAmount(originalAmount, exchangeRate),
                 expenseDate = expenseDate,
                 createdAt = now,
                 updatedAt = now,
             )
         }
+
+        private fun calculateBaseAmount(
+            originalAmount: BigDecimal,
+            exchangeRate: BigDecimal,
+        ): BigDecimal = originalAmount.multiply(exchangeRate)
 
         private fun requireFitsNumeric(
             value: BigDecimal,

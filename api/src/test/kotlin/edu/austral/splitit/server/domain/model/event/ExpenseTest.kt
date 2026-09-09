@@ -23,7 +23,6 @@ class ExpenseTest {
                 originalAmount = BigDecimal("5000.00"),
                 originalCurrency = "ars",
                 exchangeRate = BigDecimal.ONE,
-                baseAmount = BigDecimal("5000.00"),
                 expenseDate = LocalDate.of(2026, 9, 3),
             )
 
@@ -48,7 +47,6 @@ class ExpenseTest {
                 name = "Cena",
                 originalAmount = BigDecimal.ZERO,
                 originalCurrency = "ARS",
-                baseAmount = BigDecimal.ZERO,
                 expenseDate = LocalDate.now(),
             )
         }
@@ -60,7 +58,6 @@ class ExpenseTest {
                 name = "Cena",
                 originalAmount = BigDecimal("-10.00"),
                 originalCurrency = "ARS",
-                baseAmount = BigDecimal("10.00"),
                 expenseDate = LocalDate.now(),
             )
         }
@@ -82,7 +79,6 @@ class ExpenseTest {
                 name = "Cena",
                 originalAmount = BigDecimal("100.00"),
                 originalCurrency = "USD",
-                baseAmount = BigDecimal("100.00"),
                 expenseDate = LocalDate.now(),
             )
         }
@@ -100,7 +96,6 @@ class ExpenseTest {
                 name = "Cena",
                 originalAmount = BigDecimal("100.00"),
                 originalCurrency = "USD",
-                baseAmount = BigDecimal("100.00"),
                 expenseDate = LocalDate.now(),
             )
         }
@@ -115,7 +110,6 @@ class ExpenseTest {
                 name = "Cena",
                 originalAmount = BigDecimal("100.00"),
                 originalCurrency = "123",
-                baseAmount = BigDecimal("100.00"),
                 expenseDate = LocalDate.now(),
             )
         }
@@ -127,7 +121,6 @@ class ExpenseTest {
                 name = "Cena",
                 originalAmount = BigDecimal("100.00"),
                 originalCurrency = "AR",
-                baseAmount = BigDecimal("100.00"),
                 expenseDate = LocalDate.now(),
             )
         }
@@ -142,7 +135,6 @@ class ExpenseTest {
                 name = "Cena",
                 originalAmount = BigDecimal("1.23456"),
                 originalCurrency = "ARS",
-                baseAmount = BigDecimal("1.23"),
                 expenseDate = LocalDate.now(),
             )
         }
@@ -155,7 +147,6 @@ class ExpenseTest {
                 originalAmount = BigDecimal("1.23"),
                 originalCurrency = "ARS",
                 exchangeRate = BigDecimal("1.1234567"),
-                baseAmount = BigDecimal("1.23"),
                 expenseDate = LocalDate.now(),
             )
         }
@@ -168,7 +159,6 @@ class ExpenseTest {
                 name = "Cena",
                 originalAmount = tooManyIntegerDigits,
                 originalCurrency = "ARS",
-                baseAmount = BigDecimal("1.23"),
                 expenseDate = LocalDate.now(),
             )
         }
