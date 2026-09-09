@@ -43,6 +43,15 @@ class EventApplicationService(
                 trimmed
             }
 
+        val ownerKey = owner.name.trim().lowercase()
+        val additionalKeys = normalizedAdditionalNames.map { it.lowercase() }
+        require(additionalKeys.toSet().size == additionalKeys.size) {
+            "Duplicate participant names"
+        }
+        require(ownerKey !in additionalKeys) {
+            "Participant name cannot match the event owner name"
+        }
+
         val event =
             eventService.save(
                 owner = owner,

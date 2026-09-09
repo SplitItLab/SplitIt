@@ -28,6 +28,11 @@ class EventMemberService(
         event: Event,
         displayNames: List<String>,
     ): List<EventMember> {
+        val keys = displayNames.map { it.trim().lowercase() }
+        require(keys.toSet().size == keys.size) {
+            "Duplicate member display names"
+        }
+
         val members =
             displayNames.map { name ->
                 EventMember.create(

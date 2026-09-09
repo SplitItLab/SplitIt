@@ -151,6 +151,60 @@ class EventApplicationServiceTest {
     }
 
     @Test
+    fun `createEvent rejects duplicate participant names before persisting`() {
+        whenever(userService.getById(1L)).thenReturn(user)
+
+        val command =
+            CreateEventCommand(
+                userId = 1L,
+                name = "Viaje",
+                baseCurrency = "ARS",
+                participantNames = listOf("Ana", " ana "),
+            )
+
+        assertFailsWith<IllegalArgumentException> {
+            eventApplicationService.createEvent(command)
+        }
+
+        verify(eventService, never()).save(
+            owner = any(),
+            name = any(),
+            description = anyOrNull(),
+            iconKey = anyOrNull(),
+            baseCurrency = any(),
+        )
+        verify(eventMemberService, never()).addMember(any(), any(), anyOrNull())
+        verify(eventMemberService, never()).addMembers(any(), any())
+    }
+
+    @Test
+    fun `createEvent rejects participant name that matches owner before persisting`() {
+        whenever(userService.getById(1L)).thenReturn(user)
+
+        val command =
+            CreateEventCommand(
+                userId = 1L,
+                name = "Viaje",
+                baseCurrency = "ARS",
+                participantNames = listOf("mateo"),
+            )
+
+        assertFailsWith<IllegalArgumentException> {
+            eventApplicationService.createEvent(command)
+        }
+
+        verify(eventService, never()).save(
+            owner = any(),
+            name = any(),
+            description = anyOrNull(),
+            iconKey = anyOrNull(),
+            baseCurrency = any(),
+        )
+        verify(eventMemberService, never()).addMember(any(), any(), anyOrNull())
+        verify(eventMemberService, never()).addMembers(any(), any())
+    }
+
+    @Test
     fun `listUserEvents returns events with member counts`() {
         val event1 = Event.create(user, "Evento 1", baseCurrency = "ARS").apply { id = 1L }
         val event2 = Event.create(user, "Evento 2", baseCurrency = "USD").apply { id = 2L }

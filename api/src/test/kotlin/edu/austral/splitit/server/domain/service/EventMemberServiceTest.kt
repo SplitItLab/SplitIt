@@ -9,9 +9,11 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class EventMemberServiceTest {
     private val eventMemberRepository: EventMemberRepository = mock()
@@ -52,6 +54,15 @@ class EventMemberServiceTest {
         val captor = argumentCaptor<Iterable<EventMember>>()
         verify(eventMemberRepository).saveAll(captor.capture())
         assertEquals(2, captor.firstValue.toList().size)
+    }
+
+    @Test
+    fun `addMembers rejects duplicate display names without saving`() {
+        assertFailsWith<IllegalArgumentException> {
+            eventMemberService.addMembers(event, listOf("Ana", "ana"))
+        }
+
+        verify(eventMemberRepository, never()).saveAll(any<Iterable<EventMember>>())
     }
 
     @Test
