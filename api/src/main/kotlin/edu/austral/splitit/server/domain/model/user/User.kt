@@ -50,7 +50,7 @@ class User(
             val normalizedName = name.trim()
 
             require(normalizedName.length in NAME_MIN..NAME_MAX) {
-                "El nombre debe tener entre $NAME_MIN y $NAME_MAX caracteres"
+                "Name must be between $NAME_MIN and $NAME_MAX characters"
             }
 
             return normalizedName

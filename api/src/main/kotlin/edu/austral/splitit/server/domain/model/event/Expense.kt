@@ -72,29 +72,29 @@ class Expense(
                 paidByMember.event === event ||
                     (paidByMember.event.id != null && paidByMember.event.id == event.id),
             ) {
-                "El integrante que paga debe pertenecer al mismo evento"
+                "Paying member must belong to the same event"
             }
             require(originalAmount > BigDecimal.ZERO) {
-                "El monto original debe ser mayor que cero"
+                "Original amount must be greater than zero"
             }
             require(baseAmount > BigDecimal.ZERO) {
-                "El monto base debe ser mayor que cero"
+                "Base amount must be greater than zero"
             }
             require(exchangeRate > BigDecimal.ZERO) {
-                "La tasa de cambio debe ser mayor que cero"
+                "Exchange rate must be greater than zero"
             }
-            requireFitsNumeric(originalAmount, AMOUNT_PRECISION, AMOUNT_SCALE, "El monto original")
-            requireFitsNumeric(baseAmount, AMOUNT_PRECISION, AMOUNT_SCALE, "El monto base")
-            requireFitsNumeric(exchangeRate, RATE_PRECISION, RATE_SCALE, "La tasa de cambio")
+            requireFitsNumeric(originalAmount, AMOUNT_PRECISION, AMOUNT_SCALE, "Original amount")
+            requireFitsNumeric(baseAmount, AMOUNT_PRECISION, AMOUNT_SCALE, "Base amount")
+            requireFitsNumeric(exchangeRate, RATE_PRECISION, RATE_SCALE, "Exchange rate")
 
             val normalizedName = name.trim()
             require(normalizedName.length in NAME_MIN..NAME_MAX) {
-                "El nombre del gasto debe tener entre $NAME_MIN y $NAME_MAX caracteres"
+                "Expense name must be between $NAME_MIN and $NAME_MAX characters"
             }
 
             val normalizedCurrency = originalCurrency.trim().uppercase()
             require(normalizedCurrency.matches(Regex("^[A-Z]{$CURRENCY_LENGTH}$"))) {
-                "La moneda original debe ser un código ISO 4217 de $CURRENCY_LENGTH caracteres"
+                "Original currency must be a $CURRENCY_LENGTH-character ISO 4217 code"
             }
 
             val now = Instant.now()
@@ -119,11 +119,11 @@ class Expense(
             label: String,
         ) {
             require(value.scale() <= scale) {
-                "$label no puede tener más de $scale decimales"
+                "$label cannot have more than $scale decimal places"
             }
             val integerDigits = value.precision() - value.scale()
             require(integerDigits <= precision - scale) {
-                "$label excede la precisión de $precision dígitos"
+                "$label exceeds precision of $precision digits"
             }
         }
     }

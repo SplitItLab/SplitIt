@@ -38,7 +38,7 @@ class EventApplicationService(
             command.participantNames.map { name ->
                 val trimmed = name.trim()
                 require(trimmed.isNotEmpty()) {
-                    "El nombre del participante no puede estar vacío"
+                    "Participant name cannot be empty"
                 }
                 trimmed
             }

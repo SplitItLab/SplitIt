@@ -55,12 +55,12 @@ class Event(
         ): Event {
             val normalizedName = name.trim()
             require(normalizedName.length in NAME_MIN..NAME_MAX) {
-                "El nombre del evento debe tener entre $NAME_MIN y $NAME_MAX caracteres"
+                "Event name must be between $NAME_MIN and $NAME_MAX characters"
             }
 
             val normalizedCurrency = baseCurrency.trim().uppercase()
             require(normalizedCurrency.matches(Regex("^[A-Z]{$CURRENCY_LENGTH}$"))) {
-                "La moneda base debe ser un código ISO 4217 de $CURRENCY_LENGTH caracteres"
+                "Base currency must be a $CURRENCY_LENGTH-character ISO 4217 code"
             }
 
             val now = Instant.now()

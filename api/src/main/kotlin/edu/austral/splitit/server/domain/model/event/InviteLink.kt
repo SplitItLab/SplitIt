@@ -39,7 +39,7 @@ class InviteLink(
             event: Event,
             token: String,
         ): InviteLink {
-            require(token.isNotBlank()) { "El token de invitación no puede estar vacío" }
+            require(token.isNotBlank()) { "Invite token cannot be blank" }
             return InviteLink(
                 event = event,
                 token = token,

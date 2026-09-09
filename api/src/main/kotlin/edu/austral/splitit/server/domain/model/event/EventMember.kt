@@ -51,7 +51,7 @@ class EventMember(
         ): EventMember {
             val normalizedName = displayName.trim()
             require(normalizedName.length in DISPLAY_NAME_MIN..DISPLAY_NAME_MAX) {
-                "El nombre del integrante debe tener entre $DISPLAY_NAME_MIN y $DISPLAY_NAME_MAX caracteres"
+                "Member display name must be between $DISPLAY_NAME_MIN and $DISPLAY_NAME_MAX characters"
             }
 
             return EventMember(
