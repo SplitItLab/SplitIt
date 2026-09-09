@@ -2,7 +2,6 @@ package edu.austral.splitit.server.application.service
 
 import edu.austral.splitit.server.Helpers
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
-import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.domain.service.UserService
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -25,12 +24,7 @@ class SignUpServiceTest {
         whenever(userService.findByEmail(Helpers.emailOf("ada@example.com"))).thenReturn(null)
         whenever(passwordEncoder.encode("una-clave-segura")).thenReturn("hashed")
         whenever(userService.save("Ada Lovelace", Helpers.emailOf("ada@example.com"), "hashed")).thenReturn(
-            User(
-                id = 1L,
-                name = "Ada Lovelace",
-                email = "ada@example.com",
-                passwordHash = "hashed",
-            ),
+            Helpers.user(),
         )
 
         val result =
@@ -53,12 +47,7 @@ class SignUpServiceTest {
     @Test
     fun `register rejects mixed-case email that already exists`() {
         whenever(userService.findByEmail(Helpers.emailOf("ada@example.com"))).thenReturn(
-            User(
-                id = 1L,
-                name = "Ada Lovelace",
-                email = "ada@example.com",
-                passwordHash = "hashed",
-            ),
+            Helpers.user(),
         )
 
         assertFailsWith<EmailAlreadyInUseException> {

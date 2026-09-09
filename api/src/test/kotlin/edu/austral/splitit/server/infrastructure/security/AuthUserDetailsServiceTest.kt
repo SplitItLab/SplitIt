@@ -1,6 +1,6 @@
 package edu.austral.splitit.server.infrastructure.security
 
-import edu.austral.splitit.server.domain.model.user.User
+import edu.austral.splitit.server.Helpers
 import edu.austral.splitit.server.infrastructure.persistence.UserRepository
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
@@ -16,12 +16,7 @@ class AuthUserDetailsServiceTest {
     @Test
     fun `loads the user by normalized email`() {
         whenever(userRepository.findByEmail("ada@example.com")).thenReturn(
-            User(
-                id = 1L,
-                name = "Ada Lovelace",
-                email = "ada@example.com",
-                passwordHash = "hashed",
-            ),
+            Helpers.user(),
         )
 
         val details = service.loadUserByUsername("  Ada@Example.com  ")

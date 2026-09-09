@@ -126,11 +126,9 @@ class MeControllerTest(
                 email = Helpers.emailOf("ada.lovelace@example.com"),
             ),
         ).thenReturn(
-            User(
-                id = 1L,
+            Helpers.user(
                 name = "Ada Byron Lovelace",
                 email = "ada.lovelace@example.com",
-                passwordHash = "hashed",
             ),
         )
         whenever(tokenProvider.issue(any())).thenReturn("renewed.jwt.token")
@@ -277,11 +275,5 @@ class MeControllerTest(
             name = "Old Name",
         )
 
-    private fun ada(): User =
-        User(
-            id = 1L,
-            name = "Ada Lovelace",
-            email = "ada@example.com",
-            passwordHash = "hashed",
-        )
+    private fun ada(): User = Helpers.user()
 }

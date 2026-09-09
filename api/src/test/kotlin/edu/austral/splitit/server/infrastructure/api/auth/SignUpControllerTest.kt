@@ -5,7 +5,6 @@ import edu.austral.splitit.server.application.exception.EmailAlreadyInUseExcepti
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.LoginService
 import edu.austral.splitit.server.application.service.SignUpService
-import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
 import edu.austral.splitit.server.infrastructure.security.SessionCookieWriter
 import jakarta.servlet.ServletException
@@ -68,12 +67,7 @@ class SignUpControllerTest(
                 "una-clave-segura",
             ),
         ).thenReturn(
-            User(
-                id = 1L,
-                name = "Ada Lovelace",
-                email = "ada@example.com",
-                passwordHash = "hashed",
-            ),
+            Helpers.user(),
         )
 
         mockMvc

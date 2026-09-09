@@ -5,16 +5,16 @@
 #   VS Code: REST Client; ejecutá cada bloque `###`.
 #   La API tiene que estar en {{baseUrl}} (por defecto localhost:8080).
 #
-# Correr de arriba a abajo: el PATCH de email y el login posterior asumen
-# que el seed de este archivo ya corrió.
+# Correr de arriba a abajo. Cada Run All crea cuentas nuevas (emails con timestamp)
+# para no depender de datos de una corrida anterior.
 #
 @baseUrl = http://localhost:8080
-@meEmail = ada.me.owner@example.com
+@meEmail = ada.me.owner-{{$timestamp}}@example.com
 @mePassword = una-clave-segura
-@takenEmail = ada.me.taken@example.com
+@takenEmail = ada.me.taken-{{$timestamp}}@example.com
 @updatedEmail = ada.me.updated-{{$timestamp}}@example.com
 
-### Seed — account owner (201 first time, 409 after)
+### Seed — account owner (201)
 POST {{baseUrl}}/api/auth/register
 Content-Type: application/json
 Accept: application/json
@@ -26,21 +26,17 @@ Accept: application/json
 }
 
 > {%
-import { assertCreatedUser, assertError } from './scripts/assert.js'
+import { assertCreatedUser } from './scripts/assert.js'
 
-client.test("seeds the account owner or reports it already exists", function () {
-    if (response.status === 201) {
-        assertCreatedUser(client, response, {
-            name: "Ada Lovelace",
-            email: "ada.me.owner@example.com",
-        })
-        return
-    }
-    assertError(client, response, 409, "Email already in use")
+client.test("seeds the account owner", function () {
+    assertCreatedUser(client, response, {
+        name: "Ada Lovelace",
+        emailPattern: /^ada\.me\.owner-\d+@example\.com$/,
+    })
 })
 %}
 
-### Seed — taken email (201 first time, 409 after)
+### Seed — taken email (201)
 POST {{baseUrl}}/api/auth/register
 Content-Type: application/json
 Accept: application/json
@@ -52,17 +48,13 @@ Accept: application/json
 }
 
 > {%
-import { assertCreatedUser, assertError } from './scripts/assert.js'
+import { assertCreatedUser } from './scripts/assert.js'
 
 client.test("seeds a second account to occupy an email", function () {
-    if (response.status === 201) {
-        assertCreatedUser(client, response, {
-            name: "Other User",
-            email: "ada.me.taken@example.com",
-        })
-        return
-    }
-    assertError(client, response, 409, "Email already in use")
+    assertCreatedUser(client, response, {
+        name: "Other User",
+        emailPattern: /^ada\.me\.taken-\d+@example\.com$/,
+    })
 })
 %}
 
@@ -81,12 +73,13 @@ import { assertSessionUser, assertSetCookieHttpOnly, saveAuthToken } from './scr
 
 client.test("creates a session for the account owner", function () {
     assertSessionUser(client, response, {
-        name: response.body.name,
-        email: "ada.me.owner@example.com",
+        name: "Ada Lovelace",
+        emailPattern: /^ada\.me\.owner-\d+@example\.com$/,
     })
     assertSetCookieHttpOnly(client, response, "auth_token")
     client.global.set("meId", String(response.body.id))
     client.global.set("meName", response.body.name)
+    client.global.set("meEmail", response.body.email)
 })
 saveAuthToken(client, response, "auth_token")
 %}
@@ -102,7 +95,7 @@ import { assertSessionUser } from './scripts/assert.js'
 client.test("returns the authenticated account and ignores a client-supplied id", function () {
     assertSessionUser(client, response, {
         name: client.global.get("meName"),
-        email: "ada.me.owner@example.com",
+        email: client.global.get("meEmail"),
     })
     client.assert(String(response.body.id) === client.global.get("meId"), "Expected the session user id")
 })
@@ -139,7 +132,7 @@ import { assertSessionUser, assertSetCookieHttpOnly, saveAuthToken } from './scr
 client.test("updates the name, trims it, and renews the session cookie", function () {
     assertSessionUser(client, response, {
         name: "Ada Byron Lovelace",
-        email: "ada.me.owner@example.com",
+        email: client.global.get("meEmail"),
     })
     client.assert(String(response.body.id) === client.global.get("meId"), "Expected the session user id")
     assertSetCookieHttpOnly(client, response, "auth_token")
@@ -271,7 +264,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "email": "{{persistedEmail}}",
+  "email": "{{updatedEmail}}",
   "password": "{{mePassword}}"
 }
 
