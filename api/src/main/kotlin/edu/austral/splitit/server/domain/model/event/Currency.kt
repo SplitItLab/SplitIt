@@ -8,13 +8,14 @@ data class Currency private constructor(
 
     companion object {
         const val CURRENCY_LENGTH = 3
+        const val VALID_REGEX = "^[A-Z]{$CURRENCY_LENGTH}$"
 
         operator fun invoke(rawCurrency: String): Currency {
             val normalizedCurrency = rawCurrency.trim().uppercase()
 
             require(
                 normalizedCurrency.matches(
-                    Regex("^[A-Z]{$CURRENCY_LENGTH}$"),
+                    Regex(VALID_REGEX),
                 ),
             ) {
                 "Base currency must be a $CURRENCY_LENGTH-character ISO 4217 code"
