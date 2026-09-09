@@ -22,7 +22,7 @@ import java.time.Instant
         Index(name = "idx_events_owner_id", columnList = "owner_id"),
     ],
 )
-class Event(
+class Event private constructor(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,

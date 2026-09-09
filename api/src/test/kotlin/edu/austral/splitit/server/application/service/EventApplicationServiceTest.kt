@@ -1,8 +1,8 @@
 package edu.austral.splitit.server.application.service
 
+import edu.austral.splitit.server.Helpers
 import edu.austral.splitit.server.domain.model.event.Event
 import edu.austral.splitit.server.domain.model.event.EventMember
-import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.domain.service.EventMemberService
 import edu.austral.splitit.server.domain.service.EventService
 import edu.austral.splitit.server.domain.service.UserService
@@ -29,7 +29,7 @@ class EventApplicationServiceTest {
             eventMemberService = eventMemberService,
         )
 
-    private val user = User(id = 1L, name = "Mateo", email = "mateo@example.com", passwordHash = "hash")
+    private val user = Helpers.user(name = "Mateo", email = "mateo@example.com", passwordHash = "hash")
 
     @Test
     fun `createEvent saves event, owner member, and participants`() {

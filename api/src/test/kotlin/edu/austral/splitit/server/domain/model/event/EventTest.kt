@@ -1,6 +1,6 @@
 package edu.austral.splitit.server.domain.model.event
 
-import edu.austral.splitit.server.domain.model.user.User
+import edu.austral.splitit.server.Helpers
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -8,7 +8,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class EventTest {
-    private val owner = User(id = 1L, name = "Dueño", email = "dueno@example.com", passwordHash = "hash")
+    private val owner = Helpers.user(name = "Dueño", email = "dueno@example.com", passwordHash = "hash")
 
     @Test
     fun `create normalizes name and uppercase currency`() {

@@ -25,7 +25,7 @@ import java.time.LocalDate
         Index(name = "idx_expenses_paid_by_member_id", columnList = "paid_by_member_id"),
     ],
 )
-class Expense(
+class Expense private constructor(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,

@@ -1,8 +1,8 @@
 package edu.austral.splitit.server.domain.service
 
+import edu.austral.splitit.server.Helpers
 import edu.austral.splitit.server.domain.model.event.Event
 import edu.austral.splitit.server.domain.model.event.EventMember
-import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.infrastructure.persistence.EventMemberCountProjection
 import edu.austral.splitit.server.infrastructure.persistence.EventMemberRepository
 import org.junit.jupiter.api.Test
@@ -17,7 +17,7 @@ class EventMemberServiceTest {
     private val eventMemberRepository: EventMemberRepository = mock()
     private val eventMemberService = EventMemberService(eventMemberRepository)
 
-    private val owner = User(id = 1L, name = "Dueño", email = "dueno@example.com", passwordHash = "hash")
+    private val owner = Helpers.user(name = "Dueño", email = "dueno@example.com", passwordHash = "hash")
     private val event = Event.create(owner = owner, name = "Viaje", baseCurrency = "ARS")
 
     @Test

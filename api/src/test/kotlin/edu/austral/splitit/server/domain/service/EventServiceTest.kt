@@ -1,8 +1,8 @@
 package edu.austral.splitit.server.domain.service
 
+import edu.austral.splitit.server.Helpers
 import edu.austral.splitit.server.application.exception.EventNotFoundException
 import edu.austral.splitit.server.domain.model.event.Event
-import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.infrastructure.persistence.EventRepository
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -18,7 +18,7 @@ class EventServiceTest {
     private val eventRepository: EventRepository = mock()
     private val eventService = EventService(eventRepository)
 
-    private val owner = User(id = 1L, name = "Dueño", email = "dueno@example.com", passwordHash = "hash")
+    private val owner = Helpers.user(name = "Dueño", email = "dueno@example.com", passwordHash = "hash")
 
     @Test
     fun `save creates and persists event`() {

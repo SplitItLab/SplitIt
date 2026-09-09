@@ -1,6 +1,6 @@
 package edu.austral.splitit.server.domain.model.event
 
-import edu.austral.splitit.server.domain.model.user.User
+import edu.austral.splitit.server.Helpers
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -8,7 +8,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class EventMemberTest {
-    private val owner = User(id = 1L, name = "Dueño", email = "dueno@example.com", passwordHash = "hash")
+    private val owner = Helpers.user(name = "Dueño", email = "dueno@example.com", passwordHash = "hash")
     private val event = Event.create(owner = owner, name = "Viaje", baseCurrency = "ARS")
 
     @Test
@@ -34,7 +34,7 @@ class EventMemberTest {
         val member = EventMember.create(event = event, displayName = "Ana")
         assertNull(member.user)
 
-        val user = User(id = 2L, name = "Ana", email = "ana@example.com", passwordHash = "hash")
+        val user = Helpers.user(id = 2L, name = "Ana", email = "ana@example.com", passwordHash = "hash")
         member.linkUser(user)
 
         assertEquals(user, member.user)

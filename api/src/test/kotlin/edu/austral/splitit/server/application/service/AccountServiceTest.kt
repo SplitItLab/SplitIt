@@ -43,11 +43,9 @@ class AccountServiceTest {
                 email = Helpers.emailOf("ada.lovelace@example.com"),
             ),
         ).thenReturn(
-            User(
-                id = 1L,
+            Helpers.user(
                 name = "Ada Byron Lovelace",
                 email = "ada.lovelace@example.com",
-                passwordHash = "hashed",
             ),
         )
 
@@ -62,11 +60,5 @@ class AccountServiceTest {
         assertEquals("ada.lovelace@example.com", user.email)
     }
 
-    private fun ada(): User =
-        User(
-            id = 1L,
-            name = "Ada Lovelace",
-            email = "ada@example.com",
-            passwordHash = "hashed",
-        )
+    private fun ada(): User = Helpers.user()
 }

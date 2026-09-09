@@ -1,13 +1,13 @@
 package edu.austral.splitit.server.domain.model.event
 
-import edu.austral.splitit.server.domain.model.user.User
+import edu.austral.splitit.server.Helpers
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 
 class InviteLinkTest {
-    private val owner = User(id = 1L, name = "Dueño", email = "dueno@example.com", passwordHash = "hash")
+    private val owner = Helpers.user(name = "Dueño", email = "dueno@example.com", passwordHash = "hash")
     private val event = Event.create(owner = owner, name = "Viaje", baseCurrency = "ARS")
 
     @Test

@@ -31,7 +31,7 @@ class UserServiceTest {
     fun `save trims name and email before persisting`() {
         whenever(userRepository.saveAndFlush(any())).thenAnswer { invocation ->
             val unsaved = invocation.getArgument<User>(0)
-            User(
+            Helpers.user(
                 id = 1L,
                 name = unsaved.name,
                 email = unsaved.email,
@@ -253,13 +253,7 @@ class UserServiceTest {
         verify(userRepository, never()).saveAndFlush(any())
     }
 
-    private fun ada(): User =
-        User(
-            id = 1L,
-            name = "Ada Lovelace",
-            email = "ada@example.com",
-            passwordHash = "hashed",
-        )
+    private fun ada(): User = Helpers.user()
 
     private fun duplicateEmailViolation(): DataIntegrityViolationException {
         val cause =

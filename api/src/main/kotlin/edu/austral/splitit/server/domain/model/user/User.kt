@@ -16,7 +16,7 @@ import jakarta.validation.constraints.Size
         UniqueConstraint(name = "uk_users_email", columnNames = ["email"]),
     ],
 )
-class User(
+class User private constructor(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,

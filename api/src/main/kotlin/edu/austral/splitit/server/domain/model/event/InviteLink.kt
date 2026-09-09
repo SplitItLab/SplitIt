@@ -21,7 +21,7 @@ import java.time.Instant
         UniqueConstraint(name = "uk_invite_links_token", columnNames = ["token"]),
     ],
 )
-class InviteLink(
+class InviteLink private constructor(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,

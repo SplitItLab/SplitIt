@@ -1,5 +1,6 @@
 package edu.austral.splitit.server.application.service
 
+import edu.austral.splitit.server.Helpers
 import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.domain.service.EventMemberService
 import edu.austral.splitit.server.domain.service.EventService
@@ -59,7 +60,12 @@ class EventApplicationServiceRollbackTest(
         userRepository.deleteAll()
         owner =
             userRepository.saveAndFlush(
-                User(name = "Mateo", email = "mateo-rollback@example.com", passwordHash = "hash"),
+                Helpers.user(
+                    name = "Mateo",
+                    email = "mateo-rollback@example.com",
+                    passwordHash = "hash",
+                    id = null,
+                ),
             )
     }
 

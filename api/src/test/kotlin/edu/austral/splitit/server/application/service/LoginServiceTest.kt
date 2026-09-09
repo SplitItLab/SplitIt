@@ -71,11 +71,5 @@ class LoginServiceTest {
         verify(passwordEncoder).matches(eq("una-clave-segura"), any())
     }
 
-    private fun ada(): User =
-        User(
-            id = 1L,
-            name = "Ada Lovelace",
-            email = "ada@example.com",
-            passwordHash = "hashed",
-        )
+    private fun ada(): User = Helpers.user()
 }

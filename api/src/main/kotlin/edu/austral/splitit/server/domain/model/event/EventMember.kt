@@ -26,7 +26,7 @@ import java.time.Instant
         Index(name = "idx_event_members_user_id", columnList = "user_id"),
     ],
 )
-class EventMember(
+class EventMember private constructor(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null,
