@@ -1,5 +1,6 @@
 package edu.austral.splitit.server.domain.model.event
 
+import edu.austral.splitit.server.domain.model.validateBetween
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
@@ -39,10 +40,13 @@ class InviteLink(
             event: Event,
             token: String,
         ): InviteLink {
-            require(token.isNotBlank()) { "Invite token cannot be blank" }
+            val normalizedToken = token.trim()
+
+            validateBetween("invite link", normalizedToken, 1, TOKEN_MAX_LENGTH)
+
             return InviteLink(
                 event = event,
-                token = token,
+                token = normalizedToken,
                 createdAt = Instant.now(),
             )
         }

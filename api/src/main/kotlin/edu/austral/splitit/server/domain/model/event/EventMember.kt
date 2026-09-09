@@ -1,6 +1,7 @@
 package edu.austral.splitit.server.domain.model.event
 
 import edu.austral.splitit.server.domain.model.user.User
+import edu.austral.splitit.server.domain.model.validateBetween
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
@@ -50,9 +51,8 @@ class EventMember(
             user: User? = null,
         ): EventMember {
             val normalizedName = displayName.trim()
-            require(normalizedName.length in DISPLAY_NAME_MIN..DISPLAY_NAME_MAX) {
-                "Member display name must be between $DISPLAY_NAME_MIN and $DISPLAY_NAME_MAX characters"
-            }
+
+            validateBetween("member display name", normalizedName, DISPLAY_NAME_MIN, DISPLAY_NAME_MAX)
 
             return EventMember(
                 event = event,

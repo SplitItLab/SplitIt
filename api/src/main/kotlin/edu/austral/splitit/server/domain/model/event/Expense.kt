@@ -1,5 +1,8 @@
 package edu.austral.splitit.server.domain.model.event
 
+import edu.austral.splitit.server.domain.model.event.Currency.Companion.CURRENCY_LENGTH
+import edu.austral.splitit.server.domain.model.validateBetween
+import edu.austral.splitit.server.domain.model.validateNotZero
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
@@ -32,7 +35,7 @@ class Expense(
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "paid_by_member_id", nullable = false)
     var paidByMember: EventMember,
-    @Column(nullable = false, length = NAME_MAX)
+    @Column(nullable = false, length = EXPENSE_NAME_MAX)
     var name: String,
     @Column(name = "original_amount", nullable = false, precision = 19, scale = 4)
     var originalAmount: BigDecimal,
@@ -50,11 +53,12 @@ class Expense(
     var updatedAt: Instant = Instant.now(),
 ) {
     companion object {
-        const val NAME_MIN = 1
-        const val NAME_MAX = 150
-        const val CURRENCY_LENGTH = 3
+        const val EXPENSE_NAME_MIN = 1
+        const val EXPENSE_NAME_MAX = 150
+
         const val AMOUNT_PRECISION = 19
         const val AMOUNT_SCALE = 4
+
         const val RATE_PRECISION = 19
         const val RATE_SCALE = 6
 
@@ -74,28 +78,24 @@ class Expense(
             ) {
                 "Paying member must belong to the same event"
             }
-            require(originalAmount > BigDecimal.ZERO) {
-                "Original amount must be greater than zero"
-            }
-            require(baseAmount > BigDecimal.ZERO) {
-                "Base amount must be greater than zero"
-            }
-            require(exchangeRate > BigDecimal.ZERO) {
-                "Exchange rate must be greater than zero"
-            }
+
+            validateNotZero(originalAmount)
+            validateNotZero(baseAmount)
+            validateNotZero(exchangeRate)
+
             requireFitsNumeric(originalAmount, AMOUNT_PRECISION, AMOUNT_SCALE, "Original amount")
             requireFitsNumeric(baseAmount, AMOUNT_PRECISION, AMOUNT_SCALE, "Base amount")
             requireFitsNumeric(exchangeRate, RATE_PRECISION, RATE_SCALE, "Exchange rate")
 
             val normalizedName = name.trim()
-            require(normalizedName.length in NAME_MIN..NAME_MAX) {
-                "Expense name must be between $NAME_MIN and $NAME_MAX characters"
-            }
+            validateBetween(
+                "expense name",
+                normalizedName,
+                EXPENSE_NAME_MIN,
+                EXPENSE_NAME_MAX,
+            )
 
-            val normalizedCurrency = originalCurrency.trim().uppercase()
-            require(normalizedCurrency.matches(Regex("^[A-Z]{$CURRENCY_LENGTH}$"))) {
-                "Original currency must be a $CURRENCY_LENGTH-character ISO 4217 code"
-            }
+            val currency = Currency(originalCurrency)
 
             val now = Instant.now()
             return Expense(
@@ -103,7 +103,7 @@ class Expense(
                 paidByMember = paidByMember,
                 name = normalizedName,
                 originalAmount = originalAmount,
-                originalCurrency = normalizedCurrency,
+                originalCurrency = currency.get(),
                 exchangeRate = exchangeRate,
                 baseAmount = baseAmount,
                 expenseDate = expenseDate,

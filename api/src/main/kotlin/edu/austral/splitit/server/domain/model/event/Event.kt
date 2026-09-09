@@ -1,5 +1,7 @@
 package edu.austral.splitit.server.domain.model.event
 
+import edu.austral.splitit.server.domain.model.event.Currency.Companion.CURRENCY_LENGTH
+import edu.austral.splitit.server.domain.model.event.EventName.Companion.EVENT_NAME_MAX
 import edu.austral.splitit.server.domain.model.user.User
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -27,7 +29,7 @@ class Event(
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "owner_id", nullable = false)
     var owner: User,
-    @Column(nullable = false, length = NAME_MAX)
+    @Column(nullable = false, length = EVENT_NAME_MAX)
     var name: String,
     @Column(columnDefinition = "TEXT")
     var description: String? = null,
@@ -41,10 +43,7 @@ class Event(
     var updatedAt: Instant = Instant.now(),
 ) {
     companion object {
-        const val NAME_MIN = 1
-        const val NAME_MAX = 100
         const val ICON_KEY_MAX = 50
-        const val CURRENCY_LENGTH = 3
 
         fun create(
             owner: User,
@@ -53,23 +52,17 @@ class Event(
             iconKey: String? = null,
             baseCurrency: String,
         ): Event {
-            val normalizedName = name.trim()
-            require(normalizedName.length in NAME_MIN..NAME_MAX) {
-                "Event name must be between $NAME_MIN and $NAME_MAX characters"
-            }
-
-            val normalizedCurrency = baseCurrency.trim().uppercase()
-            require(normalizedCurrency.matches(Regex("^[A-Z]{$CURRENCY_LENGTH}$"))) {
-                "Base currency must be a $CURRENCY_LENGTH-character ISO 4217 code"
-            }
+            val eventName = EventName(name)
+            val currency = Currency(baseCurrency)
 
             val now = Instant.now()
+
             return Event(
                 owner = owner,
-                name = normalizedName,
+                name = eventName.get(),
                 description = description?.trim()?.takeIf { it.isNotEmpty() },
                 iconKey = iconKey?.trim()?.takeIf { it.isNotEmpty() },
-                baseCurrency = normalizedCurrency,
+                baseCurrency = currency.get(),
                 createdAt = now,
                 updatedAt = now,
             )
