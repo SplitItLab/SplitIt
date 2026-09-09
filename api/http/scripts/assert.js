@@ -90,37 +90,66 @@ export function assertSessionUser(client, response, expected) {
     client.assert(body.token === undefined, "token must not appear in the JSON body")
 }
 
-export function setCookieHeader(response) {
-    const headers = response.headers
-    if (headers == null) {
-        return ""
-    }
+function collectHeaderValues(headers, name) {
     const collected = []
+    if (headers == null) {
+        return collected
+    }
     if (typeof headers.valuesOf === "function") {
-        const values = headers.valuesOf("Set-Cookie")
+        const values = headers.valuesOf(name)
         if (values != null) {
             if (Array.isArray(values)) collected.push.apply(collected, values)
             else collected.push(values)
         }
     }
     if (collected.length === 0 && typeof headers.valueOf === "function") {
-        const value = headers.valueOf("Set-Cookie")
+        const value = headers.valueOf(name)
         if (value != null) collected.push(value)
     }
     if (collected.length === 0) {
-        const fallback = headers["Set-Cookie"] || headers["set-cookie"]
+        const fallback = headers[name] || headers[name.toLowerCase()]
         if (fallback != null) {
             if (Array.isArray(fallback)) collected.push.apply(collected, fallback)
             else collected.push(fallback)
         }
     }
-    return collected.map(String).join("\n")
+    return collected
+}
+
+export function setCookieHeader(response) {
+    return collectHeaderValues(response.headers, "Set-Cookie").map(String).join("\n")
+}
+
+function decodeCookieValue(value) {
+    const trimmed = String(value).trim()
+    if (trimmed.length === 0) {
+        return trimmed
+    }
+    try {
+        return decodeURIComponent(trimmed)
+    } catch (e) {
+        return trimmed
+    }
 }
 
 export function authTokenFromSetCookie(response, cookieName) {
-    const header = setCookieHeader(response)
-    const match = header.match(new RegExp("(?:^|[\\n,])\\s*" + cookieName + "=([^;\\n]+)"))
-    return match ? match[1].trim() : null
+    const cookies = collectHeaderValues(response.headers, "Set-Cookie")
+    for (let i = 0; i < cookies.length; i++) {
+        const firstPair = String(cookies[i]).split(";")[0]
+        const separator = firstPair.indexOf("=")
+        if (separator < 0) {
+            continue
+        }
+        const name = firstPair.slice(0, separator).trim()
+        if (name.toLowerCase() !== cookieName.toLowerCase()) {
+            continue
+        }
+        const value = decodeCookieValue(firstPair.slice(separator + 1))
+        if (value.length > 0) {
+            return value
+        }
+    }
+    return null
 }
 
 export function assertSetCookieHttpOnly(client, response, cookieName) {
@@ -168,4 +197,25 @@ export function saveAuthToken(client, response, cookieName) {
     const token = authTokenFromSetCookie(response, cookieName)
     client.assert(token != null && token.length > 0, "Expected auth token in Set-Cookie")
     client.global.set("authToken", token)
+}
+
+export function assertEvent(client, event, expected) {
+    client.assert(event != null && typeof event === "object", "Expected event object")
+    client.assert(event.id !== undefined && event.id !== null, "Expected event id")
+    if (expected.id !== undefined) {
+        client.assert(String(event.id) === String(expected.id), 'Expected event id "' + expected.id + '" but got "' + event.id + '"')
+    }
+    client.assert(event.name === expected.name, 'Expected name "' + expected.name + '" but got "' + event.name + '"')
+    if (Object.prototype.hasOwnProperty.call(expected, "description")) {
+        client.assert(event.description === expected.description, 'Expected description "' + expected.description + '" but got "' + event.description + '"')
+    }
+    if (Object.prototype.hasOwnProperty.call(expected, "iconKey")) {
+        client.assert(event.iconKey === expected.iconKey, 'Expected iconKey "' + expected.iconKey + '" but got "' + event.iconKey + '"')
+    }
+    client.assert(event.baseCurrency === expected.baseCurrency, 'Expected baseCurrency "' + expected.baseCurrency + '" but got "' + event.baseCurrency + '"')
+    if (expected.memberCount !== undefined) {
+        client.assert(event.memberCount === expected.memberCount, "Expected memberCount " + expected.memberCount + " but got " + event.memberCount)
+    }
+    client.assert(event.owner === undefined, "event must not include owner")
+    client.assert(event.members === undefined, "event must not include members")
 }

@@ -63,17 +63,18 @@ Cookie: auth_token={{authToken}}
 }
 
 > {%
-import { assertStatus, jsonBody } from './scripts/assert.js'
+import { assertStatus, jsonBody, assertEvent } from './scripts/assert.js'
 
 client.test("crea un evento con participantes adicionales y devuelve memberCount = 3", function () {
     assertStatus(client, response, 201)
     const body = jsonBody(response)
-    client.assert(body.id !== undefined && body.id !== null, "Expected event id")
-    client.assert(body.name === "Viaje a Bariloche", "Expected event name")
-    client.assert(body.description === "Vacaciones de verano", "Expected description")
-    client.assert(body.iconKey === "plane", "Expected iconKey")
-    client.assert(body.baseCurrency === "ARS", "Expected baseCurrency")
-    client.assert(body.memberCount === 3, "Expected memberCount = 3 (dueño + 2 participantes)")
+    assertEvent(client, body, {
+        name: "Viaje a Bariloche",
+        description: "Vacaciones de verano",
+        iconKey: "plane",
+        baseCurrency: "ARS",
+        memberCount: 3,
+    })
     client.global.set("firstEventId", String(body.id))
 })
 %}
@@ -90,17 +91,18 @@ Cookie: auth_token={{authToken}}
 }
 
 > {%
-import { assertStatus, jsonBody } from './scripts/assert.js'
+import { assertStatus, jsonBody, assertEvent } from './scripts/assert.js'
 
 client.test("crea un evento sin participantes adicionales y devuelve memberCount = 1", function () {
     assertStatus(client, response, 201)
     const body = jsonBody(response)
-    client.assert(body.id !== undefined && body.id !== null, "Expected event id")
-    client.assert(body.name === "Asado", "Expected event name")
-    client.assert(body.description === null, "Expected description null")
-    client.assert(body.iconKey === null, "Expected iconKey null")
-    client.assert(body.baseCurrency === "ARS", "Expected baseCurrency")
-    client.assert(body.memberCount === 1, "Expected memberCount = 1 (solo el dueño)")
+    assertEvent(client, body, {
+        name: "Asado",
+        description: null,
+        iconKey: null,
+        baseCurrency: "ARS",
+        memberCount: 1,
+    })
 })
 %}
 
@@ -206,16 +208,23 @@ Accept: application/json
 Cookie: auth_token={{authToken}}
 
 > {%
-import { assertStatus, jsonBody } from './scripts/assert.js'
+import { assertStatus, jsonBody, assertEvent } from './scripts/assert.js'
 
 client.test("lista los eventos del usuario autenticado", function () {
     assertStatus(client, response, 200)
     const list = jsonBody(response)
     client.assert(Array.isArray(list), "Expected array of events")
-    client.assert(list.length >= 2, "Expected at least 2 events")
+    client.assert(list.length === 2, "Expected exactly 2 events for this user")
     const found = list.find(e => String(e.id) === client.global.get("firstEventId"))
     client.assert(found !== undefined, "Expected created event in list")
-    client.assert(found.memberCount === 3, "Expected memberCount = 3")
+    assertEvent(client, found, {
+        id: client.global.get("firstEventId"),
+        name: "Viaje a Bariloche",
+        description: "Vacaciones de verano",
+        iconKey: "plane",
+        baseCurrency: "ARS",
+        memberCount: 3,
+    })
 })
 %}
 

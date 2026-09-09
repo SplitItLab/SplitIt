@@ -33,7 +33,9 @@ class EventController(
                 baseCurrency = request.baseCurrency,
                 participantNames = request.participantNames,
             )
+
         val summary = eventApplicationService.createEvent(command)
+
         return EventResponse.of(summary)
     }
 
@@ -42,6 +44,7 @@ class EventController(
         @AuthenticationPrincipal user: AuthUser,
     ): List<EventResponse> {
         val summaries = eventApplicationService.listUserEvents(user.id)
+
         return summaries.map { EventResponse.of(it) }
     }
 }

@@ -141,6 +141,10 @@ Content-Type: application/json
 Accept: application/json
 
 {
+  "name": "Ada Lovelace",
+  "email": "ada@example.com",
+  "password": "una-clave-segura",
+}
 
 > {%
 import { assertError } from './scripts/assert.js'
