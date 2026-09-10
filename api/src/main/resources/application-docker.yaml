@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:postgresql://${POSTGRES_HOST:db}:5432/${POSTGRES_DB:splitit}?sslmode=${POSTGRES_SSLMODE:disable}
+    url: jdbc:postgresql://${POSTGRES_HOST:db}:${POSTGRES_PORT:5432}/${POSTGRES_DB:splitit}?sslmode=${POSTGRES_SSLMODE:disable}
   jpa:
     hibernate:
       ddl-auto: ${JPA_DDL_AUTO:update}
