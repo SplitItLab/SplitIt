@@ -48,6 +48,11 @@ class EventMemberService(
 
     fun findByEventId(eventId: Long): List<EventMember> = eventMemberRepository.findAllByEventId(eventId)
 
+    fun isUserMemberOfEvent(
+        eventId: Long,
+        userId: Long,
+    ): Boolean = eventMemberRepository.existsByEventIdAndUserId(eventId, userId)
+
     fun getMemberCounts(eventIds: Collection<Long>): Map<Long, Long> {
         if (eventIds.isEmpty()) return emptyMap()
         return eventMemberRepository

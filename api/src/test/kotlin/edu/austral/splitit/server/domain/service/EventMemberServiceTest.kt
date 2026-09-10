@@ -109,4 +109,13 @@ class EventMemberServiceTest {
         val map = eventMemberService.getMemberCounts(emptyList())
         assertEquals(emptyMap(), map)
     }
+
+    @Test
+    fun `isUserMemberOfEvent delegates to repository`() {
+        whenever(eventMemberRepository.existsByEventIdAndUserId(1L, 2L)).thenReturn(true)
+        whenever(eventMemberRepository.existsByEventIdAndUserId(1L, 3L)).thenReturn(false)
+
+        assertEquals(true, eventMemberService.isUserMemberOfEvent(1L, 2L))
+        assertEquals(false, eventMemberService.isUserMemberOfEvent(1L, 3L))
+    }
 }

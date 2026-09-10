@@ -1,8 +1,10 @@
 package edu.austral.splitit.server.application.service
 
+import edu.austral.splitit.server.application.exception.EventNotFoundException
 import edu.austral.splitit.server.domain.service.EventMemberService
 import edu.austral.splitit.server.domain.service.EventService
 import edu.austral.splitit.server.domain.service.UserService
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -22,6 +24,23 @@ data class EventSummary(
     val iconKey: String?,
     val baseCurrency: String,
     val memberCount: Long,
+)
+
+data class EventDetail(
+    val id: Long,
+    val name: String,
+    val description: String?,
+    val iconKey: String?,
+    val baseCurrency: String,
+    val memberCount: Long,
+    val members: List<EventMemberSummary>,
+)
+
+data class EventMemberSummary(
+    val id: Long,
+    val name: String,
+    val email: String?,
+    val isGuest: Boolean,
 )
 
 @Service
@@ -101,5 +120,40 @@ class EventApplicationService(
                 memberCount = counts[event.id] ?: 0L,
             )
         }
+    }
+
+    @Transactional(readOnly = true)
+    fun getEventById(
+        userId: Long,
+        eventId: Long,
+    ): EventDetail {
+        val event = eventService.findById(eventId) ?: throw EventNotFoundException()
+
+        val isOwner = event.owner.id == userId
+        val isMember = isOwner || eventMemberService.isUserMemberOfEvent(eventId, userId)
+
+        if (!isMember) {
+            throw AccessDeniedException("Forbidden")
+        }
+
+        val members = eventMemberService.findByEventId(eventId)
+
+        return EventDetail(
+            id = requireNotNull(event.id),
+            name = event.name,
+            description = event.description,
+            iconKey = event.iconKey,
+            baseCurrency = event.baseCurrency,
+            memberCount = members.size.toLong(),
+            members =
+                members.map { member ->
+                    EventMemberSummary(
+                        id = requireNotNull(member.id),
+                        name = member.displayName,
+                        email = member.user?.email,
+                        isGuest = member.user == null,
+                    )
+                },
+        )
     }
 }

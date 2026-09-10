@@ -1,9 +1,12 @@
 package edu.austral.splitit.server.infrastructure.api.event
 
+import edu.austral.splitit.server.application.exception.EventNotFoundException
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.CreateEventCommand
 import edu.austral.splitit.server.application.service.EventApplicationService
+import edu.austral.splitit.server.application.service.EventDetail
+import edu.austral.splitit.server.application.service.EventMemberSummary
 import edu.austral.splitit.server.application.service.EventSummary
 import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
 import edu.austral.splitit.server.infrastructure.config.SecurityConfig
@@ -21,6 +24,7 @@ import org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoCon
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
+import org.springframework.security.access.AccessDeniedException
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
@@ -234,5 +238,100 @@ class EventControllerTest(
             .andExpect(jsonPath("$.message").value("Unauthorized"))
 
         verify(eventApplicationService, never()).listUserEvents(any())
+    }
+
+    @Test
+    fun `getEventById returns 200 with event detail and members`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+        whenever(eventApplicationService.getEventById(1L, 10L)).thenReturn(
+            EventDetail(
+                id = 10L,
+                name = "Viaje a Bariloche",
+                description = "Vacaciones de verano",
+                iconKey = "plane",
+                baseCurrency = "ARS",
+                memberCount = 2L,
+                members =
+                    listOf(
+                        EventMemberSummary(
+                            id = 1L,
+                            name = "Mateo",
+                            email = "mateo@example.com",
+                            isGuest = false,
+                        ),
+                        EventMemberSummary(
+                            id = 2L,
+                            name = "Ana",
+                            email = null,
+                            isGuest = true,
+                        ),
+                    ),
+            ),
+        )
+
+        mockMvc
+            .perform(
+                get("/api/events/10")
+                    .cookie(Cookie("auth_token", "good-token")),
+            ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(10))
+            .andExpect(jsonPath("$.name").value("Viaje a Bariloche"))
+            .andExpect(jsonPath("$.description").value("Vacaciones de verano"))
+            .andExpect(jsonPath("$.iconKey").value("plane"))
+            .andExpect(jsonPath("$.baseCurrency").value("ARS"))
+            .andExpect(jsonPath("$.memberCount").value(2))
+            .andExpect(jsonPath("$.members[0].id").value(1))
+            .andExpect(jsonPath("$.members[0].name").value("Mateo"))
+            .andExpect(jsonPath("$.members[0].email").value("mateo@example.com"))
+            .andExpect(jsonPath("$.members[0].isGuest").value(false))
+            .andExpect(jsonPath("$.members[1].id").value(2))
+            .andExpect(jsonPath("$.members[1].name").value("Ana"))
+            .andExpect(jsonPath("$.members[1].email").value(null as String?))
+            .andExpect(jsonPath("$.members[1].isGuest").value(true))
+
+        verify(eventApplicationService).getEventById(1L, 10L)
+    }
+
+    @Test
+    fun `getEventById returns 404 when event does not exist`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+        whenever(eventApplicationService.getEventById(1L, 999L)).thenThrow(EventNotFoundException())
+
+        mockMvc
+            .perform(
+                get("/api/events/999")
+                    .cookie(Cookie("auth_token", "good-token")),
+            ).andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.message").value("Event not found"))
+
+        verify(eventApplicationService).getEventById(1L, 999L)
+    }
+
+    @Test
+    fun `getEventById returns 403 when user is not owner or member`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+        whenever(eventApplicationService.getEventById(1L, 10L)).thenThrow(AccessDeniedException("Forbidden"))
+
+        mockMvc
+            .perform(
+                get("/api/events/10")
+                    .cookie(Cookie("auth_token", "good-token")),
+            ).andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.message").value("Forbidden"))
+            .andExpect(jsonPath("$.id").doesNotExist())
+            .andExpect(jsonPath("$.name").doesNotExist())
+            .andExpect(jsonPath("$.members").doesNotExist())
+
+        verify(eventApplicationService).getEventById(1L, 10L)
+    }
+
+    @Test
+    fun `getEventById returns 401 without auth cookie`() {
+        mockMvc
+            .perform(get("/api/events/10"))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.message").value("Unauthorized"))
+
+        verify(eventApplicationService, never()).getEventById(any(), any())
     }
 }
