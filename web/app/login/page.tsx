@@ -37,7 +37,7 @@ export default function LoginPage() {
   return (
     <div className="relative grid h-screen md:grid-cols-2">
       <div className="relative hidden h-screen overflow-hidden md:block">
-        <Image src="/register-image.png" alt="" fill className="object-cover" />
+        <Image src="/register-image.png" alt="" fill unoptimized className="object-cover" />
       </div>
 
       <div className="flex items-center justify-center overflow-y-auto p-6">

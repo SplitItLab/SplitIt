@@ -1,11 +1,11 @@
 import type { NextConfig } from "next";
 import { config as dotenvConfig } from "dotenv";
-import path from "path";
+import { resolveOutputFileTracingRoot } from "./tracing-root";
 
 dotenvConfig({ path: "../.env" });
 
 const nextConfig: NextConfig = {
-  outputFileTracingRoot: path.join(__dirname, "../"),
+  outputFileTracingRoot: resolveOutputFileTracingRoot(__dirname),
   ...(!process.env.VERCEL ? { output: "standalone" as const } : {}),
 };
 
