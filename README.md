@@ -71,7 +71,7 @@ JWT_SECRET=
 JWT_EXPIRATION_HOURS=8
 ```
 
-En Docker, Compose pisa `POSTGRES_HOST` a `db` (el nombre del servicio). En local, dejalo en `localhost`.
+`POSTGRES_PORT` es el puerto **en tu máquina**. Postgres adentro del contenedor siempre escucha en `5432`; Compose pisa `POSTGRES_HOST=db` y `POSTGRES_PORT=5432` en el servicio `api` para que no use el puerto del host. Si corrés la API con `./gradlew bootRun`, dejá `POSTGRES_HOST=localhost` y el `POSTGRES_PORT` publicado (por ejemplo `5433` si 5432 ya está ocupado).
 
 ## Desarrollo local (sin Docker para todo)
 
