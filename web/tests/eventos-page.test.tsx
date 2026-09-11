@@ -64,6 +64,10 @@ describe("EventsPage", () => {
     expect(screen.getByText("Vacaciones de verano con amigos")).toBeInTheDocument();
     expect(screen.getByText("4 integrantes · ARS")).toBeInTheDocument();
     expect(screen.getByText("3 integrantes · USD")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Viaje a Bariloche/ })).toHaveAttribute(
+      "href",
+      "/eventos/1"
+    );
   });
 
   it("muestra el estado vacío cuando la API devuelve una lista vacía", async () => {
@@ -181,6 +185,38 @@ describe("EventsPage", () => {
       participantNames: ["Ana"],
     });
     expect(await screen.findByText("Viaje a Mendoza")).toBeInTheDocument();
+  });
+
+  it("preserva un evento recién creado cuando termina la carga inicial", async () => {
+    let resolveInitialLoad!: (value: EventSummary[]) => void;
+    vi.mocked(listEvents).mockImplementationOnce(
+      () => new Promise<EventSummary[]>((resolve) => (resolveInitialLoad = resolve))
+    );
+    vi.mocked(createEvent).mockResolvedValue({
+      id: 3,
+      name: "Viaje a Mendoza",
+      description: "Gastos del fin de semana",
+      iconKey: "plane",
+      baseCurrency: "ARS",
+      memberCount: 2,
+    });
+    const user = userEvent.setup();
+
+    render(<EventsPage />);
+
+    await user.click(screen.getByRole("button", { name: /Crear evento/ }));
+    const dialog = await screen.findByRole("dialog");
+    await user.type(within(dialog).getByLabelText("Nombre del evento"), "Viaje a Mendoza");
+    await user.click(within(dialog).getByRole("button", { name: /Crear evento/ }));
+
+    expect(await screen.findByText("Viaje a Mendoza")).toBeInTheDocument();
+
+    resolveInitialLoad(events);
+
+    await waitFor(() => {
+      expect(screen.getByText("Viaje a Mendoza")).toBeInTheDocument();
+      expect(screen.queryByText("Viaje a Bariloche")).not.toBeInTheDocument();
+    });
   });
 
   it("muestra un mensaje claro si falla la creación", async () => {
