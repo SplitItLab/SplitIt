@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, Search, X } from "lucide-react";
 
@@ -67,7 +68,7 @@ export default function EventsPage() {
     setState((current) =>
       current.status === "loaded"
         ? { status: "loaded", events: [event, ...current.events] }
-        : { status: "loaded", events: [event] }
+        : current
     );
     setQuery("");
   };
@@ -117,6 +118,7 @@ export default function EventsPage() {
         <Button
           type="button"
           onClick={() => setCreating(true)}
+          disabled={state.status !== "loaded"}
           className="h-10 w-full rounded-[8px] px-5 text-xl font-medium sm:w-auto"
         >
           <Plus className="size-5" />
@@ -173,25 +175,24 @@ export default function EventsPage() {
       {state.status === "loaded" && visibleEvents.length > 0 && (
         <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {visibleEvents.map((event) => (
-            <article
-              key={event.id}
-              className="border-border flex items-center gap-4 rounded-[24px] border p-4 sm:p-5"
-            >
-              <EventIcon iconKey={event.iconKey} />
-              <div className="min-w-0 flex-1">
-                <h2 className="text-text-primary truncate text-base font-extrabold">
-                  {event.name}
-                </h2>
-                {event.description && (
-                  <p className="text-text-secondary mt-1 line-clamp-2 text-sm font-medium">
-                    {event.description}
+            <Link key={event.id} href={`/eventos/${event.id}`}>
+              <article className="border-border flex items-center gap-4 rounded-[24px] border p-4 sm:p-5">
+                <EventIcon iconKey={event.iconKey} />
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-text-primary truncate text-base font-extrabold">
+                    {event.name}
+                  </h2>
+                  {event.description && (
+                    <p className="text-text-secondary mt-1 line-clamp-2 text-sm font-medium">
+                      {event.description}
+                    </p>
+                  )}
+                  <p className="text-primary mt-2 text-sm font-medium">
+                    {event.memberCount} integrantes · {event.baseCurrency}
                   </p>
-                )}
-                <p className="text-primary mt-2 text-sm font-medium">
-                  {event.memberCount} integrantes · {event.baseCurrency}
-                </p>
-              </div>
-            </article>
+                </div>
+              </article>
+            </Link>
           ))}
         </section>
       )}
@@ -200,6 +201,7 @@ export default function EventsPage() {
         open={creating}
         onOpenChange={setCreating}
         onCreated={handleCreated}
+        onUnauthorized={() => setState({ status: "unauthorized" })}
         currentUserName={session.status === "authenticated" ? session.user.name : undefined}
       />
     </div>

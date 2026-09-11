@@ -31,6 +31,7 @@ type CreateEventDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated: (event: EventSummary) => void;
+  onUnauthorized: () => void;
   /** Nombre del usuario autenticado: siempre integra el evento. */
   currentUserName?: string;
 };
@@ -39,6 +40,7 @@ export function CreateEventDialog({
   open,
   onOpenChange,
   onCreated,
+  onUnauthorized,
   currentUserName,
 }: CreateEventDialogProps) {
   const [participants, setParticipants] = useState<string[]>([]);
@@ -88,7 +90,10 @@ export function CreateEventDialog({
       setMemberError("Escribí un nombre para agregarlo.");
       return;
     }
-    if (participants.some((participant) => participant.toLowerCase() === name.toLowerCase())) {
+    if (
+      currentUserName?.trim().toLowerCase() === name.toLowerCase() ||
+      participants.some((participant) => participant.toLowerCase() === name.toLowerCase())
+    ) {
       setMemberError("Ese integrante ya está en la lista.");
       return;
     }
@@ -109,6 +114,10 @@ export function CreateEventDialog({
       resetForm();
       onOpenChange(false);
     } catch (err) {
+      if (err instanceof EventError && err.type === "unauthorized") {
+        onUnauthorized();
+        return;
+      }
       setGeneralError(
         err instanceof EventError ? err.message : "No pudimos crear el evento. Probá de nuevo."
       );

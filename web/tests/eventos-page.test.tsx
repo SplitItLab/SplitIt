@@ -66,6 +66,34 @@ describe("EventsPage", () => {
     expect(screen.getByText("3 integrantes · USD")).toBeInTheDocument();
   });
 
+  it("enlaza cada evento a su vista de detalle", async () => {
+    vi.mocked(listEvents).mockResolvedValue(events);
+
+    render(<EventsPage />);
+
+    expect(await screen.findByRole("link", { name: /Viaje a Bariloche/ })).toHaveAttribute(
+      "href",
+      "/eventos/1"
+    );
+  });
+
+  it("habilita la creación solamente después de cargar los eventos", async () => {
+    let resolveEvents!: (value: EventSummary[]) => void;
+    vi.mocked(listEvents).mockReturnValue(
+      new Promise((resolve) => {
+        resolveEvents = resolve;
+      })
+    );
+
+    render(<EventsPage />);
+
+    const createButton = screen.getByRole("button", { name: /Crear evento/ });
+    expect(createButton).toBeDisabled();
+
+    resolveEvents(events);
+    await waitFor(() => expect(createButton).toBeEnabled());
+  });
+
   it("muestra el estado vacío cuando la API devuelve una lista vacía", async () => {
     vi.mocked(listEvents).mockResolvedValue([]);
 
@@ -177,6 +205,46 @@ describe("EventsPage", () => {
       participantNames: ["Ana"],
     });
     expect(await screen.findByText("Viaje a Mendoza")).toBeInTheDocument();
+  });
+
+  it("no permite agregar al usuario actual como participante otra vez", async () => {
+    vi.mocked(listEvents).mockResolvedValue(events);
+    const user = userEvent.setup();
+
+    render(<EventsPage />);
+    await screen.findByText("Viaje a Bariloche");
+
+    await user.click(screen.getByRole("button", { name: /Crear evento/ }));
+    const dialog = await screen.findByRole("dialog");
+
+    await user.type(within(dialog).getByLabelText("Integrantes"), "nIcOlAs");
+    await user.click(within(dialog).getByRole("button", { name: "Agregar" }));
+
+    expect(within(dialog).getByText("Ese integrante ya está en la lista.")).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("button", { name: "Quitar a nIcOlAs" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("redirige al login si la creación falla por falta de autorización", async () => {
+    vi.mocked(listEvents).mockResolvedValue(events);
+    vi.mocked(createEvent).mockRejectedValue(
+      new EventError("unauthorized", "Tu sesión expiró. Iniciá sesión de nuevo.")
+    );
+    const user = userEvent.setup();
+
+    render(<EventsPage />);
+    await screen.findByText("Viaje a Bariloche");
+
+    await user.click(screen.getByRole("button", { name: /Crear evento/ }));
+    const dialog = await screen.findByRole("dialog");
+    await user.type(within(dialog).getByLabelText("Nombre del evento"), "Asado");
+    await user.click(within(dialog).getByRole("button", { name: /Crear evento/ }));
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/login"));
+    expect(
+      within(dialog).queryByText("Tu sesión expiró. Iniciá sesión de nuevo.")
+    ).not.toBeInTheDocument();
   });
 
   it("muestra un mensaje claro si falla la creación", async () => {
