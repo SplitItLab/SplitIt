@@ -219,3 +219,29 @@ export function assertEvent(client, event, expected) {
     client.assert(event.owner === undefined, "event must not include owner")
     client.assert(event.members === undefined, "event must not include members")
 }
+
+export function assertEventDetail(client, event, expected) {
+    client.assert(event != null && typeof event === "object", "Expected event object")
+    client.assert(event.id !== undefined && event.id !== null, "Expected event id")
+    if (expected.id !== undefined) {
+        client.assert(String(event.id) === String(expected.id), 'Expected event id "' + expected.id + '" but got "' + event.id + '"')
+    }
+    client.assert(event.name === expected.name, 'Expected name "' + expected.name + '" but got "' + event.name + '"')
+    if (Object.prototype.hasOwnProperty.call(expected, "description")) {
+        client.assert(event.description === expected.description, 'Expected description "' + expected.description + '" but got "' + event.description + '"')
+    }
+    if (Object.prototype.hasOwnProperty.call(expected, "iconKey")) {
+        client.assert(event.iconKey === expected.iconKey, 'Expected iconKey "' + expected.iconKey + '" but got "' + event.iconKey + '"')
+    }
+    client.assert(event.baseCurrency === expected.baseCurrency, 'Expected baseCurrency "' + expected.baseCurrency + '" but got "' + event.baseCurrency + '"')
+    if (expected.memberCount !== undefined) {
+        client.assert(event.memberCount === expected.memberCount, "Expected memberCount " + expected.memberCount + " but got " + event.memberCount)
+    }
+    client.assert(Array.isArray(event.members), "Expected members array")
+    client.assert(event.memberCount === event.members.length, "memberCount must match members array length")
+    client.assert(event.owner === undefined, "event must not include owner")
+    client.assert(event.expenses === undefined, "event must not include expenses")
+    client.assert(event.totals === undefined, "event must not include totals")
+    client.assert(event.balances === undefined, "event must not include balances")
+}
+
