@@ -46,17 +46,17 @@ export default function RegisterPage() {
   return (
     <div className="relative grid h-screen md:grid-cols-2">
       <Link href="/login" className="absolute top-6 right-6 text-sm font-medium">
-        Login
+        LogIn
       </Link>
 
       <div className="relative hidden h-screen overflow-hidden md:block">
         <Image src="/register-image.png" alt="" fill unoptimized className="object-cover" />
       </div>
 
-      <div className="flex items-center justify-center overflow-y-auto p-6">
+      <div className="flex flex-col items-center justify-center gap-2 text-center">
         <div className="w-full max-w-sm">
-          <h1 className="text-2xl font-bold">Crea una cuenta</h1>
-          <p className="text-muted-foreground mb-6 text-sm">
+          <h1 className="text-[32px] font-extrabold text-black">Crea una cuenta</h1>
+          <p className="text-muted-foreground text-sm font-medium">
             Ingresá mail y contraseña para crear tu cuenta
           </p>
 
@@ -111,6 +111,12 @@ export default function RegisterPage() {
               </Button>
             </FieldGroup>
           </form>
+          <p className="text-muted-foreground mt-3 text-center text-sm">
+            ¿ Ya tenés cuenta ?
+            <Link className="text-primary font-medium hover:underline" href="/login">
+              Iniciá Sesión
+            </Link>
+          </p>
         </div>
       </div>
     </div>
