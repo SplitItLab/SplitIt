@@ -263,6 +263,7 @@ class EventApplicationServiceTest {
         assertEquals("ARS", detail.baseCurrency)
         assertEquals(2L, detail.memberCount)
         assertEquals(2, detail.members.size)
+        assertEquals(detail.memberCount, detail.members.size.toLong())
 
         val first = detail.members[0]
         assertEquals(100L, first.id)
@@ -306,6 +307,7 @@ class EventApplicationServiceTest {
         assertEquals("Asado", detail.name)
         assertEquals(1L, detail.memberCount)
         assertEquals(1, detail.members.size)
+        assertEquals(detail.memberCount, detail.members.size.toLong())
         assertEquals("Mateo", detail.members[0].name)
         assertEquals("mateo@example.com", detail.members[0].email)
         assertFalse(detail.members[0].isGuest)

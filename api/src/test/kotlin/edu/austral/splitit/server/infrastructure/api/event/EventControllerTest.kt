@@ -241,7 +241,7 @@ class EventControllerTest(
     }
 
     @Test
-    fun `getEventById returns 200 with event detail and members`() {
+    fun `getEventById returns 200 with event detail and members for owner`() {
         whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
         whenever(eventApplicationService.getEventById(1L, 10L)).thenReturn(
             EventDetail(
@@ -280,6 +280,7 @@ class EventControllerTest(
             .andExpect(jsonPath("$.iconKey").value("plane"))
             .andExpect(jsonPath("$.baseCurrency").value("ARS"))
             .andExpect(jsonPath("$.memberCount").value(2))
+            .andExpect(jsonPath("$.members.length()").value(2))
             .andExpect(jsonPath("$.members[0].id").value(1))
             .andExpect(jsonPath("$.members[0].name").value("Mateo"))
             .andExpect(jsonPath("$.members[0].email").value("mateo@example.com"))
@@ -288,8 +289,66 @@ class EventControllerTest(
             .andExpect(jsonPath("$.members[1].name").value("Ana"))
             .andExpect(jsonPath("$.members[1].email").value(null as String?))
             .andExpect(jsonPath("$.members[1].isGuest").value(true))
+            .andExpect(jsonPath("$.owner").doesNotExist())
+            .andExpect(jsonPath("$.expenses").doesNotExist())
+            .andExpect(jsonPath("$.balances").doesNotExist())
+            .andExpect(jsonPath("$.totals").doesNotExist())
 
         verify(eventApplicationService).getEventById(1L, 10L)
+    }
+
+    @Test
+    fun `getEventById returns 200 with event detail when requested by linked member`() {
+        val linkedUser =
+            AuthUser(
+                id = 2L,
+                username = "ana@example.com",
+                password = "",
+                roles = emptyList(),
+                name = "Ana",
+            )
+        whenever(tokenProvider.parse("linked-token")).thenReturn(linkedUser)
+        whenever(eventApplicationService.getEventById(2L, 10L)).thenReturn(
+            EventDetail(
+                id = 10L,
+                name = "Viaje a Bariloche",
+                description = "Vacaciones de verano",
+                iconKey = "plane",
+                baseCurrency = "ARS",
+                memberCount = 2L,
+                members =
+                    listOf(
+                        EventMemberSummary(
+                            id = 1L,
+                            name = "Mateo",
+                            email = "mateo@example.com",
+                            isGuest = false,
+                        ),
+                        EventMemberSummary(
+                            id = 2L,
+                            name = "Ana",
+                            email = "ana@example.com",
+                            isGuest = false,
+                        ),
+                    ),
+            ),
+        )
+
+        mockMvc
+            .perform(
+                get("/api/events/10")
+                    .cookie(Cookie("auth_token", "linked-token")),
+            ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(10))
+            .andExpect(jsonPath("$.name").value("Viaje a Bariloche"))
+            .andExpect(jsonPath("$.memberCount").value(2))
+            .andExpect(jsonPath("$.members.length()").value(2))
+            .andExpect(jsonPath("$.members[1].email").value("ana@example.com"))
+            .andExpect(jsonPath("$.members[1].isGuest").value(false))
+            .andExpect(jsonPath("$.expenses").doesNotExist())
+            .andExpect(jsonPath("$.balances").doesNotExist())
+
+        verify(eventApplicationService).getEventById(2L, 10L)
     }
 
     @Test
@@ -320,6 +379,10 @@ class EventControllerTest(
             .andExpect(jsonPath("$.message").value("Forbidden"))
             .andExpect(jsonPath("$.id").doesNotExist())
             .andExpect(jsonPath("$.name").doesNotExist())
+            .andExpect(jsonPath("$.description").doesNotExist())
+            .andExpect(jsonPath("$.iconKey").doesNotExist())
+            .andExpect(jsonPath("$.baseCurrency").doesNotExist())
+            .andExpect(jsonPath("$.memberCount").doesNotExist())
             .andExpect(jsonPath("$.members").doesNotExist())
 
         verify(eventApplicationService).getEventById(1L, 10L)
