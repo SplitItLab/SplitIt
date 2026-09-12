@@ -638,6 +638,52 @@ A task is complete only when:
 
 ---
 
+# HTTP endpoint tests
+
+Every endpoint that is **created or modified** must have corresponding HTTP tests.
+
+These tests live in the project's:
+
+```text
+.http/
+```
+
+directory.
+
+When creating or modifying an endpoint:
+
+* Create or update the corresponding `.http` test file.
+* Use the project's existing HTTP testing framework and conventions.
+* Use `http-client.env.json` for environment configuration.
+* Reuse the existing HTTP test utilities and assertion helpers.
+* Do not create a new HTTP testing framework or assertion mechanism.
+* Follow the existing `.http` file structure and naming conventions.
+
+HTTP tests should verify the endpoint's **observable behavior**, not its internal implementation.
+
+Depending on the endpoint, tests should cover the relevant cases, including:
+
+* successful requests,
+* authentication/authorization requirements,
+* invalid input,
+* relevant validation failures,
+* expected error responses,
+* important business-rule failures,
+* relevant response body data,
+* relevant response headers or cookies.
+
+When an endpoint is modified, update its existing `.http` tests to reflect the new behavior rather than creating duplicate test files.
+
+When an endpoint is added, create an appropriate `.http` test covering its main successful flow and relevant failure cases.
+
+Use the existing test scripts/helpers in `.http/scripts/` for assertions whenever possible.
+
+Do not hardcode environment-specific values when the existing environment configuration can be used instead.
+
+A backend endpoint change is **not complete** until its corresponding `.http` tests have been added or updated and pass using the project's existing HTTP testing setup.
+
+---
+
 # Git and scope
 
 Keep changes focused.
