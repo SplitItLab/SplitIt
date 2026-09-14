@@ -94,7 +94,7 @@ export default function EventsPage() {
               className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
             />
             <Input
-              type="search"
+              type="text"
               aria-label="Buscar evento"
               placeholder="Buscar evento"
               value={query}
@@ -108,7 +108,7 @@ export default function EventsPage() {
                 size="icon"
                 aria-label="Limpiar búsqueda"
                 onClick={() => setQuery("")}
-                className="absolute top-1/2 right-1.5 -translate-y-1/2 rounded-[6px]"
+                className="absolute inset-y-0 right-1.5 my-auto rounded-[6px] active:translate-y-0!"
               >
                 <X className="size-4" />
               </Button>
