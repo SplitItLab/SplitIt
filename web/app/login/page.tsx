@@ -104,7 +104,7 @@ export default function LoginPage() {
             </FieldGroup>
           </form>
           <p className="text-muted-foreground mt-3 text-center text-sm">
-            ¿ No tenés cuenta ?
+            ¿No tenés cuenta?{" "}
             <Link className="font medium text-primary hover:underline" href="/register">
               Registrate gratis
             </Link>

@@ -112,7 +112,7 @@ export default function RegisterPage() {
             </FieldGroup>
           </form>
           <p className="text-muted-foreground mt-3 text-center text-sm">
-            ¿ Ya tenés cuenta ?
+            ¿Ya tenés cuenta?{" "}
             <Link className="text-primary font-medium hover:underline" href="/login">
               Iniciá Sesión
             </Link>
