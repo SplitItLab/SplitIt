@@ -37,7 +37,7 @@ export function AppHeader() {
           <DropdownMenuContent align="end">
             <DropdownMenuItem
               render={
-                <Link href="/dashboard" className="flex items-center gap-2">
+                <Link href="/eventos" className="flex items-center gap-2">
                   <LayoutGrid className="size-4" />
                   Eventos
                 </Link>
