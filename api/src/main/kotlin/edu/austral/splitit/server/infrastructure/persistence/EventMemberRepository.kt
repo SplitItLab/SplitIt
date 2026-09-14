@@ -8,7 +8,22 @@ import org.springframework.data.repository.query.Param
 interface EventMemberRepository : JpaRepository<EventMember, Long> {
     fun countByEventId(eventId: Long): Long
 
-    fun findAllByEventId(eventId: Long): List<EventMember>
+    @Query(
+        """
+        SELECT em FROM EventMember em
+        LEFT JOIN FETCH em.user
+        WHERE em.event.id = :eventId
+        ORDER BY em.id ASC
+        """,
+    )
+    fun findAllByEventId(
+        @Param("eventId") eventId: Long,
+    ): List<EventMember>
+
+    fun existsByEventIdAndUserId(
+        eventId: Long,
+        userId: Long,
+    ): Boolean
 
     @Query(
         """

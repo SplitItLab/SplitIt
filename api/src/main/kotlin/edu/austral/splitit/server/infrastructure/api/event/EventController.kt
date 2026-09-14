@@ -7,6 +7,7 @@ import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -46,5 +47,14 @@ class EventController(
         val summaries = eventApplicationService.listUserEvents(user.id)
 
         return summaries.map { EventResponse.of(it) }
+    }
+
+    @GetMapping("/{id}")
+    fun getEventById(
+        @AuthenticationPrincipal user: AuthUser,
+        @PathVariable id: Long,
+    ): EventDetailResponse {
+        val detail = eventApplicationService.getEventById(user.id, id)
+        return EventDetailResponse.of(detail)
     }
 }

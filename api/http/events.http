@@ -8,6 +8,8 @@
 @baseUrl = http://localhost:8080
 @eventOwnerEmail = event.owner-{{$timestamp}}@example.com
 @eventOwnerPassword = una-clave-segura
+@otherUserEmail = other.user-{{$timestamp}}@example.com
+@otherUserPassword = una-clave-segura
 
 ### 1. Seed — Crear cuenta de prueba para el dueño
 POST {{baseUrl}}/api/auth/register
@@ -240,3 +242,112 @@ client.test("rechaza listar eventos sin sesión", function () {
     assertError(client, response, 401, "Unauthorized")
 })
 %}
+
+### 12. Events — GET detalle de evento por dueño (200)
+GET {{baseUrl}}/api/events/{{firstEventId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody, assertEventDetail } from './scripts/assert.js'
+
+client.test("obtiene el detalle del evento con sus integrantes", function () {
+    assertStatus(client, response, 200)
+    const body = jsonBody(response)
+    assertEventDetail(client, body, {
+        id: client.global.get("firstEventId"),
+        name: "Viaje a Bariloche",
+        description: "Vacaciones de verano",
+        iconKey: "plane",
+        baseCurrency: "ARS",
+        memberCount: 3,
+    })
+    client.assert(body.members.length === 3, "Expected 3 members")
+    const ownerMember = body.members.find(m => !m.isGuest)
+    client.assert(ownerMember !== undefined, "Expected linked owner member")
+    client.assert(typeof ownerMember.email === "string" && ownerMember.email.length > 0, "Expected owner email")
+    const guests = body.members.filter(m => m.isGuest)
+    client.assert(guests.length === 2, "Expected 2 guest members")
+    guests.forEach(g => {
+        client.assert(g.email === null || g.email === undefined, "Guest must not have email")
+    })
+})
+%}
+
+### 13. Events — GET detalle de evento inexistente (404)
+GET {{baseUrl}}/api/events/999999
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("devuelve 404 al consultar un evento inexistente", function () {
+    assertError(client, response, 404, "Event not found")
+})
+%}
+
+### 14. Seed — Crear cuenta de prueba para usuario ajeno
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Other User",
+  "email": "{{otherUserEmail}}",
+  "password": "{{otherUserPassword}}"
+}
+
+> {%
+import { assertStatus } from './scripts/assert.js'
+
+client.test("crea usuario ajeno para pruebas de permisos", function () {
+    assertStatus(client, response, 201)
+})
+%}
+
+### 15. Login — Iniciar sesión con usuario ajeno
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{otherUserEmail}}",
+  "password": "{{otherUserPassword}}"
+}
+
+> {%
+import { assertStatus, saveAuthToken } from './scripts/assert.js'
+
+client.test("inicia sesión como usuario ajeno exitosamente", function () {
+    assertStatus(client, response, 200)
+})
+saveAuthToken(client, response, "auth_token")
+%}
+
+### 16. Events — GET detalle de evento ajeno (403)
+GET {{baseUrl}}/api/events/{{firstEventId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza la consulta de evento ajeno con 403 Forbidden", function () {
+    assertError(client, response, 403, "Forbidden")
+})
+%}
+
+### 17. Events — GET detalle sin autenticación (401)
+# @no-cookie-jar
+GET {{baseUrl}}/api/events/{{firstEventId}}
+Accept: application/json
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza consultar detalle de evento sin sesión", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
