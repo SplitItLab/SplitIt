@@ -174,6 +174,7 @@ describe("getEventById y updateEvent", () => {
     baseCurrency: "ARS",
     memberCount: 4,
     members: [],
+    isOwner: true,
   };
 
   beforeEach(() => {

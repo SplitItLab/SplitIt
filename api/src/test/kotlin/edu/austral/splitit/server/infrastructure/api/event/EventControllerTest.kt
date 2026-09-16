@@ -270,6 +270,7 @@ class EventControllerTest(
                             isGuest = true,
                         ),
                     ),
+                isOwner = true,
             ),
         )
 
@@ -284,6 +285,7 @@ class EventControllerTest(
             .andExpect(jsonPath("$.iconKey").value("plane"))
             .andExpect(jsonPath("$.baseCurrency").value("ARS"))
             .andExpect(jsonPath("$.memberCount").value(2))
+            .andExpect(jsonPath("$.isOwner").value(true))
             .andExpect(jsonPath("$.members.length()").value(2))
             .andExpect(jsonPath("$.members[0].id").value(1))
             .andExpect(jsonPath("$.members[0].name").value("Mateo"))
@@ -335,6 +337,7 @@ class EventControllerTest(
                             isGuest = false,
                         ),
                     ),
+                isOwner = false,
             ),
         )
 
@@ -346,6 +349,7 @@ class EventControllerTest(
             .andExpect(jsonPath("$.id").value(10))
             .andExpect(jsonPath("$.name").value("Viaje a Bariloche"))
             .andExpect(jsonPath("$.memberCount").value(2))
+            .andExpect(jsonPath("$.isOwner").value(false))
             .andExpect(jsonPath("$.members.length()").value(2))
             .andExpect(jsonPath("$.members[1].email").value("ana@example.com"))
             .andExpect(jsonPath("$.members[1].isGuest").value(false))

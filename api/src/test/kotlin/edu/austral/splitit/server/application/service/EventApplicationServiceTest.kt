@@ -279,6 +279,7 @@ class EventApplicationServiceTest {
 
         verify(eventService).findById(10L)
         verify(eventMemberService).findByEventId(10L)
+        assertTrue(detail.isOwner)
     }
 
     @Test
@@ -311,6 +312,7 @@ class EventApplicationServiceTest {
         assertEquals("Mateo", detail.members[0].name)
         assertEquals("mateo@example.com", detail.members[0].email)
         assertFalse(detail.members[0].isGuest)
+        assertFalse(detail.isOwner)
     }
 
     @Test

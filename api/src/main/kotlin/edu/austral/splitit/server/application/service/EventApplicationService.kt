@@ -44,6 +44,7 @@ data class EventDetail(
     val baseCurrency: String,
     val memberCount: Long,
     val members: List<EventMemberSummary>,
+    val isOwner: Boolean,
 )
 
 data class EventMemberSummary(
@@ -164,6 +165,7 @@ class EventApplicationService(
                         isGuest = member.user == null,
                     )
                 },
+            isOwner = isOwner,
         )
     }
 

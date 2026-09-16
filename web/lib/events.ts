@@ -25,6 +25,7 @@ export type EventDetail = {
   baseCurrency: string;
   memberCount: number;
   members: EventMember[];
+  isOwner: boolean;
 };
 export const EVENT_CURRENCIES = [
   { code: "ARS", label: "ARS - Peso argentino" },

@@ -22,6 +22,7 @@ const event: EventDetail = {
   baseCurrency: "ARS",
   memberCount: 4,
   members: [],
+  isOwner: true,
 };
 
 function renderDialog(onDeleted = () => {}) {

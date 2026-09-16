@@ -87,7 +87,7 @@ export default function EventDetailPage() {
           <ArrowLeft className="size-4" />
           Volver a eventos
         </Link>
-        {state.status === "loaded" && (
+        {state.status === "loaded" && state.event.isOwner && (
           <div className="flex items-center gap-2">
             <Button
               type="button"
