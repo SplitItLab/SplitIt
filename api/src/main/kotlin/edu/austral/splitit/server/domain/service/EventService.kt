@@ -43,13 +43,7 @@ class EventService(
         name: String? = null,
         description: String? = null,
         iconKey: String? = null,
-    ): Event {
-        name?.let { event.name = it }
-        description?.let { event.description = it }
-        iconKey?.let { event.iconKey = it }
-
-        return eventRepository.save(event)
-    }
+    ): Event = eventRepository.save(event.update(name = name, description = description, iconKey = iconKey))
 
     fun hasExpenses(eventId: Long): Boolean = eventRepository.countExpensesByEventId(eventId) > 0
 

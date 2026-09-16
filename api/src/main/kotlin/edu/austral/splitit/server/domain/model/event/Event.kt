@@ -68,4 +68,16 @@ class Event private constructor(
             )
         }
     }
+
+    fun update(
+        name: String? = null,
+        description: String? = null,
+        iconKey: String? = null,
+    ): Event {
+        name?.let { this.name = EventName(it).get() }
+        description?.let { this.description = it.trim().takeIf { d -> d.isNotEmpty() } }
+        iconKey?.let { this.iconKey = it.trim().takeIf { k -> k.isNotEmpty() } }
+        this.updatedAt = Instant.now()
+        return this
+    }
 }
