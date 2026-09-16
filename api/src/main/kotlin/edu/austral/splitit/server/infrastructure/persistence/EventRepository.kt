@@ -17,4 +17,9 @@ interface EventRepository : JpaRepository<Event, Long> {
     fun findDistinctByOwnerIdOrMemberUserId(
         @Param("userId") userId: Long,
     ): List<Event>
+
+    @Query("SELECT COUNT(x) FROM Expense x WHERE x.event.id = :eventId")
+    fun countExpensesByEventId(
+        @Param("eventId") eventId: Long,
+    ): Long
 }

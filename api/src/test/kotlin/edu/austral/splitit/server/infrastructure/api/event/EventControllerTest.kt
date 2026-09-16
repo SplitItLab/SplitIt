@@ -1,5 +1,6 @@
 package edu.austral.splitit.server.infrastructure.api.event
 
+import edu.austral.splitit.server.application.exception.EventDeletionConflictException
 import edu.austral.splitit.server.application.exception.EventNotFoundException
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
@@ -29,6 +30,7 @@ import org.springframework.security.access.AccessDeniedException
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
@@ -398,6 +400,57 @@ class EventControllerTest(
             .andExpect(jsonPath("$.message").value("Unauthorized"))
 
         verify(eventApplicationService, never()).getEventById(any(), any())
+    }
+
+    @Test
+    fun `delete returns 204 without a body`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+
+        mockMvc
+            .perform(delete("/api/events/10").cookie(Cookie("auth_token", "good-token")))
+            .andExpect(status().isNoContent)
+            .andExpect(content().string(""))
+    }
+
+    @Test
+    fun `delete returns 401 without auth cookie`() {
+        mockMvc
+            .perform(delete("/api/events/10"))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.message").value("Unauthorized"))
+    }
+
+    @Test
+    fun `delete returns 404 when event does not exist`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+        whenever(eventApplicationService.deleteEvent(1L, 999L)).thenThrow(EventNotFoundException())
+
+        mockMvc
+            .perform(delete("/api/events/999").cookie(Cookie("auth_token", "good-token")))
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.message").value("Event not found"))
+    }
+
+    @Test
+    fun `delete returns 403 when user is not owner`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+        whenever(eventApplicationService.deleteEvent(1L, 10L)).thenThrow(AccessDeniedException("Forbidden"))
+
+        mockMvc
+            .perform(delete("/api/events/10").cookie(Cookie("auth_token", "good-token")))
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.message").value("Forbidden"))
+    }
+
+    @Test
+    fun `delete returns 409 when existing relations block deletion`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+        whenever(eventApplicationService.deleteEvent(1L, 10L)).thenThrow(EventDeletionConflictException())
+
+        mockMvc
+            .perform(delete("/api/events/10").cookie(Cookie("auth_token", "good-token")))
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.message").value("Event has related records"))
     }
 
     @Test

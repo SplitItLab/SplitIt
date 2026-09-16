@@ -1,9 +1,11 @@
 package edu.austral.splitit.server.application.service
 
+import edu.austral.splitit.server.application.exception.EventDeletionConflictException
 import edu.austral.splitit.server.application.exception.EventNotFoundException
 import edu.austral.splitit.server.domain.service.EventMemberService
 import edu.austral.splitit.server.domain.service.EventService
 import edu.austral.splitit.server.domain.service.UserService
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -193,5 +195,32 @@ class EventApplicationService(
             baseCurrency = updated.baseCurrency,
             memberCount = members.size.toLong(),
         )
+    }
+
+    @Transactional
+    fun deleteEvent(
+        userId: Long,
+        eventId: Long,
+    ) {
+        val event = eventService.getById(eventId)
+
+        require(event.owner.id == userId) {
+            throw AccessDeniedException("Forbidden")
+        }
+
+        ensureDeletable(eventId)
+
+        try {
+            eventMemberService.deleteByEventId(eventId)
+            eventService.delete(event)
+        } catch (exception: DataIntegrityViolationException) {
+            throw EventDeletionConflictException(cause = exception)
+        }
+    }
+
+    private fun ensureDeletable(eventId: Long) {
+        if (eventService.hasExpenses(eventId)) {
+            throw EventDeletionConflictException()
+        }
     }
 }

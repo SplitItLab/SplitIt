@@ -2,6 +2,7 @@ package edu.austral.splitit.server.infrastructure.api
 
 import edu.austral.splitit.server.application.exception.AuthenticatedUserMissingException
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
+import edu.austral.splitit.server.application.exception.EventDeletionConflictException
 import edu.austral.splitit.server.application.exception.EventNotFoundException
 import edu.austral.splitit.server.application.exception.InvalidCredentialsException
 import edu.austral.splitit.server.application.exception.InvalidRequestException
@@ -49,6 +50,10 @@ class GlobalExceptionHandler {
     fun handleEventNotFound(exception: EventNotFoundException): ResponseEntity<ErrorMessage> =
         error(HttpStatus.NOT_FOUND, exception.message ?: EVENT_NOT_FOUND_MESSAGE)
 
+    @ExceptionHandler(EventDeletionConflictException::class)
+    fun handleEventDeletionConflict(exception: EventDeletionConflictException): ResponseEntity<ErrorMessage> =
+        error(HttpStatus.CONFLICT, exception.message ?: EVENT_DELETION_CONFLICT_MESSAGE)
+
     @ExceptionHandler(AccessDeniedException::class)
     fun rethrowAccessDenied(exception: AccessDeniedException): Unit = throw exception
 
@@ -68,6 +73,7 @@ class GlobalExceptionHandler {
         private const val INVALID_CREDENTIALS_MESSAGE = "Invalid credentials"
         private const val UNAUTHORIZED_MESSAGE = "Unauthorized"
         private const val EVENT_NOT_FOUND_MESSAGE = "Event not found"
+        private const val EVENT_DELETION_CONFLICT_MESSAGE = "Event cannot be deleted"
         private const val INTERNAL_ERROR_MESSAGE = "Internal server error"
 
         private val logger =

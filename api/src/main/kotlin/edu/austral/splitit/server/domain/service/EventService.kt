@@ -50,4 +50,11 @@ class EventService(
 
         return eventRepository.save(event)
     }
+
+    fun hasExpenses(eventId: Long): Boolean = eventRepository.countExpensesByEventId(eventId) > 0
+
+    fun delete(event: Event) {
+        eventRepository.delete(event)
+        eventRepository.flush()
+    }
 }

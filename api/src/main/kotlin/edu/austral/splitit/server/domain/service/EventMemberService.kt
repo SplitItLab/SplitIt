@@ -46,6 +46,11 @@ class EventMemberService(
 
     fun countByEventId(eventId: Long): Long = eventMemberRepository.countByEventId(eventId)
 
+    fun deleteByEventId(eventId: Long) {
+        eventMemberRepository.deleteAllByEventId(eventId)
+        eventMemberRepository.flush()
+    }
+
     fun findByEventId(eventId: Long): List<EventMember> = eventMemberRepository.findAllByEventId(eventId)
 
     fun isUserMemberOfEvent(
