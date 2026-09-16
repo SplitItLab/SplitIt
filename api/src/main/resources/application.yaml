@@ -10,6 +10,11 @@ spring:
     import: >-
       optional:file:.env[.properties],
       optional:file:../.env[.properties]
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:false}
+    baseline-version: 0
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT:5433}/${POSTGRES_DB:${POSTGRES_DATABASE:splitit}}?sslmode=${POSTGRES_SSLMODE:disable}
     username: ${POSTGRES_USER}
@@ -25,7 +30,7 @@ spring:
     properties:
       hibernate.boot.allow_jdbc_metadata_access: false
     hibernate:
-      ddl-auto: ${JPA_DDL_AUTO:none}
+      ddl-auto: ${JPA_DDL_AUTO:validate}
   data:
     jpa:
       repositories:
