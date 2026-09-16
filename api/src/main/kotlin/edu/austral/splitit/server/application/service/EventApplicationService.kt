@@ -17,6 +17,14 @@ data class CreateEventCommand(
     val participantNames: List<String> = emptyList(),
 )
 
+data class UpdateEventCommand(
+    val userId: Long,
+    val eventId: Long,
+    val name: String? = null,
+    val description: String? = null,
+    val iconKey: String? = null,
+)
+
 data class EventSummary(
     val id: Long,
     val name: String,
@@ -154,6 +162,36 @@ class EventApplicationService(
                         isGuest = member.user == null,
                     )
                 },
+        )
+    }
+
+    @Transactional
+    fun updateEvent(command: UpdateEventCommand): EventSummary {
+        val event =
+            eventService.findById(command.eventId)
+                ?: throw EventNotFoundException()
+
+        require(event.owner.id == command.userId) {
+            throw AccessDeniedException("Forbidden")
+        }
+
+        val updated =
+            eventService.update(
+                event = event,
+                name = command.name,
+                description = command.description,
+                iconKey = command.iconKey,
+            )
+
+        val members = eventMemberService.findByEventId(command.eventId)
+
+        return EventSummary(
+            id = requireNotNull(updated.id),
+            name = updated.name,
+            description = updated.description,
+            iconKey = updated.iconKey,
+            baseCurrency = updated.baseCurrency,
+            memberCount = members.size.toLong(),
         )
     }
 }

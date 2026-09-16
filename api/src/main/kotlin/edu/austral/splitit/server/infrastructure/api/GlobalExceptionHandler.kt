@@ -18,6 +18,7 @@ import org.springframework.web.method.annotation.HandlerMethodValidationExceptio
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
+    // == Logger ==
     @ExceptionHandler(
         MethodArgumentNotValidException::class,
         HandlerMethodValidationException::class,
@@ -29,6 +30,8 @@ class GlobalExceptionHandler {
         logger.warn("Invalid request: {}", exception.message)
         return error(HttpStatus.BAD_REQUEST, INVALID_REQUEST_MESSAGE)
     }
+
+    // == Exception Handling ==
 
     @ExceptionHandler(EmailAlreadyInUseException::class)
     fun handleEmailAlreadyInUse(exception: EmailAlreadyInUseException): ResponseEntity<ErrorMessage> =
@@ -58,6 +61,22 @@ class GlobalExceptionHandler {
         return error(HttpStatus.INTERNAL_SERVER_ERROR, INTERNAL_ERROR_MESSAGE)
     }
 
+    // == Static Constants ==
+    companion object {
+        private const val INVALID_REQUEST_MESSAGE = "Invalid request data"
+        private const val EMAIL_ALREADY_IN_USE_MESSAGE = "Email already in use"
+        private const val INVALID_CREDENTIALS_MESSAGE = "Invalid credentials"
+        private const val UNAUTHORIZED_MESSAGE = "Unauthorized"
+        private const val EVENT_NOT_FOUND_MESSAGE = "Event not found"
+        private const val INTERNAL_ERROR_MESSAGE = "Internal server error"
+
+        private val logger =
+            LoggerFactory
+                .getLogger(GlobalExceptionHandler::class.java)
+    }
+
+    // == Helper Methods ==
+
     private fun error(
         status: HttpStatus,
         message: String,
@@ -65,14 +84,4 @@ class GlobalExceptionHandler {
         ResponseEntity
             .status(status)
             .body(ErrorMessage(message))
-
-    companion object {
-        private val logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
-        private const val INVALID_REQUEST_MESSAGE = "Invalid request data"
-        private const val EMAIL_ALREADY_IN_USE_MESSAGE = "Email already in use"
-        private const val INVALID_CREDENTIALS_MESSAGE = "Invalid credentials"
-        private const val UNAUTHORIZED_MESSAGE = "Unauthorized"
-        private const val EVENT_NOT_FOUND_MESSAGE = "Event not found"
-        private const val INTERNAL_ERROR_MESSAGE = "Internal server error"
-    }
 }
