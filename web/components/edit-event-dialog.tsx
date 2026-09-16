@@ -40,7 +40,7 @@ export function EditEventDialog({
   onUpdated,
   onUnauthorized,
 }: EditEventDialogProps) {
-  const [iconKey, setIconKey] = useState(event.iconKey ?? EVENT_ICON_OPTIONS[0].key);
+  const [iconKey, setIconKey] = useState<string | undefined>(event.iconKey ?? undefined);
   const [iconOpen, setIconOpen] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
 
@@ -54,16 +54,16 @@ export function EditEventDialog({
     defaultValues: {
       name: event.name,
       description: event.description ?? "",
-      iconKey: event.iconKey ?? "",
+      iconKey: event.iconKey ?? undefined,
     },
   });
   const syncWithEvent = () => {
     reset({
       name: event.name,
       description: event.description ?? "",
-      iconKey: event.iconKey ?? "",
+      iconKey: event.iconKey ?? undefined,
     });
-    setIconKey(event.iconKey ?? EVENT_ICON_OPTIONS[0].key);
+    setIconKey(event.iconKey ?? undefined);
     setGeneralError(null);
   };
 

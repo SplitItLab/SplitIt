@@ -17,7 +17,20 @@ class UpdateEventRequestValidationTest {
             )
 
         val violations = validator.validate(request)
-        assert(violations.isEmpty())
+        assertTrue(violations.isEmpty())
+    }
+
+    @Test
+    fun `omitted name produces no violations`() {
+        val request =
+            UpdateEventRequest(
+                name = null,
+                description = "Solo cambio de descripción",
+                iconKey = null,
+            )
+
+        val violations = validator.validate(request)
+        assertTrue(violations.isEmpty())
     }
 
     @Test

@@ -258,4 +258,15 @@ describe("deleteEvent", () => {
 
     await expect(deleteEvent(10)).rejects.toMatchObject({ type: "forbidden" });
   });
+
+  it("traduce un 409 a un EventError de tipo conflict con mensaje descriptivo", async () => {
+    vi.mocked(fetch).mockImplementation(async () =>
+      jsonResponse({ message: "Event has related records" }, 409)
+    );
+
+    await expect(deleteEvent(10)).rejects.toMatchObject({
+      type: "conflict",
+      message: "No se puede eliminar el evento porque tiene registros relacionados.",
+    });
+  });
 });

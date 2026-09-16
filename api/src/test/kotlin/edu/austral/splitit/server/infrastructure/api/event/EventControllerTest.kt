@@ -410,6 +410,8 @@ class EventControllerTest(
             .perform(delete("/api/events/10").cookie(Cookie("auth_token", "good-token")))
             .andExpect(status().isNoContent)
             .andExpect(content().string(""))
+
+        verify(eventApplicationService).deleteEvent(1L, 10L)
     }
 
     @Test

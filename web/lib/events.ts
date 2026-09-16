@@ -67,7 +67,7 @@ export type UpdateEventInput = z.input<typeof updateEventSchema>;
 export type UpdateEventPayload = z.output<typeof updateEventSchema>;
 
 export type EventErrorType =
-  "validation" | "unauthorized" | "forbidden" | "network" | "server-error";
+  "validation" | "unauthorized" | "forbidden" | "conflict" | "network" | "server-error";
 
 export class EventError extends Error {
   constructor(
@@ -89,6 +89,12 @@ function toEventError(err: unknown): never {
     }
     if (err.status === 400 || err.status === 422) {
       throw new EventError("validation", err.message || "Revisá los datos ingresados.");
+    }
+    if (err.status === 409) {
+      throw new EventError(
+        "conflict",
+        err.message || "No se puede completar la operación porque tiene registros relacionados."
+      );
     }
     throw new EventError("server-error", "Ocurrió un error. Probá de nuevo.");
   }
@@ -148,6 +154,12 @@ export async function deleteEvent(id: number | string): Promise<void> {
   } catch (err) {
     if (err instanceof ApiError && err.status === 403) {
       throw new EventError("forbidden", "Solo el dueño puede eliminar este evento.");
+    }
+    if (err instanceof ApiError && err.status === 409) {
+      throw new EventError(
+        "conflict",
+        "No se puede eliminar el evento porque tiene registros relacionados."
+      );
     }
     toEventError(err);
   }

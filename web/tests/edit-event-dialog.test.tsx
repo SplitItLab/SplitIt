@@ -97,4 +97,35 @@ describe("EditEventDialog", () => {
     ).toBeInTheDocument();
     expect(within(dialog).getByLabelText("Nombre del evento")).toHaveValue("Viaje a Bariloche");
   });
+
+  it("preserva iconKey como undefined al guardar si el evento no tiene icono", async () => {
+    const eventWithoutIcon: EventDetail = {
+      ...event,
+      iconKey: null,
+    };
+    vi.mocked(updateEvent).mockResolvedValue({ ...eventWithoutIcon, name: "Viaje a Salta" });
+    const user = userEvent.setup();
+    render(
+      <EditEventDialog
+        open
+        onOpenChange={() => {}}
+        event={eventWithoutIcon}
+        onUpdated={() => {}}
+        onUnauthorized={() => {}}
+      />
+    );
+    const dialog = await screen.findByRole("dialog");
+
+    await user.clear(within(dialog).getByLabelText("Nombre del evento"));
+    await user.type(within(dialog).getByLabelText("Nombre del evento"), "Viaje a Salta");
+
+    await user.click(within(dialog).getByRole("button", { name: /Guardar cambios/ }));
+
+    await waitFor(() =>
+      expect(vi.mocked(updateEvent)).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ name: "Viaje a Salta", iconKey: undefined })
+      )
+    );
+  });
 });

@@ -108,4 +108,24 @@ describe("DeleteEventDialog", () => {
     ).toBeInTheDocument();
     expect(deleteEvent).toHaveBeenCalledTimes(1);
   });
+
+  it("muestra mensaje de conflicto cuando el evento tiene registros relacionados", async () => {
+    vi.mocked(deleteEvent).mockRejectedValue(
+      new EventError(
+        "conflict",
+        "No se puede eliminar el evento porque tiene registros relacionados."
+      )
+    );
+    const user = userEvent.setup();
+    renderDialog();
+    const dialog = await screen.findByRole("dialog");
+
+    await user.click(within(dialog).getByRole("button", { name: "Eliminar evento" }));
+
+    expect(
+      await within(dialog).findByText(
+        "No se puede eliminar el evento porque tiene registros relacionados."
+      )
+    ).toBeInTheDocument();
+  });
 });
