@@ -66,7 +66,7 @@ export default function EventDetailPage() {
 
   const handleDeleted = () => {
     if (state.status !== "loaded") return;
-    showAppToast("success", `Eliminamos «${state.event.name}»`);
+    showAppToast("success", `El evento «${state.event.name}» fue eliminado`);
     router.push("/eventos");
   };
   const handleUpdated = (updated: EventSummary) => {
