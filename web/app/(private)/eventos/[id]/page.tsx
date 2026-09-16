@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 
 import {
   currencyLabel,
@@ -14,6 +14,8 @@ import {
 } from "@/lib/events";
 import { EventIcon } from "@/components/event-icon";
 import { EditEventDialog } from "@/components/edit-event-dialog";
+import { DeleteEventDialog } from "@/components/delete-event-dialog";
+import { showAppToast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
@@ -29,6 +31,7 @@ export default function EventDetailPage() {
   const router = useRouter();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [editing, setEditing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchEvent = useCallback(() => {
     getEventById(params.id)
@@ -61,6 +64,11 @@ export default function EventDetailPage() {
     fetchEvent();
   };
 
+  const handleDeleted = () => {
+    if (state.status !== "loaded") return;
+    showAppToast("success", `Eliminamos «${state.event.name}»`);
+    router.push("/eventos");
+  };
   const handleUpdated = (updated: EventSummary) => {
     setState((current) =>
       current.status === "loaded"
@@ -80,16 +88,28 @@ export default function EventDetailPage() {
           Volver a eventos
         </Link>
         {state.status === "loaded" && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label="Editar evento"
-            onClick={() => setEditing(true)}
-            className="size-11 rounded-full"
-          >
-            <Pencil className="size-5" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Editar evento"
+              onClick={() => setEditing(true)}
+              className="size-11 rounded-full"
+            >
+              <Pencil className="size-5" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Eliminar evento"
+              onClick={() => setDeleting(true)}
+              className="hover:text-destructive size-11 rounded-full"
+            >
+              <Trash2 className="size-5" />
+            </Button>
+          </div>
         )}
       </div>
 
@@ -150,6 +170,13 @@ export default function EventDetailPage() {
             onOpenChange={setEditing}
             event={state.event}
             onUpdated={handleUpdated}
+            onUnauthorized={() => setState({ status: "unauthorized" })}
+          />
+          <DeleteEventDialog
+            open={deleting}
+            onOpenChange={setDeleting}
+            event={state.event}
+            onDeleted={handleDeleted}
             onUnauthorized={() => setState({ status: "unauthorized" })}
           />
         </>

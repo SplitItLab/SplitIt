@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   createEvent,
   createEventSchema,
+  deleteEvent,
   EventError,
   filterEventsByName,
   getEventById,
@@ -230,5 +231,31 @@ describe("getEventById y updateEvent", () => {
     vi.mocked(fetch).mockImplementation(async () => jsonResponse({ message: "Forbidden" }, 403));
 
     await expect(updateEvent(1, { name: "x" })).rejects.toMatchObject({ type: "forbidden" });
+  });
+});
+
+describe("deleteEvent", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("envía DELETE /api/events/{id} y resuelve con 204", async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 204 }));
+
+    await expect(deleteEvent(10)).resolves.toBeUndefined();
+
+    const [url, init] = vi.mocked(fetch).mock.calls[0];
+    expect(String(url)).toContain("/api/events/10");
+    expect(init?.method).toBe("DELETE");
+  });
+
+  it("traduce un 403 a un EventError de tipo forbidden", async () => {
+    vi.mocked(fetch).mockImplementation(async () => jsonResponse({ message: "Forbidden" }, 403));
+
+    await expect(deleteEvent(10)).rejects.toMatchObject({ type: "forbidden" });
   });
 });

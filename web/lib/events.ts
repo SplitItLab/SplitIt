@@ -142,6 +142,17 @@ export async function updateEvent(
   }
 }
 
+export async function deleteEvent(id: number | string): Promise<void> {
+  try {
+    await request<void>(`/api/events/${id}`, { method: "DELETE" });
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 403) {
+      throw new EventError("forbidden", "Solo el dueño puede eliminar este evento.");
+    }
+    toEventError(err);
+  }
+}
+
 export function filterEventsByName(events: EventSummary[], query: string): EventSummary[] {
   const term = query.trim().toLowerCase();
   if (!term) return events;
