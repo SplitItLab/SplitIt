@@ -1,6 +1,23 @@
 import { z } from "zod";
 import { request, ApiError } from "@/lib/api";
 
+export type EventMember = {
+  id: number;
+  name: string;
+  email: string | null;
+  isGuest: boolean;
+};
+
+export type EventDetail = {
+  id: number;
+  name: string;
+  description: string | null;
+  iconKey: string | null;
+  baseCurrency: string;
+  memberCount: number;
+  members: EventMember[];
+};
+
 export type EventSummary = {
   id: number;
   name: string;
@@ -40,7 +57,8 @@ export const createEventSchema = z.object({
 export type CreateEventInput = z.input<typeof createEventSchema>;
 export type CreateEventPayload = z.output<typeof createEventSchema>;
 
-export type EventErrorType = "validation" | "unauthorized" | "network" | "server-error";
+export type EventErrorType =
+  "validation" | "unauthorized" | "forbidden" | "not-found" | "network" | "server-error";
 
 export class EventError extends Error {
   constructor(
@@ -57,8 +75,14 @@ function toEventError(err: unknown): never {
     if (err.status === 0) {
       throw new EventError("network", "No pudimos conectar con el servidor.");
     }
-    if (err.status === 401 || err.status === 403) {
+    if (err.status === 401) {
       throw new EventError("unauthorized", "Tu sesión expiró. Iniciá sesión de nuevo.");
+    }
+    if (err.status === 403) {
+      throw new EventError("forbidden", "No tenés acceso a este evento.");
+    }
+    if (err.status === 404) {
+      throw new EventError("not-found", "No encontramos este evento.");
     }
     if (err.status === 400 || err.status === 422) {
       throw new EventError("validation", err.message || "Revisá los datos ingresados.");
@@ -71,6 +95,14 @@ function toEventError(err: unknown): never {
 export async function listEvents(): Promise<EventSummary[]> {
   try {
     return await request<EventSummary[]>("/api/events");
+  } catch (err) {
+    toEventError(err);
+  }
+}
+
+export async function getEvent(id: number | string): Promise<EventDetail> {
+  try {
+    return await request<EventDetail>(`/api/events/${id}`);
   } catch (err) {
     toEventError(err);
   }
