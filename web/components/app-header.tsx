@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Menu, LayoutGrid, User } from "lucide-react";
 import { useSession } from "@/lib/use-session";
 import {
@@ -10,14 +11,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+const NAV_ITEMS = [
+  { href: "/eventos", label: "Eventos", Icon: LayoutGrid },
+  { href: "/perfil", label: "Perfil", Icon: User },
+] as const;
+
 export function AppHeader() {
   const session = useSession();
+  const pathname = usePathname();
   const user = session.status === "authenticated" ? session.user : null;
+
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <header className="flex items-center justify-between px-4 py-3 sm:px-6">
       <Link
-        href="/dashboard"
+        href="/eventos"
         className="border-border flex items-center gap-0 rounded-full border px-3 py-2"
       >
         <span className="bg-primary text-primary-foreground flex h-[34px] w-[57px] items-center justify-center rounded-[8px] text-[24px] leading-[115%] font-extrabold">
@@ -35,22 +44,26 @@ export function AppHeader() {
             <Menu className="size-5" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem
-              render={
-                <Link href="/eventos" className="flex items-center gap-2">
-                  <LayoutGrid className="size-4" />
-                  Eventos
-                </Link>
-              }
-            />
-            <DropdownMenuItem
-              render={
-                <Link href="/perfil" className="flex items-center gap-2">
-                  <User className="size-4" />
-                  Perfil
-                </Link>
-              }
-            />
+            {NAV_ITEMS.map(({ href, label, Icon }) => {
+              const active = isActive(href);
+              return (
+                <DropdownMenuItem
+                  key={href}
+                  render={
+                    <Link
+                      href={href}
+                      aria-current={active ? "page" : undefined}
+                      className={`flex items-center gap-2 ${
+                        active ? "text-primary" : "text-text-primary"
+                      }`}
+                    >
+                      <Icon className="size-4" />
+                      {label}
+                    </Link>
+                  }
+                />
+              );
+            })}
           </DropdownMenuContent>
         </DropdownMenu>
       )}
