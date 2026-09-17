@@ -2,9 +2,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   createEvent,
   createEventSchema,
+  deleteEvent,
   EventError,
   filterEventsByName,
+  getEventById,
   listEvents,
+  updateEvent,
+  updateEventSchema,
+  type EventDetail,
   type EventSummary,
 } from "../lib/events";
 
@@ -157,5 +162,112 @@ describe("listEvents y createEvent", () => {
 
     await expect(listEvents()).rejects.toBeInstanceOf(EventError);
     await expect(listEvents()).rejects.toMatchObject({ type: "unauthorized" });
+  });
+});
+
+describe("getEventById y updateEvent", () => {
+  const detail: EventDetail = {
+    id: 1,
+    name: "Viaje a Bariloche",
+    description: "Vacaciones",
+    iconKey: "plane",
+    baseCurrency: "ARS",
+    memberCount: 4,
+    members: [],
+    isOwner: true,
+  };
+
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("pide GET /api/events/{id} y devuelve el detalle", async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(detail));
+
+    await expect(getEventById(1)).resolves.toEqual(detail);
+
+    const [url, init] = vi.mocked(fetch).mock.calls[0];
+    expect(String(url)).toContain("/api/events/1");
+    expect(init?.method ?? "GET").toBe("GET");
+  });
+
+  it("traduce un 403 del detalle a un EventError de tipo forbidden", async () => {
+    vi.mocked(fetch).mockImplementation(async () => jsonResponse({ message: "Forbidden" }, 403));
+
+    await expect(getEventById(1)).rejects.toMatchObject({ type: "forbidden" });
+  });
+
+  it("el schema de edición reutiliza la validación de nombre y no incluye moneda", async () => {
+    expect(updateEventSchema.safeParse({ name: "   ", description: "x" }).success).toBe(false);
+    expect("baseCurrency" in updateEventSchema.shape).toBe(false);
+    expect("participantNames" in updateEventSchema.shape).toBe(false);
+  });
+
+  it("envía PUT /api/events/{id} solo con nombre, descripción e icono", async () => {
+    const updated = { ...events[0], name: "Viaje a Mendoza" };
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(updated));
+
+    const result = await updateEvent(1, {
+      name: "Viaje a Mendoza",
+      description: "Fin de semana",
+      iconKey: "car",
+    });
+
+    expect(result).toEqual(updated);
+    const [url, init] = vi.mocked(fetch).mock.calls[0];
+    expect(String(url)).toContain("/api/events/1");
+    expect(init?.method).toBe("PUT");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      name: "Viaje a Mendoza",
+      description: "Fin de semana",
+      iconKey: "car",
+    });
+  });
+
+  it("traduce un 403 al editar a un EventError de tipo forbidden", async () => {
+    vi.mocked(fetch).mockImplementation(async () => jsonResponse({ message: "Forbidden" }, 403));
+
+    await expect(updateEvent(1, { name: "x" })).rejects.toMatchObject({ type: "forbidden" });
+  });
+});
+
+describe("deleteEvent", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("envía DELETE /api/events/{id} y resuelve con 204", async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 204 }));
+
+    await expect(deleteEvent(10)).resolves.toBeUndefined();
+
+    const [url, init] = vi.mocked(fetch).mock.calls[0];
+    expect(String(url)).toContain("/api/events/10");
+    expect(init?.method).toBe("DELETE");
+  });
+
+  it("traduce un 403 a un EventError de tipo forbidden", async () => {
+    vi.mocked(fetch).mockImplementation(async () => jsonResponse({ message: "Forbidden" }, 403));
+
+    await expect(deleteEvent(10)).rejects.toMatchObject({ type: "forbidden" });
+  });
+
+  it("traduce un 409 a un EventError de tipo conflict con mensaje descriptivo", async () => {
+    vi.mocked(fetch).mockImplementation(async () =>
+      jsonResponse({ message: "Event has related records" }, 409)
+    );
+
+    await expect(deleteEvent(10)).rejects.toMatchObject({
+      type: "conflict",
+      message: "No se puede eliminar el evento porque tiene registros relacionados.",
+    });
   });
 });

@@ -79,4 +79,53 @@ class EventServiceTest {
         assertEquals(1, result.size)
         assertEquals("Viaje", result[0].name)
     }
+
+    @Test
+    fun `update applies provided fields and saves`() {
+        val event =
+            Event
+                .create(
+                    owner = owner,
+                    name = "Original",
+                    description = "Descripción",
+                    iconKey = "bus",
+                    baseCurrency = "ARS",
+                ).apply { id = 1L }
+        whenever(eventRepository.save(any<Event>())).thenAnswer { it.getArgument<Event>(0) }
+
+        val updated =
+            eventService.update(
+                event = event,
+                name = "Nuevo nombre",
+                description = "Nueva descripción",
+                iconKey = "car",
+            )
+
+        assertEquals("Nuevo nombre", updated.name)
+        assertEquals("Nueva descripción", updated.description)
+        assertEquals("car", updated.iconKey)
+        assertEquals("ARS", updated.baseCurrency)
+        verify(eventRepository).save(event)
+    }
+
+    @Test
+    fun `update leaves fields unchanged when not provided`() {
+        val event =
+            Event
+                .create(
+                    owner = owner,
+                    name = "Original",
+                    description = "Descripción",
+                    iconKey = "bus",
+                    baseCurrency = "ARS",
+                ).apply { id = 1L }
+        whenever(eventRepository.save(any<Event>())).thenAnswer { it.getArgument<Event>(0) }
+
+        val updated = eventService.update(event = event, name = "Solo nombre")
+
+        assertEquals("Solo nombre", updated.name)
+        assertEquals("Descripción", updated.description)
+        assertEquals("bus", updated.iconKey)
+        verify(eventRepository).save(event)
+    }
 }

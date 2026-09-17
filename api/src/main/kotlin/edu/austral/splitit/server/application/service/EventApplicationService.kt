@@ -1,9 +1,11 @@
 package edu.austral.splitit.server.application.service
 
+import edu.austral.splitit.server.application.exception.EventDeletionConflictException
 import edu.austral.splitit.server.application.exception.EventNotFoundException
 import edu.austral.splitit.server.domain.service.EventMemberService
 import edu.austral.splitit.server.domain.service.EventService
 import edu.austral.splitit.server.domain.service.UserService
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -15,6 +17,14 @@ data class CreateEventCommand(
     val iconKey: String? = null,
     val baseCurrency: String,
     val participantNames: List<String> = emptyList(),
+)
+
+data class UpdateEventCommand(
+    val userId: Long,
+    val eventId: Long,
+    val name: String? = null,
+    val description: String? = null,
+    val iconKey: String? = null,
 )
 
 data class EventSummary(
@@ -34,6 +44,7 @@ data class EventDetail(
     val baseCurrency: String,
     val memberCount: Long,
     val members: List<EventMemberSummary>,
+    val isOwner: Boolean,
 )
 
 data class EventMemberSummary(
@@ -154,6 +165,64 @@ class EventApplicationService(
                         isGuest = member.user == null,
                     )
                 },
+            isOwner = isOwner,
         )
+    }
+
+    @Transactional
+    fun updateEvent(command: UpdateEventCommand): EventSummary {
+        val event =
+            eventService.findById(command.eventId)
+                ?: throw EventNotFoundException()
+
+        require(event.owner.id == command.userId) {
+            throw AccessDeniedException("Forbidden")
+        }
+
+        val updated =
+            eventService.update(
+                event = event,
+                name = command.name,
+                description = command.description,
+                iconKey = command.iconKey,
+            )
+
+        val members = eventMemberService.findByEventId(command.eventId)
+
+        return EventSummary(
+            id = requireNotNull(updated.id),
+            name = updated.name,
+            description = updated.description,
+            iconKey = updated.iconKey,
+            baseCurrency = updated.baseCurrency,
+            memberCount = members.size.toLong(),
+        )
+    }
+
+    @Transactional
+    fun deleteEvent(
+        userId: Long,
+        eventId: Long,
+    ) {
+        val event = eventService.getById(eventId)
+
+        require(event.owner.id == userId) {
+            throw AccessDeniedException("Forbidden")
+        }
+
+        ensureDeletable(eventId)
+
+        try {
+            eventMemberService.deleteByEventId(eventId)
+            eventService.delete(event)
+        } catch (exception: DataIntegrityViolationException) {
+            throw EventDeletionConflictException(cause = exception)
+        }
+    }
+
+    private fun ensureDeletable(eventId: Long) {
+        if (eventService.hasExpenses(eventId)) {
+            throw EventDeletionConflictException()
+        }
     }
 }

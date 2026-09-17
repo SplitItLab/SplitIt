@@ -10,6 +10,23 @@ export type EventSummary = {
   memberCount: number;
 };
 
+export type EventMember = {
+  id: number;
+  name: string;
+  email?: string | null;
+  isGuest: boolean;
+};
+
+export type EventDetail = {
+  id: number;
+  name: string;
+  description?: string | null;
+  iconKey?: string | null;
+  baseCurrency: string;
+  memberCount: number;
+  members: EventMember[];
+  isOwner: boolean;
+};
 export const EVENT_CURRENCIES = [
   { code: "ARS", label: "ARS - Peso argentino" },
   { code: "USD", label: "USD - Dolar" },
@@ -40,7 +57,18 @@ export const createEventSchema = z.object({
 export type CreateEventInput = z.input<typeof createEventSchema>;
 export type CreateEventPayload = z.output<typeof createEventSchema>;
 
-export type EventErrorType = "validation" | "unauthorized" | "network" | "server-error";
+/** Reutiliza las validaciones de creación: solo nombre, descripción e icono son editables. */
+export const updateEventSchema = createEventSchema.pick({
+  name: true,
+  description: true,
+  iconKey: true,
+});
+
+export type UpdateEventInput = z.input<typeof updateEventSchema>;
+export type UpdateEventPayload = z.output<typeof updateEventSchema>;
+
+export type EventErrorType =
+  "validation" | "unauthorized" | "forbidden" | "conflict" | "network" | "server-error";
 
 export class EventError extends Error {
   constructor(
@@ -63,6 +91,12 @@ function toEventError(err: unknown): never {
     if (err.status === 400 || err.status === 422) {
       throw new EventError("validation", err.message || "Revisá los datos ingresados.");
     }
+    if (err.status === 409) {
+      throw new EventError(
+        "conflict",
+        err.message || "No se puede completar la operación porque tiene registros relacionados."
+      );
+    }
     throw new EventError("server-error", "Ocurrió un error. Probá de nuevo.");
   }
   throw err as Error;
@@ -83,6 +117,51 @@ export async function createEvent(input: CreateEventPayload): Promise<EventSumma
       body: JSON.stringify(input),
     });
   } catch (err) {
+    toEventError(err);
+  }
+}
+
+export async function getEventById(id: number | string): Promise<EventDetail> {
+  try {
+    return await request<EventDetail>(`/api/events/${id}`);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 403) {
+      throw new EventError("forbidden", "No tenés acceso a este evento.");
+    }
+    toEventError(err);
+  }
+}
+
+export async function updateEvent(
+  id: number | string,
+  input: UpdateEventPayload
+): Promise<EventSummary> {
+  try {
+    return await request<EventSummary>(`/api/events/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(input),
+    });
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 403) {
+      throw new EventError("forbidden", "Solo el dueño puede editar este evento.");
+    }
+    toEventError(err);
+  }
+}
+
+export async function deleteEvent(id: number | string): Promise<void> {
+  try {
+    await request<void>(`/api/events/${id}`, { method: "DELETE" });
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 403) {
+      throw new EventError("forbidden", "Solo el dueño puede eliminar este evento.");
+    }
+    if (err instanceof ApiError && err.status === 409) {
+      throw new EventError(
+        "conflict",
+        "No se puede eliminar el evento porque tiene registros relacionados."
+      );
+    }
     toEventError(err);
   }
 }
