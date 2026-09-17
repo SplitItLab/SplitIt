@@ -14,10 +14,15 @@ export function useSession(): SessionState {
   useEffect(() => {
     let cancelled = false;
 
-    getSession().then((user) => {
-      if (cancelled) return;
-      setState(user ? { status: "authenticated", user } : { status: "unauthenticated" });
-    });
+    getSession()
+      .then((user) => {
+        if (cancelled) return;
+        setState(user ? { status: "authenticated", user } : { status: "unauthenticated" });
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setState({ status: "unauthenticated" });
+      });
 
     return () => {
       cancelled = true;
