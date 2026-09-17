@@ -9,10 +9,10 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/lib/events", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/events")>();
-  return { ...actual, getEvent: vi.fn() };
+  return { ...actual, getEventById: vi.fn() };
 });
 
-import { EventError, getEvent, type EventDetail } from "@/lib/events";
+import { EventError, getEventById, type EventDetail } from "@/lib/events";
 import { EventDetailView } from "../components/event-detail-view";
 
 const eventDetail: EventDetail = {
@@ -22,6 +22,7 @@ const eventDetail: EventDetail = {
   iconKey: "plane",
   baseCurrency: "ARS",
   memberCount: 2,
+  isOwner: true,
   members: [
     { id: 10, name: "Ana", email: "ana@mail.com", isGuest: false },
     { id: 11, name: "Juan", email: null, isGuest: true },
@@ -31,7 +32,7 @@ const eventDetail: EventDetail = {
 describe("EventDetailView", () => {
   beforeEach(() => {
     replace.mockClear();
-    vi.mocked(getEvent).mockReset();
+    vi.mocked(getEventById).mockReset();
   });
 
   afterEach(() => {
@@ -39,7 +40,7 @@ describe("EventDetailView", () => {
   });
 
   it("muestra la pantalla sin acceso cuando la API responde 403", async () => {
-    vi.mocked(getEvent).mockRejectedValue(new EventError("forbidden", "No tenés acceso."));
+    vi.mocked(getEventById).mockRejectedValue(new EventError("forbidden", "No tenés acceso."));
 
     render(<EventDetailView id="1" />);
 
@@ -53,7 +54,7 @@ describe("EventDetailView", () => {
   });
 
   it("no filtra datos del evento ni redirige al login cuando recibe un 403", async () => {
-    vi.mocked(getEvent).mockRejectedValue(new EventError("forbidden", "No tenés acceso."));
+    vi.mocked(getEventById).mockRejectedValue(new EventError("forbidden", "No tenés acceso."));
 
     render(<EventDetailView id="1" />);
 
@@ -63,7 +64,9 @@ describe("EventDetailView", () => {
   });
 
   it("muestra la misma pantalla cuando el evento no existe", async () => {
-    vi.mocked(getEvent).mockRejectedValue(new EventError("not-found", "No encontramos el evento."));
+    vi.mocked(getEventById).mockRejectedValue(
+      new EventError("not-found", "No encontramos el evento.")
+    );
 
     render(<EventDetailView id="999" />);
 
@@ -73,7 +76,7 @@ describe("EventDetailView", () => {
   });
 
   it("permite reintentar después de un error de red", async () => {
-    vi.mocked(getEvent)
+    vi.mocked(getEventById)
       .mockRejectedValueOnce(new EventError("network", "No pudimos conectar con el servidor."))
       .mockResolvedValueOnce(eventDetail);
 
@@ -86,18 +89,18 @@ describe("EventDetailView", () => {
     await userEvent.click(screen.getByRole("button", { name: "Reintentar" }));
 
     expect(await screen.findByRole("heading", { name: "Viaje a Bariloche" })).toBeInTheDocument();
-    expect(getEvent).toHaveBeenCalledTimes(2);
+    expect(getEventById).toHaveBeenCalledTimes(2);
   });
 
   it("redirige al login cuando la sesión no es válida", async () => {
-    vi.mocked(getEvent).mockRejectedValue(new EventError("unauthorized", "Tu sesión expiró."));
+    vi.mocked(getEventById).mockRejectedValue(new EventError("unauthorized", "Tu sesión expiró."));
 
     render(<EventDetailView id="1" />);
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/login"));
   });
   it("muestra nombre, descripción y moneda del evento", async () => {
-    vi.mocked(getEvent).mockResolvedValue(eventDetail);
+    vi.mocked(getEventById).mockResolvedValue(eventDetail);
 
     render(<EventDetailView id="1" />);
 
@@ -111,7 +114,7 @@ describe("EventDetailView", () => {
   });
 
   it("permite navegar entre Gastos, Saldos e Integrantes", async () => {
-    vi.mocked(getEvent).mockResolvedValue(eventDetail);
+    vi.mocked(getEventById).mockResolvedValue(eventDetail);
 
     render(<EventDetailView id="1" />);
 
@@ -129,7 +132,7 @@ describe("EventDetailView", () => {
   });
 
   it("muestra el email de los integrantes con cuenta y marca invitado a los que no", async () => {
-    vi.mocked(getEvent).mockResolvedValue(eventDetail);
+    vi.mocked(getEventById).mockResolvedValue(eventDetail);
 
     render(<EventDetailView id="1" />);
 

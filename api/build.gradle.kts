@@ -45,6 +45,10 @@ dependencies {
     // Persistencia con JPA + Hibernate
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 
+    // Flyway database migrations
+    implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-database-postgresql")
+
     // Validaciones (Jakarta Validation)
     implementation("org.springframework.boot:spring-boot-starter-validation")
 

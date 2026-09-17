@@ -1,8 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, UserRound } from "lucide-react";
+import { UserRound } from "lucide-react";
 
 import { currencyLabel, type EventDetail, type EventMember } from "@/lib/events";
 import { getInitials } from "@/lib/profile";
@@ -45,14 +44,6 @@ export function EventDetailContent({ event }: { event: EventDetail }) {
 
   return (
     <>
-      <Link
-        href="/eventos"
-        aria-label="Volver a eventos"
-        className="border-border text-text-secondary hover:text-text-primary hover:bg-muted focus-visible:ring-ring/50 inline-flex size-12 items-center justify-center rounded-full border outline-none focus-visible:ring-3"
-      >
-        <ArrowLeft className="size-5" />
-      </Link>
-
       <header className="flex items-start gap-4">
         <EventIcon iconKey={event.iconKey} />
         <div className="min-w-0 flex-1">

@@ -26,6 +26,7 @@ class EventService(
                 iconKey = iconKey,
                 baseCurrency = baseCurrency,
             )
+
         return eventRepository.save(event)
     }
 
@@ -36,4 +37,18 @@ class EventService(
     fun getById(id: Long): Event = findById(id) ?: throw EventNotFoundException()
 
     fun findUserEvents(userId: Long): List<Event> = eventRepository.findDistinctByOwnerIdOrMemberUserId(userId)
+
+    fun update(
+        event: Event,
+        name: String? = null,
+        description: String? = null,
+        iconKey: String? = null,
+    ): Event = eventRepository.save(event.update(name = name, description = description, iconKey = iconKey))
+
+    fun hasExpenses(eventId: Long): Boolean = eventRepository.countExpensesByEventId(eventId) > 0
+
+    fun delete(event: Event) {
+        eventRepository.delete(event)
+        eventRepository.flush()
+    }
 }

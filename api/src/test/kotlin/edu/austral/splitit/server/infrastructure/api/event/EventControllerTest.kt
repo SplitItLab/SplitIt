@@ -1,5 +1,6 @@
 package edu.austral.splitit.server.infrastructure.api.event
 
+import edu.austral.splitit.server.application.exception.EventDeletionConflictException
 import edu.austral.splitit.server.application.exception.EventNotFoundException
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
@@ -8,6 +9,7 @@ import edu.austral.splitit.server.application.service.EventApplicationService
 import edu.austral.splitit.server.application.service.EventDetail
 import edu.austral.splitit.server.application.service.EventMemberSummary
 import edu.austral.splitit.server.application.service.EventSummary
+import edu.austral.splitit.server.application.service.UpdateEventCommand
 import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
 import edu.austral.splitit.server.infrastructure.config.SecurityConfig
 import jakarta.servlet.http.Cookie
@@ -28,8 +30,10 @@ import org.springframework.security.access.AccessDeniedException
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -266,6 +270,7 @@ class EventControllerTest(
                             isGuest = true,
                         ),
                     ),
+                isOwner = true,
             ),
         )
 
@@ -280,6 +285,7 @@ class EventControllerTest(
             .andExpect(jsonPath("$.iconKey").value("plane"))
             .andExpect(jsonPath("$.baseCurrency").value("ARS"))
             .andExpect(jsonPath("$.memberCount").value(2))
+            .andExpect(jsonPath("$.isOwner").value(true))
             .andExpect(jsonPath("$.members.length()").value(2))
             .andExpect(jsonPath("$.members[0].id").value(1))
             .andExpect(jsonPath("$.members[0].name").value("Mateo"))
@@ -331,6 +337,7 @@ class EventControllerTest(
                             isGuest = false,
                         ),
                     ),
+                isOwner = false,
             ),
         )
 
@@ -342,6 +349,7 @@ class EventControllerTest(
             .andExpect(jsonPath("$.id").value(10))
             .andExpect(jsonPath("$.name").value("Viaje a Bariloche"))
             .andExpect(jsonPath("$.memberCount").value(2))
+            .andExpect(jsonPath("$.isOwner").value(false))
             .andExpect(jsonPath("$.members.length()").value(2))
             .andExpect(jsonPath("$.members[1].email").value("ana@example.com"))
             .andExpect(jsonPath("$.members[1].isGuest").value(false))
@@ -396,5 +404,208 @@ class EventControllerTest(
             .andExpect(jsonPath("$.message").value("Unauthorized"))
 
         verify(eventApplicationService, never()).getEventById(any(), any())
+    }
+
+    @Test
+    fun `delete returns 204 without a body`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+
+        mockMvc
+            .perform(delete("/api/events/10").cookie(Cookie("auth_token", "good-token")))
+            .andExpect(status().isNoContent)
+            .andExpect(content().string(""))
+
+        verify(eventApplicationService).deleteEvent(1L, 10L)
+    }
+
+    @Test
+    fun `delete returns 401 without auth cookie`() {
+        mockMvc
+            .perform(delete("/api/events/10"))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.message").value("Unauthorized"))
+    }
+
+    @Test
+    fun `delete returns 404 when event does not exist`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+        whenever(eventApplicationService.deleteEvent(1L, 999L)).thenThrow(EventNotFoundException())
+
+        mockMvc
+            .perform(delete("/api/events/999").cookie(Cookie("auth_token", "good-token")))
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.message").value("Event not found"))
+    }
+
+    @Test
+    fun `delete returns 403 when user is not owner`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+        whenever(eventApplicationService.deleteEvent(1L, 10L)).thenThrow(AccessDeniedException("Forbidden"))
+
+        mockMvc
+            .perform(delete("/api/events/10").cookie(Cookie("auth_token", "good-token")))
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.message").value("Forbidden"))
+    }
+
+    @Test
+    fun `delete returns 409 when existing relations block deletion`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+        whenever(eventApplicationService.deleteEvent(1L, 10L)).thenThrow(EventDeletionConflictException())
+
+        mockMvc
+            .perform(delete("/api/events/10").cookie(Cookie("auth_token", "good-token")))
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.message").value("Event has related records"))
+    }
+
+    @Test
+    fun `put updates event and returns 200 with summary`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+        whenever(eventApplicationService.updateEvent(any())).thenReturn(
+            EventSummary(
+                id = 10L,
+                name = "Viaje a Mendoza",
+                description = "Gastos del fin de semana",
+                iconKey = "car",
+                baseCurrency = "ARS",
+                memberCount = 1L,
+            ),
+        )
+
+        mockMvc
+            .perform(
+                put("/api/events/10")
+                    .cookie(Cookie("auth_token", "good-token"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {
+                          "name": "Viaje a Mendoza",
+                          "description": "Gastos del fin de semana",
+                          "iconKey": "car"
+                        }
+                        """.trimIndent(),
+                    ),
+            ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(10))
+            .andExpect(jsonPath("$.name").value("Viaje a Mendoza"))
+            .andExpect(jsonPath("$.description").value("Gastos del fin de semana"))
+            .andExpect(jsonPath("$.iconKey").value("car"))
+            .andExpect(jsonPath("$.baseCurrency").value("ARS"))
+            .andExpect(jsonPath("$.memberCount").value(1))
+
+        verify(eventApplicationService).updateEvent(
+            check<UpdateEventCommand> {
+                assertEquals(1L, it.userId)
+                assertEquals(10L, it.eventId)
+                assertEquals("Viaje a Mendoza", it.name)
+                assertEquals("Gastos del fin de semana", it.description)
+                assertEquals("car", it.iconKey)
+            },
+        )
+    }
+
+    @Test
+    fun `put only propagates provided fields`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+        whenever(eventApplicationService.updateEvent(any())).thenReturn(
+            EventSummary(
+                id = 10L,
+                name = "Viaje a Mendoza",
+                description = "Vacaciones de verano",
+                iconKey = "plane",
+                baseCurrency = "ARS",
+                memberCount = 3L,
+            ),
+        )
+
+        mockMvc
+            .perform(
+                put("/api/events/10")
+                    .cookie(Cookie("auth_token", "good-token"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"name":"Viaje a Mendoza"}"""),
+            ).andExpect(status().isOk)
+
+        verify(eventApplicationService).updateEvent(
+            check<UpdateEventCommand> {
+                assertEquals(1L, it.userId)
+                assertEquals(10L, it.eventId)
+                assertEquals("Viaje a Mendoza", it.name)
+                assertEquals(null, it.description)
+                assertEquals(null, it.iconKey)
+            },
+        )
+    }
+
+    @Test
+    fun `put returns 401 without auth cookie`() {
+        mockMvc
+            .perform(
+                put("/api/events/10")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"name":"Viaje a Mendoza"}"""),
+            ).andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.message").value("Unauthorized"))
+
+        verify(eventApplicationService, never()).updateEvent(any())
+    }
+
+    @Test
+    fun `put returns 404 when event does not exist`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+        whenever(eventApplicationService.updateEvent(any())).thenThrow(EventNotFoundException())
+
+        mockMvc
+            .perform(
+                put("/api/events/999")
+                    .cookie(Cookie("auth_token", "good-token"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"name":"Viaje a Mendoza"}"""),
+            ).andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.message").value("Event not found"))
+
+        verify(eventApplicationService).updateEvent(any())
+    }
+
+    @Test
+    fun `put returns 403 when user is not owner`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+        whenever(eventApplicationService.updateEvent(any())).thenThrow(AccessDeniedException("Forbidden"))
+
+        mockMvc
+            .perform(
+                put("/api/events/10")
+                    .cookie(Cookie("auth_token", "good-token"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"name":"Hackeo"}"""),
+            ).andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.message").value("Forbidden"))
+
+        verify(eventApplicationService).updateEvent(any())
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings = [
+            """{"name":""}""",
+            """{"name":"   "}""",
+            """{"name":"Viaje a Mendoza","iconKey":"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}""",
+        ],
+    )
+    fun `put returns 400 for invalid body`(body: String) {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+
+        mockMvc
+            .perform(
+                put("/api/events/10")
+                    .cookie(Cookie("auth_token", "good-token"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.message").value("Invalid request data"))
+
+        verify(eventApplicationService, never()).updateEvent(any())
     }
 }

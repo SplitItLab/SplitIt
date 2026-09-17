@@ -279,6 +279,7 @@ class EventApplicationServiceTest {
 
         verify(eventService).findById(10L)
         verify(eventMemberService).findByEventId(10L)
+        assertTrue(detail.isOwner)
     }
 
     @Test
@@ -311,6 +312,7 @@ class EventApplicationServiceTest {
         assertEquals("Mateo", detail.members[0].name)
         assertEquals("mateo@example.com", detail.members[0].email)
         assertFalse(detail.members[0].isGuest)
+        assertFalse(detail.isOwner)
     }
 
     @Test
@@ -345,6 +347,164 @@ class EventApplicationServiceTest {
             eventApplicationService.getEventById(userId = 1L, eventId = 30L)
         }
 
+        verify(eventMemberService, never()).findByEventId(any())
+    }
+
+    @Test
+    fun `updateEvent updates event when requested by owner`() {
+        val event =
+            Event
+                .create(
+                    owner = user,
+                    name = "Viaje a Bariloche",
+                    description = "Vacaciones de verano",
+                    iconKey = "plane",
+                    baseCurrency = "ARS",
+                ).apply { id = 10L }
+
+        val updatedEvent =
+            Event
+                .create(
+                    owner = user,
+                    name = "Viaje a Mendoza",
+                    description = "Gastos del fin de semana",
+                    iconKey = "car",
+                    baseCurrency = "ARS",
+                ).apply { id = 10L }
+
+        val ownerMember = EventMember.create(updatedEvent, "Mateo", user).apply { id = 100L }
+
+        whenever(eventService.findById(10L)).thenReturn(event)
+        whenever(
+            eventService.update(
+                event = eq(event),
+                name = eq("Viaje a Mendoza"),
+                description = eq("Gastos del fin de semana"),
+                iconKey = eq("car"),
+            ),
+        ).thenReturn(updatedEvent)
+        whenever(eventMemberService.findByEventId(10L)).thenReturn(listOf(ownerMember))
+
+        val summary =
+            eventApplicationService.updateEvent(
+                UpdateEventCommand(
+                    userId = 1L,
+                    eventId = 10L,
+                    name = "Viaje a Mendoza",
+                    description = "Gastos del fin de semana",
+                    iconKey = "car",
+                ),
+            )
+
+        assertEquals(10L, summary.id)
+        assertEquals("Viaje a Mendoza", summary.name)
+        assertEquals("Gastos del fin de semana", summary.description)
+        assertEquals("car", summary.iconKey)
+        assertEquals("ARS", summary.baseCurrency)
+        assertEquals(1L, summary.memberCount)
+
+        verify(eventService).update(event, "Viaje a Mendoza", "Gastos del fin de semana", "car")
+        verify(eventMemberService).findByEventId(10L)
+    }
+
+    @Test
+    fun `updateEvent with only name leaves other fields unchanged`() {
+        val event =
+            Event
+                .create(
+                    owner = user,
+                    name = "Viaje a Bariloche",
+                    description = "Vacaciones de verano",
+                    iconKey = "plane",
+                    baseCurrency = "ARS",
+                ).apply { id = 10L }
+
+        val updatedEvent =
+            Event
+                .create(
+                    owner = user,
+                    name = "Viaje a Mendoza",
+                    description = "Vacaciones de verano",
+                    iconKey = "plane",
+                    baseCurrency = "ARS",
+                ).apply { id = 10L }
+
+        whenever(eventService.findById(10L)).thenReturn(event)
+        whenever(
+            eventService.update(
+                event = eq(event),
+                name = eq("Viaje a Mendoza"),
+                description = anyOrNull(),
+                iconKey = anyOrNull(),
+            ),
+        ).thenReturn(updatedEvent)
+        whenever(eventMemberService.findByEventId(10L)).thenReturn(emptyList())
+
+        val summary =
+            eventApplicationService.updateEvent(
+                UpdateEventCommand(
+                    userId = 1L,
+                    eventId = 10L,
+                    name = "Viaje a Mendoza",
+                ),
+            )
+
+        assertEquals("Viaje a Mendoza", summary.name)
+        assertEquals("Vacaciones de verano", summary.description)
+        assertEquals("plane", summary.iconKey)
+        assertEquals(0L, summary.memberCount)
+
+        verify(eventService).update(event, "Viaje a Mendoza", null, null)
+        verify(eventMemberService).findByEventId(10L)
+    }
+
+    @Test
+    fun `updateEvent throws EventNotFoundException when event does not exist`() {
+        whenever(eventService.findById(999L)).thenReturn(null)
+
+        assertFailsWith<EventNotFoundException> {
+            eventApplicationService.updateEvent(
+                UpdateEventCommand(
+                    userId = 1L,
+                    eventId = 999L,
+                    name = "Nuevo nombre",
+                ),
+            )
+        }
+
+        verify(eventService, never()).update(any(), anyOrNull(), anyOrNull(), anyOrNull())
+        verify(eventMemberService, never()).findByEventId(any())
+    }
+
+    @Test
+    fun `updateEvent throws AccessDeniedException when user is not owner`() {
+        val otherOwner =
+            Helpers
+                .user(name = "Otro", email = "otro@example.com", passwordHash = "hash")
+                .apply { id = 2L }
+        val event =
+            Event
+                .create(
+                    owner = otherOwner,
+                    name = "Viaje a Bariloche",
+                    description = "Vacaciones de verano",
+                    iconKey = "plane",
+                    baseCurrency = "ARS",
+                ).apply { id = 10L }
+
+        whenever(eventService.findById(10L)).thenReturn(event)
+
+        assertFailsWith<AccessDeniedException> {
+            eventApplicationService.updateEvent(
+                UpdateEventCommand(
+                    userId = 1L,
+                    eventId = 10L,
+                    name = "Nuevo nombre",
+                ),
+            )
+        }
+
+        verify(eventService, never()).update(any(), anyOrNull(), anyOrNull(), anyOrNull())
         verify(eventMemberService, never()).findByEventId(any())
     }
 }

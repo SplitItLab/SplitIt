@@ -25,6 +25,8 @@ interface EventMemberRepository : JpaRepository<EventMember, Long> {
         userId: Long,
     ): Boolean
 
+    fun deleteAllByEventId(eventId: Long)
+
     @Query(
         """
         SELECT em.event.id AS eventId, COUNT(em.id) AS memberCount

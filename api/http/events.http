@@ -351,3 +351,360 @@ client.test("rechaza consultar detalle de evento sin sesión", function () {
 })
 %}
 
+### 18. Login — Dueño retoma sesión para editar/eliminar
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{eventOwnerEmail}}",
+  "password": "{{eventOwnerPassword}}"
+}
+
+> {%
+import { assertStatus, saveAuthToken } from './scripts/assert.js'
+
+client.test("retoma sesión del dueño para editar/eliminar", function () {
+    assertStatus(client, response, 200)
+})
+saveAuthToken(client, response, "auth_token")
+%}
+
+### 19. Events — POST crear evento editable (201)
+POST {{baseUrl}}/api/events
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Viaje a Mendoza",
+  "description": "Borrador",
+  "iconKey": "bus",
+  "baseCurrency": "ARS"
+}
+
+> {%
+import { assertStatus, jsonBody, assertEvent } from './scripts/assert.js'
+
+client.test("crea un evento dedicado a edición/eliminación", function () {
+    assertStatus(client, response, 201)
+    const body = jsonBody(response)
+    assertEvent(client, body, {
+        name: "Viaje a Mendoza",
+        description: "Borrador",
+        iconKey: "bus",
+        baseCurrency: "ARS",
+        memberCount: 1,
+    })
+    client.global.set("editableEventId", String(body.id))
+})
+%}
+
+### 20. Events — PUT editar evento como dueño (200)
+PUT {{baseUrl}}/api/events/{{editableEventId}}
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Viaje a Mendoza",
+  "description": "Fin de semana",
+  "iconKey": "car"
+}
+
+> {%
+import { assertStatus, jsonBody, assertEvent } from './scripts/assert.js'
+
+client.test("el dueño edita nombre, descripción e icono", function () {
+    assertStatus(client, response, 200)
+    const body = jsonBody(response)
+    assertEvent(client, body, {
+        id: client.global.get("editableEventId"),
+        name: "Viaje a Mendoza",
+        description: "Fin de semana",
+        iconKey: "car",
+        baseCurrency: "ARS",
+        memberCount: 1,
+    })
+})
+%}
+
+### 21. Events — GET detalle refleja la edición (200)
+GET {{baseUrl}}/api/events/{{editableEventId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody, assertEventDetail } from './scripts/assert.js'
+
+client.test("el detalle muestra inmediatamente los datos actualizados", function () {
+    assertStatus(client, response, 200)
+    const body = jsonBody(response)
+    assertEventDetail(client, body, {
+        id: client.global.get("editableEventId"),
+        name: "Viaje a Mendoza",
+        description: "Fin de semana",
+        iconKey: "car",
+        baseCurrency: "ARS",
+        memberCount: 1,
+    })
+})
+%}
+
+### 22. Events — PUT ignora baseCurrency (200, no cambia)
+PUT {{baseUrl}}/api/events/{{editableEventId}}
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Viaje a Mendoza",
+  "description": "Fin de semana",
+  "iconKey": "car",
+  "baseCurrency": "USD"
+}
+
+> {%
+import { assertStatus, jsonBody, assertEvent } from './scripts/assert.js'
+
+client.test("la moneda base no cambia al editar aunque se envíe", function () {
+    assertStatus(client, response, 200)
+    const body = jsonBody(response)
+    assertEvent(client, body, {
+        id: client.global.get("editableEventId"),
+        name: "Viaje a Mendoza",
+        description: "Fin de semana",
+        iconKey: "car",
+        baseCurrency: "ARS",
+        memberCount: 1,
+    })
+})
+%}
+
+### 23. Events — PUT nombre en blanco (400)
+PUT {{baseUrl}}/api/events/{{editableEventId}}
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "   ",
+  "description": "Fin de semana",
+  "iconKey": "car"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza la edición con nombre en blanco", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### 24. Events — GET detalle conserva valores tras edición inválida (200)
+GET {{baseUrl}}/api/events/{{editableEventId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody, assertEventDetail } from './scripts/assert.js'
+
+client.test("los datos inválidos no persisten y el evento conserva sus valores", function () {
+    assertStatus(client, response, 200)
+    const body = jsonBody(response)
+    assertEventDetail(client, body, {
+        id: client.global.get("editableEventId"),
+        name: "Viaje a Mendoza",
+        description: "Fin de semana",
+        iconKey: "car",
+        baseCurrency: "ARS",
+        memberCount: 1,
+    })
+})
+%}
+
+### 25. Events — PUT icono demasiado largo (400)
+PUT {{baseUrl}}/api/events/{{editableEventId}}
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Viaje a Mendoza",
+  "description": "Fin de semana",
+  "iconKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza la edición con icono que supera el máximo", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### 26. Events — PUT sin autenticación (401)
+# @no-cookie-jar
+PUT {{baseUrl}}/api/events/{{editableEventId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Viaje a Mendoza",
+  "description": "Fin de semana",
+  "iconKey": "car"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza editar sin sesión", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### 27. Events — PUT evento inexistente (404)
+PUT {{baseUrl}}/api/events/999999
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Viaje a Mendoza",
+  "description": "Fin de semana",
+  "iconKey": "car"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("devuelve 404 al editar un evento inexistente", function () {
+    assertError(client, response, 404, "Event not found")
+})
+%}
+
+### 28. Login — Usuario ajeno para probar permisos de edición
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{otherUserEmail}}",
+  "password": "{{otherUserPassword}}"
+}
+
+> {%
+import { assertStatus, saveAuthToken } from './scripts/assert.js'
+
+client.test("inicia sesión como usuario ajeno para editar", function () {
+    assertStatus(client, response, 200)
+})
+saveAuthToken(client, response, "auth_token")
+%}
+
+### 29. Events — PUT evento ajeno (403)
+PUT {{baseUrl}}/api/events/{{editableEventId}}
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Hackeo",
+  "description": "No debería pasar",
+  "iconKey": "car"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza la edición de un evento ajeno con 403 Forbidden", function () {
+    assertError(client, response, 403, "Forbidden")
+})
+%}
+
+### 30. Events — DELETE evento ajeno (403)
+DELETE {{baseUrl}}/api/events/{{editableEventId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza eliminar un evento ajeno con 403 Forbidden", function () {
+    assertError(client, response, 403, "Forbidden")
+})
+%}
+
+### 31. Events — DELETE sin autenticación (401)
+# @no-cookie-jar
+DELETE {{baseUrl}}/api/events/{{editableEventId}}
+Accept: application/json
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza eliminar sin sesión", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### 32. Events — DELETE evento inexistente (404)
+DELETE {{baseUrl}}/api/events/999999
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("devuelve 404 al eliminar un evento inexistente", function () {
+    // Nota: corre con usuario ajeno a propósito — si el evento no existe,
+    // ni siquiera el dueño lo vería. El 404 precede al 403.
+    assertError(client, response, 404, "Event not found")
+})
+%}
+
+### 33. Login — Dueño retoma sesión para eliminar
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{eventOwnerEmail}}",
+  "password": "{{eventOwnerPassword}}"
+}
+
+> {%
+import { assertStatus, saveAuthToken } from './scripts/assert.js'
+
+client.test("retoma sesión del dueño para eliminar", function () {
+    assertStatus(client, response, 200)
+})
+saveAuthToken(client, response, "auth_token")
+%}
+
+### 34. Events — DELETE evento sin gastos como dueño (204)
+DELETE {{baseUrl}}/api/events/{{editableEventId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertNoContent } from './scripts/assert.js'
+
+client.test("el dueño elimina un evento sin gastos", function () {
+    assertNoContent(client, response)
+})
+%}
+
+### 35. Events — GET detalle de evento eliminado (404)
+GET {{baseUrl}}/api/events/{{editableEventId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("el evento eliminado ya no existe", function () {
+    assertError(client, response, 404, "Event not found")
+})
+%}
+
