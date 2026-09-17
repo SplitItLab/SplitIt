@@ -85,7 +85,7 @@ describe("EventDetailView", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Reintentar" }));
 
-    expect(await screen.findByRole("heading", { name: "Detalle del evento" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Viaje a Bariloche" })).toBeInTheDocument();
     expect(getEvent).toHaveBeenCalledTimes(2);
   });
 
@@ -95,5 +95,50 @@ describe("EventDetailView", () => {
     render(<EventDetailView id="1" />);
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/login"));
+  });
+  it("muestra nombre, descripción y moneda del evento", async () => {
+    vi.mocked(getEvent).mockResolvedValue(eventDetail);
+
+    render(<EventDetailView id="1" />);
+
+    expect(await screen.findByRole("heading", { name: "Viaje a Bariloche" })).toBeInTheDocument();
+    expect(screen.getByText("Vacaciones")).toBeInTheDocument();
+    expect(screen.getByText("Moneda ARS - Peso argentino")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Volver a eventos" })).toHaveAttribute(
+      "href",
+      "/eventos"
+    );
+  });
+
+  it("permite navegar entre Gastos, Saldos e Integrantes", async () => {
+    vi.mocked(getEvent).mockResolvedValue(eventDetail);
+
+    render(<EventDetailView id="1" />);
+
+    expect(await screen.findByRole("tab", { name: "Gastos" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    expect(screen.getByText("Todavía no hay gastos")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("tab", { name: "Saldos" }));
+    expect(screen.getByText("Todavía no hay saldos")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("tab", { name: "Integrantes" }));
+    expect(screen.getByRole("heading", { name: "Integrantes" })).toBeInTheDocument();
+  });
+
+  it("muestra el email de los integrantes con cuenta y marca invitado a los que no", async () => {
+    vi.mocked(getEvent).mockResolvedValue(eventDetail);
+
+    render(<EventDetailView id="1" />);
+
+    await userEvent.click(await screen.findByRole("tab", { name: "Integrantes" }));
+
+    expect(screen.getByText("Ana")).toBeInTheDocument();
+    expect(screen.getByText("ana@mail.com")).toBeInTheDocument();
+
+    expect(screen.getByText("Juan")).toBeInTheDocument();
+    expect(screen.getByText("Invitado")).toBeInTheDocument();
   });
 });
