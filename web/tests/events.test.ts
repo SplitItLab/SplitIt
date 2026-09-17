@@ -32,6 +32,20 @@ const events: EventSummary[] = [
   },
 ];
 
+const eventDetail: EventDetail = {
+  id: 1,
+  name: "Viaje a Bariloche",
+  description: "Vacaciones",
+  iconKey: "plane",
+  baseCurrency: "ARS",
+  memberCount: 2,
+  isOwner: true,
+  members: [
+    { id: 10, name: "Ana", email: "ana@mail.com", isGuest: false },
+    { id: 11, name: "Juan", email: null, isGuest: true },
+  ],
+};
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -162,6 +176,59 @@ describe("listEvents y createEvent", () => {
 
     await expect(listEvents()).rejects.toBeInstanceOf(EventError);
     await expect(listEvents()).rejects.toMatchObject({ type: "unauthorized" });
+  });
+
+  it("traduce un 403 a un EventError de tipo forbidden", async () => {
+    vi.mocked(fetch).mockImplementation(async () => jsonResponse({ message: "no" }, 403));
+
+    await expect(listEvents()).rejects.toMatchObject({ type: "forbidden" });
+  });
+});
+
+describe("getEventById (detalle)", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("pide GET /api/events/:id y devuelve el detalle", async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(eventDetail));
+
+    await expect(getEventById(1)).resolves.toEqual(eventDetail);
+
+    const [url, init] = vi.mocked(fetch).mock.calls[0];
+    expect(String(url)).toContain("/api/events/1");
+    expect(init?.method ?? "GET").toBe("GET");
+  });
+
+  it("traduce un 403 a un EventError de tipo forbidden", async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ message: "no" }, 403));
+
+    await expect(getEventById(1)).rejects.toMatchObject({ name: "EventError", type: "forbidden" });
+  });
+
+  it("traduce un 404 a un EventError de tipo not-found", async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ message: "no" }, 404));
+
+    await expect(getEventById(999)).rejects.toMatchObject({
+      name: "EventError",
+      type: "not-found",
+    });
+  });
+
+  it("traduce un 401 a un EventError de tipo unauthorized", async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ message: "no" }, 401));
+
+    await expect(getEventById(1)).rejects.toMatchObject({ type: "unauthorized" });
+  });
+
+  it("traduce un fallo de red a un EventError de tipo network", async () => {
+    vi.mocked(fetch).mockRejectedValue(new TypeError("failed"));
+
+    await expect(getEventById(1)).rejects.toMatchObject({ type: "network" });
   });
 });
 

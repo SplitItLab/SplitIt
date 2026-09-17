@@ -29,7 +29,7 @@ export default function LoginPage() {
     setGeneralError(null);
     try {
       await login(data);
-      router.push("/dashboard");
+      router.push("/eventos");
     } catch (err) {
       if (err instanceof LoginError) {
         setGeneralError(err.message);

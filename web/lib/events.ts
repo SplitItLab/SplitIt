@@ -68,7 +68,13 @@ export type UpdateEventInput = z.input<typeof updateEventSchema>;
 export type UpdateEventPayload = z.output<typeof updateEventSchema>;
 
 export type EventErrorType =
-  "validation" | "unauthorized" | "forbidden" | "conflict" | "network" | "server-error";
+  | "validation"
+  | "unauthorized"
+  | "forbidden"
+  | "not-found"
+  | "conflict"
+  | "network"
+  | "server-error";
 
 export class EventError extends Error {
   constructor(
@@ -85,8 +91,14 @@ function toEventError(err: unknown): never {
     if (err.status === 0) {
       throw new EventError("network", "No pudimos conectar con el servidor.");
     }
-    if (err.status === 401 || err.status === 403) {
+    if (err.status === 401) {
       throw new EventError("unauthorized", "Tu sesión expiró. Iniciá sesión de nuevo.");
+    }
+    if (err.status === 403) {
+      throw new EventError("forbidden", "No tenés acceso a este evento.");
+    }
+    if (err.status === 404) {
+      throw new EventError("not-found", "No encontramos este evento.");
     }
     if (err.status === 400 || err.status === 422) {
       throw new EventError("validation", err.message || "Revisá los datos ingresados.");
@@ -125,9 +137,6 @@ export async function getEventById(id: number | string): Promise<EventDetail> {
   try {
     return await request<EventDetail>(`/api/events/${id}`);
   } catch (err) {
-    if (err instanceof ApiError && err.status === 403) {
-      throw new EventError("forbidden", "No tenés acceso a este evento.");
-    }
     toEventError(err);
   }
 }
