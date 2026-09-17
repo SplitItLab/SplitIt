@@ -1,4 +1,4 @@
-import { render, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 const replace = vi.fn();
@@ -20,16 +20,24 @@ describe("Home", () => {
     vi.mocked(useSession).mockReset();
   });
 
-  it("no muestra contenido privado mientras valida la sesión", () => {
+  it("no muestra contenido mientras valida la sesión", () => {
     vi.mocked(useSession).mockReturnValue({ status: "loading" });
-    render(<Home />);
+    const { container } = render(<Home />);
+    expect(container.querySelector("h1")).toBeNull();
     expect(replace).not.toHaveBeenCalled();
   });
 
-  it("redirige a /login cuando no hay sesión", async () => {
+  it("muestra la landing cuando no hay sesión", () => {
     vi.mocked(useSession).mockReturnValue({ status: "unauthenticated" });
     render(<Home />);
-    await waitFor(() => expect(replace).toHaveBeenCalledWith("/login"));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Compartí el link y listo."
+    );
+    expect(screen.getByRole("link", { name: /crear un evento/i })).toHaveAttribute(
+      "href",
+      "/register"
+    );
+    expect(replace).not.toHaveBeenCalled();
   });
 
   it("redirige a /eventos cuando hay sesión", async () => {
