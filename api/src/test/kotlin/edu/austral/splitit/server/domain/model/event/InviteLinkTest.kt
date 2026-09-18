@@ -12,17 +12,42 @@ class InviteLinkTest {
 
     @Test
     fun `create invite link successfully`() {
-        val link = InviteLink.create(event = event, token = "opaque-token-12345")
+        val token = "opaque-token-1234567890"
+
+        val link = InviteLink.create(event = event, token = token)
 
         assertEquals(event, link.event)
-        assertEquals("opaque-token-12345", link.token)
+        assertEquals(token, link.token)
         assertNotNull(link.createdAt)
+    }
+
+    @Test
+    fun `create invite link accepts a token of the minimum length`() {
+        val token = "a".repeat(InviteLink.TOKEN_MIN_LENGTH)
+
+        val link = InviteLink.create(event = event, token = token)
+
+        assertEquals(token, link.token)
     }
 
     @Test
     fun `create invite link fails with blank token`() {
         assertFailsWith<IllegalArgumentException> {
             InviteLink.create(event = event, token = "   ")
+        }
+    }
+
+    @Test
+    fun `create invite link fails with a token shorter than the minimum`() {
+        assertFailsWith<IllegalArgumentException> {
+            InviteLink.create(event = event, token = "a".repeat(InviteLink.TOKEN_MIN_LENGTH - 1))
+        }
+    }
+
+    @Test
+    fun `create invite link fails with a token longer than the maximum`() {
+        assertFailsWith<IllegalArgumentException> {
+            InviteLink.create(event = event, token = "a".repeat(InviteLink.TOKEN_MAX_LENGTH + 1))
         }
     }
 }

@@ -8,6 +8,7 @@ import edu.austral.splitit.server.domain.model.event.InviteLink
 import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.domain.service.EventMemberService
 import edu.austral.splitit.server.domain.service.EventService
+import edu.austral.splitit.server.domain.service.InviteLinkService
 import edu.austral.splitit.server.domain.service.UserService
 import edu.austral.splitit.server.infrastructure.persistence.EventMemberRepository
 import edu.austral.splitit.server.infrastructure.persistence.EventRepository
@@ -38,7 +39,13 @@ import kotlin.test.assertTrue
 @DataJpaTest
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
-@Import(EventApplicationService::class, EventService::class, EventMemberService::class, UserService::class)
+@Import(
+    EventApplicationService::class,
+    EventService::class,
+    EventMemberService::class,
+    InviteLinkService::class,
+    UserService::class,
+)
 @TestPropertySource(
     properties = [
         "POSTGRES_HOST=localhost",
@@ -143,7 +150,7 @@ class EventApplicationServiceRollbackTest(
         val event = createEvent()
         val invite =
             inviteLinkRepository.saveAndFlush(
-                InviteLink.create(eventRepository.findById(event.id).orElseThrow(), "test-invite"),
+                InviteLink.create(eventRepository.findById(event.id).orElseThrow(), "test-invite-token-1234567"),
             )
 
         assertFailsWith<EventDeletionConflictException> {

@@ -608,4 +608,58 @@ class EventControllerTest(
 
         verify(eventApplicationService, never()).updateEvent(any())
     }
+
+    @Test
+    fun `post invite-link returns 200 with the event token`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+        whenever(eventApplicationService.getOrCreateInviteToken(1L, 10L)).thenReturn("un-token-ya-persistido-123")
+
+        mockMvc
+            .perform(
+                post("/api/events/10/invite-link")
+                    .cookie(Cookie("auth_token", "good-token")),
+            ).andExpect(status().isOk)
+            .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.token").value("un-token-ya-persistido-123"))
+
+        verify(eventApplicationService).getOrCreateInviteToken(1L, 10L)
+    }
+
+    @Test
+    fun `post invite-link returns 401 without session`() {
+        mockMvc
+            .perform(post("/api/events/10/invite-link"))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.message").value("Unauthorized"))
+
+        verify(eventApplicationService, never()).getOrCreateInviteToken(any(), any())
+    }
+
+    @Test
+    fun `post invite-link returns 403 when user is not owner`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+        whenever(eventApplicationService.getOrCreateInviteToken(any(), any()))
+            .thenThrow(AccessDeniedException("Forbidden"))
+
+        mockMvc
+            .perform(
+                post("/api/events/10/invite-link")
+                    .cookie(Cookie("auth_token", "good-token")),
+            ).andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.message").value("Forbidden"))
+    }
+
+    @Test
+    fun `post invite-link returns 404 when event does not exist`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+        whenever(eventApplicationService.getOrCreateInviteToken(any(), any()))
+            .thenThrow(EventNotFoundException())
+
+        mockMvc
+            .perform(
+                post("/api/events/999/invite-link")
+                    .cookie(Cookie("auth_token", "good-token")),
+            ).andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.message").value("Event not found"))
+    }
 }
