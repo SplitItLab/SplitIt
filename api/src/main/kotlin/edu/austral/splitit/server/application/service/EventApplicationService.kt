@@ -4,6 +4,7 @@ import edu.austral.splitit.server.application.exception.EventDeletionConflictExc
 import edu.austral.splitit.server.application.exception.EventNotFoundException
 import edu.austral.splitit.server.domain.service.EventMemberService
 import edu.austral.splitit.server.domain.service.EventService
+import edu.austral.splitit.server.domain.service.InviteLinkService
 import edu.austral.splitit.server.domain.service.UserService
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.security.access.AccessDeniedException
@@ -59,6 +60,7 @@ class EventApplicationService(
     private val userService: UserService,
     private val eventService: EventService,
     private val eventMemberService: EventMemberService,
+    private val inviteLinkService: InviteLinkService,
 ) {
     @Transactional
     fun createEvent(command: CreateEventCommand): EventSummary {
@@ -167,6 +169,20 @@ class EventApplicationService(
                 },
             isOwner = isOwner,
         )
+    }
+
+    @Transactional
+    fun getOrCreateInviteToken(
+        userId: Long,
+        eventId: Long,
+    ): String {
+        val event = eventService.findById(eventId) ?: throw EventNotFoundException()
+
+        if (event.owner.id != userId) {
+            throw AccessDeniedException("Forbidden")
+        }
+
+        return inviteLinkService.getOrCreate(event).token
     }
 
     @Transactional

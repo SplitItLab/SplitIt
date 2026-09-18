@@ -245,3 +245,16 @@ export function assertEventDetail(client, event, expected) {
     client.assert(event.balances === undefined, "event must not include balances")
 }
 
+const INVITE_TOKEN_MIN_LENGTH = 22
+
+export function assertInviteLink(client, inviteLink, expected) {
+    expected = expected || {}
+    client.assert(inviteLink != null && typeof inviteLink === "object", "Expected invite link object")
+    client.assert(typeof inviteLink.token === "string", "Expected invite link token")
+    client.assert(inviteLink.token.length >= INVITE_TOKEN_MIN_LENGTH, "Expected token of at least " + INVITE_TOKEN_MIN_LENGTH + " chars but got " + inviteLink.token.length)
+    if (expected.token !== undefined) {
+        client.assert(inviteLink.token === expected.token, 'Expected token "' + expected.token + '" but got "' + inviteLink.token + '"')
+    }
+    client.assert(!/https?:\/\//.test(inviteLink.token), "token must not include a frontend URL")
+    client.assert(Object.keys(inviteLink).length === 1, "invite link must only include the token")
+}

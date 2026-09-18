@@ -34,6 +34,7 @@ class InviteLink private constructor(
     var createdAt: Instant = Instant.now(),
 ) {
     companion object {
+        const val TOKEN_MIN_LENGTH = 22
         const val TOKEN_MAX_LENGTH = 128
 
         fun create(
@@ -42,7 +43,7 @@ class InviteLink private constructor(
         ): InviteLink {
             val normalizedToken = token.trim()
 
-            validateBetween("invite link", normalizedToken, 1, TOKEN_MAX_LENGTH)
+            validateBetween("invite link", normalizedToken, TOKEN_MIN_LENGTH, TOKEN_MAX_LENGTH)
 
             return InviteLink(
                 event = event,

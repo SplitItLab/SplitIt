@@ -4,8 +4,10 @@ import edu.austral.splitit.server.Helpers
 import edu.austral.splitit.server.application.exception.EventNotFoundException
 import edu.austral.splitit.server.domain.model.event.Event
 import edu.austral.splitit.server.domain.model.event.EventMember
+import edu.austral.splitit.server.domain.model.event.InviteLink
 import edu.austral.splitit.server.domain.service.EventMemberService
 import edu.austral.splitit.server.domain.service.EventService
+import edu.austral.splitit.server.domain.service.InviteLinkService
 import edu.austral.splitit.server.domain.service.UserService
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -26,12 +28,14 @@ class EventApplicationServiceTest {
     private val userService: UserService = mock()
     private val eventService: EventService = mock()
     private val eventMemberService: EventMemberService = mock()
+    private val inviteLinkService: InviteLinkService = mock()
 
     private val eventApplicationService =
         EventApplicationService(
             userService = userService,
             eventService = eventService,
             eventMemberService = eventMemberService,
+            inviteLinkService = inviteLinkService,
         )
 
     private val user = Helpers.user(name = "Mateo", email = "mateo@example.com", passwordHash = "hash")
@@ -506,5 +510,70 @@ class EventApplicationServiceTest {
 
         verify(eventService, never()).update(any(), anyOrNull(), anyOrNull(), anyOrNull())
         verify(eventMemberService, never()).findByEventId(any())
+    }
+
+    @Test
+    fun `getOrCreateInviteToken returns the token of the event invite link for the owner`() {
+        val event =
+            Event
+                .create(owner = user, name = "Viaje a Bariloche", baseCurrency = "ARS")
+                .apply { id = 10L }
+        val inviteLink = InviteLink.create(event, "un-token-ya-persistido-123")
+
+        whenever(eventService.findById(10L)).thenReturn(event)
+        whenever(inviteLinkService.getOrCreate(event)).thenReturn(inviteLink)
+
+        val token = eventApplicationService.getOrCreateInviteToken(userId = 1L, eventId = 10L)
+
+        assertEquals("un-token-ya-persistido-123", token)
+        verify(inviteLinkService).getOrCreate(event)
+    }
+
+    @Test
+    fun `getOrCreateInviteToken returns the same token on repeated calls`() {
+        val event =
+            Event
+                .create(owner = user, name = "Viaje a Bariloche", baseCurrency = "ARS")
+                .apply { id = 10L }
+        val inviteLink = InviteLink.create(event, "un-token-ya-persistido-123")
+
+        whenever(eventService.findById(10L)).thenReturn(event)
+        whenever(inviteLinkService.getOrCreate(event)).thenReturn(inviteLink)
+
+        val first = eventApplicationService.getOrCreateInviteToken(userId = 1L, eventId = 10L)
+        val second = eventApplicationService.getOrCreateInviteToken(userId = 1L, eventId = 10L)
+
+        assertEquals(first, second)
+    }
+
+    @Test
+    fun `getOrCreateInviteToken rejects a user that is not the owner`() {
+        val otherOwner =
+            Helpers
+                .user(name = "Otro", email = "otro@example.com", passwordHash = "hash")
+                .apply { id = 2L }
+        val event =
+            Event
+                .create(owner = otherOwner, name = "Asado", baseCurrency = "ARS")
+                .apply { id = 20L }
+
+        whenever(eventService.findById(20L)).thenReturn(event)
+
+        assertFailsWith<AccessDeniedException> {
+            eventApplicationService.getOrCreateInviteToken(userId = 1L, eventId = 20L)
+        }
+
+        verify(inviteLinkService, never()).getOrCreate(any())
+    }
+
+    @Test
+    fun `getOrCreateInviteToken fails when the event does not exist`() {
+        whenever(eventService.findById(99L)).thenReturn(null)
+
+        assertFailsWith<EventNotFoundException> {
+            eventApplicationService.getOrCreateInviteToken(userId = 1L, eventId = 99L)
+        }
+
+        verify(inviteLinkService, never()).getOrCreate(any())
     }
 }
