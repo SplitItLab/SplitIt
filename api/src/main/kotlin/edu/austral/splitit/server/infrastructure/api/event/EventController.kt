@@ -61,6 +61,15 @@ class EventController(
         return EventDetailResponse.of(detail)
     }
 
+    @PostMapping("/{id}/invite-link")
+    fun getOrCreateInviteLink(
+        @AuthenticationPrincipal user: AuthUser,
+        @PathVariable id: Long,
+    ): InviteLinkResponse {
+        val token = eventApplicationService.getOrCreateInviteToken(user.id, id)
+        return InviteLinkResponse.of(token)
+    }
+
     @PutMapping("/{id}")
     fun updateEvent(
         @AuthenticationPrincipal user: AuthUser,

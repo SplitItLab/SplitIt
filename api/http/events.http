@@ -708,3 +708,92 @@ client.test("el evento eliminado ya no existe", function () {
 })
 %}
 
+### 36. Events — POST enlace de acceso como dueño (200)
+POST {{baseUrl}}/api/events/{{firstEventId}}/invite-link
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody, assertInviteLink } from './scripts/assert.js'
+
+client.test("el dueño obtiene el token de acceso del evento", function () {
+    assertStatus(client, response, 200)
+    const body = jsonBody(response)
+    assertInviteLink(client, body)
+    client.global.set("inviteToken", body.token)
+})
+%}
+
+### 37. Events — POST enlace de acceso otra vez devuelve el mismo token (200)
+POST {{baseUrl}}/api/events/{{firstEventId}}/invite-link
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody, assertInviteLink } from './scripts/assert.js'
+
+client.test("una segunda solicitud devuelve el mismo token", function () {
+    assertStatus(client, response, 200)
+    assertInviteLink(client, jsonBody(response), {
+        token: client.global.get("inviteToken"),
+    })
+})
+%}
+
+### 38. Events — POST enlace de acceso de un evento inexistente (404)
+POST {{baseUrl}}/api/events/999999/invite-link
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("devuelve 404 al pedir el enlace de un evento inexistente", function () {
+    assertError(client, response, 404, "Event not found")
+})
+%}
+
+### 39. Events — POST enlace de acceso sin autenticación (401)
+# @no-cookie-jar
+POST {{baseUrl}}/api/events/{{firstEventId}}/invite-link
+Accept: application/json
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza pedir el enlace sin sesión", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### 40. Login — Usuario ajeno para probar permisos del enlace
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{otherUserEmail}}",
+  "password": "{{otherUserPassword}}"
+}
+
+> {%
+import { assertStatus, saveAuthToken } from './scripts/assert.js'
+
+client.test("inicia sesión como usuario ajeno para pedir el enlace", function () {
+    assertStatus(client, response, 200)
+})
+saveAuthToken(client, response, "auth_token")
+%}
+
+### 41. Events — POST enlace de acceso de evento ajeno (403)
+POST {{baseUrl}}/api/events/{{firstEventId}}/invite-link
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza pedir el enlace de un evento ajeno con 403 Forbidden", function () {
+    assertError(client, response, 403, "Forbidden")
+})
+%}
