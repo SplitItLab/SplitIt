@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, UserPlus } from "lucide-react";
 
 import { EventError, getEventById, type EventDetail, type EventSummary } from "@/lib/events";
 import { showAppToast } from "@/lib/toast";
@@ -11,6 +11,7 @@ import { EventNotFound } from "@/components/event-not-found";
 import { EventDetailContent } from "@/components/event-detail-content";
 import { EditEventDialog } from "@/components/edit-event-dialog";
 import { DeleteEventDialog } from "@/components/delete-event-dialog";
+import { InviteEventDialog } from "@/components/invite-event-dialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
@@ -27,6 +28,7 @@ export function EventDetailView({ id }: { id: string }) {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [inviting, setInviting] = useState(false);
 
   const fetchEvent = useCallback(() => {
     getEventById(id)
@@ -99,6 +101,16 @@ export function EventDetailView({ id }: { id: string }) {
                 type="button"
                 variant="ghost"
                 size="icon"
+                aria-label="Invitar"
+                onClick={() => setInviting(true)}
+                className="size-11 rounded-full"
+              >
+                <UserPlus className="size-5" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
                 aria-label="Editar evento"
                 onClick={() => setEditing(true)}
                 className="size-11 rounded-full"
@@ -121,6 +133,12 @@ export function EventDetailView({ id }: { id: string }) {
 
         <EventDetailContent event={state.event} />
 
+        <InviteEventDialog
+          open={inviting}
+          onOpenChange={setInviting}
+          event={state.event}
+          onUnauthorized={() => setState({ status: "unauthorized" })}
+        />
         <EditEventDialog
           open={editing}
           onOpenChange={setEditing}

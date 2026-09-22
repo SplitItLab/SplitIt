@@ -175,6 +175,29 @@ export async function deleteEvent(id: number | string): Promise<void> {
   }
 }
 
+export type InviteLinkResponse = { token: string };
+
+export async function getEventInviteToken(id: number | string): Promise<string> {
+  try {
+    const body = await request<InviteLinkResponse>(`/api/events/${id}/invite-link`, {
+      method: "POST",
+    });
+    return body.token;
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 403) {
+      throw new EventError("forbidden", "Solo el dueño puede invitar a este evento.");
+    }
+    toEventError(err);
+  }
+}
+
+export function buildEventInviteUrl(
+  token: string,
+  origin: string = globalThis.location.origin
+): string {
+  return `${origin}/eventos/invitacion/${token}`;
+}
+
 export function filterEventsByName(events: EventSummary[], query: string): EventSummary[] {
   const term = query.trim().toLowerCase();
   if (!term) return events;
