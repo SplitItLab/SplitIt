@@ -2,6 +2,7 @@ package edu.austral.splitit.server.infrastructure.api.event
 
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.service.CreateEventCommand
+import edu.austral.splitit.server.application.service.CreateExpenseCommand
 import edu.austral.splitit.server.application.service.EventApplicationService
 import edu.austral.splitit.server.application.service.UpdateEventCommand
 import jakarta.validation.Valid
@@ -68,6 +69,38 @@ class EventController(
     ): InviteLinkResponse {
         val token = eventApplicationService.getOrCreateInviteToken(user.id, id)
         return InviteLinkResponse.of(token)
+    }
+
+    @PostMapping("/{eventId}/expenses")
+    @ResponseStatus(HttpStatus.CREATED)
+    fun createExpense(
+        @AuthenticationPrincipal user: AuthUser,
+        @PathVariable eventId: Long,
+        @Valid @RequestBody request: CreateExpenseRequest,
+    ): ExpenseResponse {
+        val command =
+            CreateExpenseCommand(
+                userId = user.id,
+                eventId = eventId,
+                name = request.name,
+                amount = request.amount,
+                currency = request.currency,
+                paidByMemberId = request.paidByMemberId,
+            )
+
+        val summary = eventApplicationService.addExpense(command)
+
+        return ExpenseResponse.of(summary)
+    }
+
+    @GetMapping("/{eventId}/expenses")
+    fun listExpenses(
+        @AuthenticationPrincipal user: AuthUser,
+        @PathVariable eventId: Long,
+    ): List<ExpenseResponse> {
+        val summaries = eventApplicationService.listExpenses(user.id, eventId)
+
+        return summaries.map { ExpenseResponse.of(it) }
     }
 
     @PutMapping("/{id}")

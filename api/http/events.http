@@ -797,3 +797,252 @@ client.test("rechaza pedir el enlace de un evento ajeno con 403 Forbidden", func
     assertError(client, response, 403, "Forbidden")
 })
 %}
+
+### 42. Login — Dueño retoma sesión para registrar gastos
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{eventOwnerEmail}}",
+  "password": "{{eventOwnerPassword}}"
+}
+
+> {%
+import { assertStatus, saveAuthToken } from './scripts/assert.js'
+
+client.test("el dueño vuelve a iniciar sesión para probar gastos", function () {
+    assertStatus(client, response, 200)
+})
+saveAuthToken(client, response, "auth_token")
+%}
+
+### 43. Events — GET detalle para capturar el id de un integrante pagador
+GET {{baseUrl}}/api/events/{{firstEventId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("obtiene el detalle del evento para elegir un pagador", function () {
+    assertStatus(client, response, 200)
+    const body = jsonBody(response)
+    const ownerMember = body.members.find(m => !m.isGuest)
+    client.assert(ownerMember !== undefined, "Expected linked owner member")
+    client.global.set("firstEventOwnerMemberId", String(ownerMember.id))
+})
+%}
+
+### 44. Events — POST crear gasto en la moneda base como dueño (201)
+POST {{baseUrl}}/api/events/{{firstEventId}}/expenses
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Cena",
+  "amount": 5000,
+  "currency": "ARS",
+  "paidByMemberId": {{firstEventOwnerMemberId}}
+}
+
+> {%
+import { assertStatus, jsonBody, assertExpense } from './scripts/assert.js'
+
+client.test("registra un gasto en la moneda base del evento", function () {
+    assertStatus(client, response, 201)
+    const body = jsonBody(response)
+    assertExpense(client, body, {
+        eventId: client.global.get("firstEventId"),
+        name: "Cena",
+        originalAmount: 5000,
+        currency: "ARS",
+        paidByMemberId: client.global.get("firstEventOwnerMemberId"),
+    })
+    client.global.set("firstExpenseId", String(body.id))
+})
+%}
+
+### 45. Events — GET lista de gastos incluye el gasto recién creado (200)
+GET {{baseUrl}}/api/events/{{firstEventId}}/expenses
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody, assertExpense } from './scripts/assert.js'
+
+client.test("lista los gastos del evento e incluye el gasto creado", function () {
+    assertStatus(client, response, 200)
+    const list = jsonBody(response)
+    client.assert(Array.isArray(list), "Expected array of expenses")
+    const found = list.find(e => String(e.id) === client.global.get("firstExpenseId"))
+    client.assert(found !== undefined, "Expected created expense in list")
+    assertExpense(client, found, {
+        id: client.global.get("firstExpenseId"),
+        eventId: client.global.get("firstEventId"),
+        name: "Cena",
+        originalAmount: 5000,
+        currency: "ARS",
+        paidByMemberId: client.global.get("firstEventOwnerMemberId"),
+    })
+})
+%}
+
+### 46. Events — POST crear gasto sin autenticación (401)
+# @no-cookie-jar
+POST {{baseUrl}}/api/events/{{firstEventId}}/expenses
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Cena",
+  "amount": 5000,
+  "currency": "ARS",
+  "paidByMemberId": {{firstEventOwnerMemberId}}
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza crear un gasto sin sesión", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### 47. Events — POST crear gasto en una moneda distinta a la base (400)
+POST {{baseUrl}}/api/events/{{firstEventId}}/expenses
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Cena",
+  "amount": 5000,
+  "currency": "USD",
+  "paidByMemberId": {{firstEventOwnerMemberId}}
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza un gasto en una moneda distinta a la base del evento", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### 48. Seed — Crear un segundo evento del dueño para probar aislamiento de pagadores
+POST {{baseUrl}}/api/events
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Asado",
+  "baseCurrency": "ARS"
+}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("crea un segundo evento del dueño sin participantes", function () {
+    assertStatus(client, response, 201)
+    const body = jsonBody(response)
+    client.global.set("secondEventId", String(body.id))
+})
+%}
+
+### 49. Events — POST crear gasto con pagador de otro evento (400)
+POST {{baseUrl}}/api/events/{{secondEventId}}/expenses
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Cena",
+  "amount": 5000,
+  "currency": "ARS",
+  "paidByMemberId": {{firstEventOwnerMemberId}}
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza un gasto cuyo pagador no pertenece al evento pedido", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### 50. Events — POST crear gasto de un evento inexistente (404)
+POST {{baseUrl}}/api/events/999999/expenses
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Cena",
+  "amount": 5000,
+  "currency": "ARS",
+  "paidByMemberId": {{firstEventOwnerMemberId}}
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("devuelve 404 al crear un gasto en un evento inexistente", function () {
+    assertError(client, response, 404, "Event not found")
+})
+%}
+
+### 51. Login — Usuario ajeno para probar permisos de gastos
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{otherUserEmail}}",
+  "password": "{{otherUserPassword}}"
+}
+
+> {%
+import { assertStatus, saveAuthToken } from './scripts/assert.js'
+
+client.test("inicia sesión como usuario ajeno para probar permisos de gastos", function () {
+    assertStatus(client, response, 200)
+})
+saveAuthToken(client, response, "auth_token")
+%}
+
+### 52. Events — POST crear gasto en un evento ajeno (403)
+POST {{baseUrl}}/api/events/{{firstEventId}}/expenses
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Cena",
+  "amount": 5000,
+  "currency": "ARS",
+  "paidByMemberId": {{firstEventOwnerMemberId}}
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza crear un gasto en un evento ajeno con 403 Forbidden", function () {
+    assertError(client, response, 403, "Forbidden")
+})
+%}
+
+### 53. Events — GET lista de gastos de un evento ajeno (403)
+GET {{baseUrl}}/api/events/{{firstEventId}}/expenses
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza listar los gastos de un evento ajeno con 403 Forbidden", function () {
+    assertError(client, response, 403, "Forbidden")
+})
+%}

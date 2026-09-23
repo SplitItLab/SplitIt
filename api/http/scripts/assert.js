@@ -258,3 +258,21 @@ export function assertInviteLink(client, inviteLink, expected) {
     client.assert(!/https?:\/\//.test(inviteLink.token), "token must not include a frontend URL")
     client.assert(Object.keys(inviteLink).length === 1, "invite link must only include the token")
 }
+
+export function assertExpense(client, expense, expected) {
+    client.assert(expense != null && typeof expense === "object", "Expected expense object")
+    client.assert(expense.id !== undefined && expense.id !== null, "Expected expense id")
+    if (expected.id !== undefined) {
+        client.assert(String(expense.id) === String(expected.id), 'Expected expense id "' + expected.id + '" but got "' + expense.id + '"')
+    }
+    client.assert(String(expense.eventId) === String(expected.eventId), 'Expected eventId "' + expected.eventId + '" but got "' + expense.eventId + '"')
+    client.assert(expense.name === expected.name, 'Expected name "' + expected.name + '" but got "' + expense.name + '"')
+    client.assert(Number(expense.originalAmount) === Number(expected.originalAmount), "Expected originalAmount " + expected.originalAmount + " but got " + expense.originalAmount)
+    client.assert(expense.originalCurrency === expected.currency, 'Expected originalCurrency "' + expected.currency + '" but got "' + expense.originalCurrency + '"')
+    client.assert(Number(expense.baseAmount) === Number(expected.originalAmount), "Expected baseAmount " + expected.originalAmount + " but got " + expense.baseAmount)
+    client.assert(expense.baseCurrency === expected.currency, 'Expected baseCurrency "' + expected.currency + '" but got "' + expense.baseCurrency + '"')
+    client.assert(expense.paidByMember != null && typeof expense.paidByMember === "object", "Expected paidByMember object")
+    client.assert(String(expense.paidByMember.id) === String(expected.paidByMemberId), 'Expected paidByMember.id "' + expected.paidByMemberId + '" but got "' + expense.paidByMember.id + '"')
+    client.assert(typeof expense.paidByMember.name === "string" && expense.paidByMember.name.length > 0, "Expected paidByMember.name")
+    client.assert(typeof expense.expenseDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(expense.expenseDate), "Expected expenseDate as YYYY-MM-DD")
+}
