@@ -147,11 +147,6 @@ export function InviteEventDialog({
             >
               {copied ? "Enlace copiado" : "Copiar enlace"}
             </Button>
-            {copied && (
-              <p role="status" className="text-sm font-medium">
-                Enlace copiado
-              </p>
-            )}
             {copyError && (
               <Alert variant="destructive">
                 <AlertDescription>{copyError}</AlertDescription>

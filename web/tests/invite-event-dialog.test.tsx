@@ -89,8 +89,10 @@ describe("InviteEventDialog", () => {
     await user.click(within(dialog).getByRole("button", { name: "Copiar enlace" }));
 
     expect(writeText).toHaveBeenCalledWith(expectedUrl());
-    expect(await within(dialog).findByRole("status")).toHaveTextContent("Enlace copiado");
-    expect(within(dialog).getByRole("button", { name: "Enlace copiado" })).toBeInTheDocument();
+    expect(
+      await within(dialog).findByRole("button", { name: "Enlace copiado" })
+    ).toBeInTheDocument();
+    expect(within(dialog).queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("muestra un error y permite reintentar si la API falla", async () => {
