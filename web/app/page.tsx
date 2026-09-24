@@ -2,9 +2,9 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useSession } from "@/lib/use-session";
 import { Spinner } from "@/components/ui/spinner";
+import { PrimaryLink } from "@/components/primary-link";
 import { ArrowRight } from "lucide-react";
 
 function SplitItLogo() {
@@ -102,13 +102,10 @@ function LandingHero() {
             <p className="max-w-[350px] text-[14px] text-black lg:max-w-[560px] lg:text-[18px]">
               Tus amigos cargan gastos y ven sus saldos sin crear cuenta ni bajar nada.
             </p>
-            <Link
-              href="/register"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-10 w-fit items-center justify-center gap-[10px] rounded-[8px] px-[14px] py-2 text-xl font-medium whitespace-nowrap transition-all"
-            >
+            <PrimaryLink href="/register">
               Crear un evento
               <ArrowRight className="size-6" aria-hidden="true" />
-            </Link>
+            </PrimaryLink>
           </div>
 
           <BalancePreviewCard />
