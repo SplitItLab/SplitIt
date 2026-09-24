@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Pencil, Trash2, UserPlus } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 
 import { EventError, getEventById, type EventDetail, type EventSummary } from "@/lib/events";
 import { showAppToast } from "@/lib/toast";
@@ -101,16 +101,16 @@ export function EventDetailView({ id }: { id: string }) {
 
           {state.event.isOwner && (
             <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="Invitar"
-                onClick={() => setInviting(true)}
-                className="size-11 rounded-full"
-              >
-                <UserPlus className="size-5" />
-              </Button>
+              {/*<Button*/}
+              {/*  type="button"*/}
+              {/*  variant="ghost"*/}
+              {/*  size="icon"*/}
+              {/*  aria-label="Invitar"*/}
+              {/*  onClick={() => setInviting(true)}*/}
+              {/*  className="size-11 rounded-full"*/}
+              {/*>*/}
+              {/*  <UserPlus className="size-5" />*/}
+              {/*</Button>*/}
               <Button
                 type="button"
                 variant="ghost"
