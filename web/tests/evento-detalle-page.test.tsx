@@ -181,6 +181,24 @@ describe("EventDetailView", () => {
     expect(getEventInviteToken).toHaveBeenCalledWith(1);
   });
 
+  it("no vuelve a pedir el enlace si la vista se vuelve a renderizar con el modal abierto", async () => {
+    vi.mocked(getEventById).mockResolvedValue(eventDetail);
+    vi.mocked(getEventInviteToken).mockResolvedValue("un-token-ya-persistido-123");
+
+    const view = render(<EventDetailView id="1" />);
+    await userEvent.click(await screen.findByRole("button", { name: "Invitar" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Invitar al evento" });
+    await within(dialog).findByDisplayValue(
+      `${window.location.origin}/eventos/invitacion/un-token-ya-persistido-123`
+    );
+    expect(getEventInviteToken).toHaveBeenCalledTimes(1);
+
+    view.rerender(<EventDetailView id="1" />);
+
+    expect(getEventInviteToken).toHaveBeenCalledTimes(1);
+  });
+
   it("redirige al login si la sesión vence al pedir el enlace", async () => {
     vi.mocked(getEventById).mockResolvedValue(eventDetail);
     vi.mocked(getEventInviteToken).mockRejectedValue(
