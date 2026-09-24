@@ -1,11 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
+  buildEventInviteUrl,
   createEvent,
   createEventSchema,
   deleteEvent,
   EventError,
   filterEventsByName,
   getEventById,
+  getEventInviteToken,
   listEvents,
   updateEvent,
   updateEventSchema,
@@ -335,6 +337,93 @@ describe("deleteEvent", () => {
     await expect(deleteEvent(10)).rejects.toMatchObject({
       type: "conflict",
       message: "No se puede eliminar el evento porque tiene registros relacionados.",
+    });
+  });
+});
+
+describe("buildEventInviteUrl", () => {
+  it("arma el enlace con el origen actual y el token opaco", () => {
+    expect(buildEventInviteUrl("un-token-ya-persistido-123", "http://localhost:3000")).toBe(
+      "http://localhost:3000/eventos/invitacion/un-token-ya-persistido-123"
+    );
+  });
+
+  it("no usa la URL de la API ni un dominio fijo para el enlace público", () => {
+    const url = buildEventInviteUrl("abc", "http://localhost:3000");
+    expect(url).toBe("http://localhost:3000/eventos/invitacion/abc");
+    expect(url).not.toContain("/api/");
+    expect(url).not.toMatch(/vercel\.app|splititlab/i);
+  });
+});
+
+describe("getEventInviteToken", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("pide POST /api/events/{id}/invite-link y devuelve el token", async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ token: "un-token-ya-persistido-123" }));
+
+    await expect(getEventInviteToken(10)).resolves.toBe("un-token-ya-persistido-123");
+
+    const [url, init] = vi.mocked(fetch).mock.calls[0];
+    expect(String(url)).toContain("/api/events/10/invite-link");
+    expect(init?.method).toBe("POST");
+  });
+
+  it("devuelve el mismo token en solicitudes posteriores", async () => {
+    vi.mocked(fetch).mockImplementation(() =>
+      Promise.resolve(jsonResponse({ token: "un-token-ya-persistido-123" }))
+    );
+
+    const first = await getEventInviteToken(10);
+    const second = await getEventInviteToken(10);
+
+    expect(first).toBe(second);
+    expect(buildEventInviteUrl(first, "http://localhost:3000")).toBe(
+      buildEventInviteUrl(second, "http://localhost:3000")
+    );
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("traduce un 401 a un EventError de tipo unauthorized", async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ message: "Unauthorized" }, 401));
+
+    await expect(getEventInviteToken(10)).rejects.toMatchObject({
+      name: "EventError",
+      type: "unauthorized",
+    });
+  });
+
+  it("traduce un 403 a un EventError de tipo forbidden", async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ message: "Forbidden" }, 403));
+
+    await expect(getEventInviteToken(10)).rejects.toMatchObject({
+      name: "EventError",
+      type: "forbidden",
+      message: "Solo el dueño puede invitar a este evento.",
+    });
+  });
+
+  it("traduce un 404 a un EventError de tipo not-found", async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ message: "Event not found" }, 404));
+
+    await expect(getEventInviteToken(999)).rejects.toMatchObject({
+      name: "EventError",
+      type: "not-found",
+    });
+  });
+
+  it("traduce un fallo de red a un EventError de tipo network", async () => {
+    vi.mocked(fetch).mockRejectedValue(new TypeError("failed"));
+
+    await expect(getEventInviteToken(10)).rejects.toMatchObject({
+      name: "EventError",
+      type: "network",
     });
   });
 });
