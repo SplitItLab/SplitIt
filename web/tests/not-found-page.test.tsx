@@ -13,23 +13,39 @@ describe("NotFound", () => {
     vi.mocked(useSession).mockReset();
   });
 
-  it("muestra el CTA al inicio cuando no hay sesión", () => {
+  it("manda al login cuando no hay sesión", () => {
     vi.mocked(useSession).mockReturnValue({ status: "unauthenticated" });
     render(<NotFound />);
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "Esta página se fue de viaje"
     );
-    expect(screen.getByRole("link", { name: "Volver al inicio" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "Volver al inicio" })).toHaveAttribute(
+      "href",
+      "/login"
+    );
   });
 
-  it("muestra el CTA al inicio cuando hay sesión", () => {
+  it("manda a /eventos cuando hay sesión", () => {
     vi.mocked(useSession).mockReturnValue({
       status: "authenticated",
       user: { id: 1, name: "Ada Lovelace", email: "ada@example.com" },
     });
     render(<NotFound />);
 
-    expect(screen.getByRole("link", { name: "Volver al inicio" })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "Volver al inicio" })).toHaveAttribute(
+      "href",
+      "/eventos"
+    );
+  });
+
+  it("manda al login mientras la sesión está cargando", () => {
+    vi.mocked(useSession).mockReturnValue({ status: "loading" });
+    render(<NotFound />);
+
+    expect(screen.getByRole("link", { name: "Volver al inicio" })).toHaveAttribute(
+      "href",
+      "/login"
+    );
   });
 });

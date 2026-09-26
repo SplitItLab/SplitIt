@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { PrimaryLink } from "@/components/primary-link";
 import { SplitItLogo } from "@/components/splitit-logo";
+import { useSession } from "@/lib/use-session";
 
 function NotFoundBackground() {
   return (
@@ -114,6 +117,9 @@ function NotFoundBackground() {
 }
 
 export default function NotFound() {
+  const session = useSession();
+  const href = session.status === "authenticated" ? "/eventos" : "/login";
+
   return (
     <div className="bg-card relative flex min-h-screen flex-col overflow-hidden">
       <NotFoundBackground />
@@ -154,7 +160,7 @@ export default function NotFound() {
             página ya no exista.
           </p>
 
-          <PrimaryLink href="/" size="lg" className="mt-8">
+          <PrimaryLink href={href} size="lg" className="mt-8">
             <ArrowLeft className="size-5" aria-hidden="true" />
             Volver al inicio
           </PrimaryLink>
