@@ -7,6 +7,7 @@ import edu.austral.splitit.server.domain.model.event.EventMember
 import edu.austral.splitit.server.domain.model.event.InviteLink
 import edu.austral.splitit.server.domain.service.EventMemberService
 import edu.austral.splitit.server.domain.service.EventService
+import edu.austral.splitit.server.domain.service.ExpenseService
 import edu.austral.splitit.server.domain.service.InviteLinkService
 import edu.austral.splitit.server.domain.service.UserService
 import org.junit.jupiter.api.Test
@@ -29,6 +30,7 @@ class EventApplicationServiceTest {
     private val eventService: EventService = mock()
     private val eventMemberService: EventMemberService = mock()
     private val inviteLinkService: InviteLinkService = mock()
+    private val expenseService: ExpenseService = mock()
 
     private val eventApplicationService =
         EventApplicationService(
@@ -36,6 +38,7 @@ class EventApplicationServiceTest {
             eventService = eventService,
             eventMemberService = eventMemberService,
             inviteLinkService = inviteLinkService,
+            expenseService = expenseService,
         )
 
     private val user = Helpers.user(name = "Mateo", email = "mateo@example.com", passwordHash = "hash")
