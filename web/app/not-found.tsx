@@ -162,10 +162,12 @@ export default function NotFound() {
             página ya no exista.
           </p>
 
-          <PrimaryLink href={href} size="lg" className="mt-8">
-            <ArrowLeft className="size-5" aria-hidden="true" />
-            {ctaLabel}
-          </PrimaryLink>
+          {session.status !== "loading" && (
+            <PrimaryLink href={href} size="lg" className="mt-8">
+              <ArrowLeft className="size-5" aria-hidden="true" />
+              {ctaLabel}
+            </PrimaryLink>
+          )}
         </div>
       </main>
     </div>

@@ -36,10 +36,14 @@ describe("NotFound", () => {
     );
   });
 
-  it("manda al login mientras la sesión está cargando", () => {
+  it("muestra la 404 y oculta el CTA mientras la sesión está cargando", () => {
     vi.mocked(useSession).mockReturnValue({ status: "loading" });
     render(<NotFound />);
 
-    expect(screen.getByRole("link", { name: "Iniciar sesión" })).toHaveAttribute("href", "/login");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Esta página se fue de viaje"
+    );
+    expect(screen.queryByRole("link", { name: "Iniciar sesión" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Volver a mis eventos" })).not.toBeInTheDocument();
   });
 });
