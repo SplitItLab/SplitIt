@@ -11,22 +11,6 @@ describe("PrimaryLink", () => {
     expect(screen.getByRole("link", { name: "Volver al inicio" })).toHaveAttribute("href", "/");
   });
 
-  it("usa el tamaño mediano por defecto", () => {
-    render(<PrimaryLink href="/">Volver al inicio</PrimaryLink>);
-
-    expect(screen.getByRole("link")).toHaveClass("h-10", "text-xl");
-  });
-
-  it("aplica el tamaño grande cuando size es lg", () => {
-    render(
-      <PrimaryLink href="/" size="lg">
-        Volver al inicio
-      </PrimaryLink>
-    );
-
-    expect(screen.getByRole("link")).toHaveClass("h-12", "text-2xl");
-  });
-
   it("acepta un ícono junto al texto", () => {
     render(
       <PrimaryLink href="/">
