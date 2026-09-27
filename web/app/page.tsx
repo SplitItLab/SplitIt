@@ -2,22 +2,11 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useSession } from "@/lib/use-session";
 import { Spinner } from "@/components/ui/spinner";
+import { PrimaryLink } from "@/components/primary-link";
+import { SplitItLogo } from "@/components/splitit-logo";
 import { ArrowRight } from "lucide-react";
-
-function SplitItLogo() {
-  return (
-    <div className="relative h-[34px] w-[74px]">
-      <div className="bg-primary absolute top-0 left-0 h-[34px] w-[57px] rounded-[8px]" />
-      <div className="absolute top-[3px] left-[calc(50%+1px)] flex -translate-x-1/2 items-center justify-center text-[24px] leading-[1.15] font-extrabold whitespace-nowrap">
-        <span className="text-primary-foreground">Split</span>
-        <span className="text-black">It</span>
-      </div>
-    </div>
-  );
-}
 
 const PREVIEW_MEMBERS = [
   { initial: "N", name: "Nicolas", badge: "recibe", amount: "+$ 28.500", positive: true },
@@ -102,13 +91,10 @@ function LandingHero() {
             <p className="max-w-[350px] text-[14px] text-black lg:max-w-[560px] lg:text-[18px]">
               Tus amigos cargan gastos y ven sus saldos sin crear cuenta ni bajar nada.
             </p>
-            <Link
-              href="/register"
-              className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-10 w-fit items-center justify-center gap-[10px] rounded-[8px] px-[14px] py-2 text-xl font-medium whitespace-nowrap transition-all"
-            >
+            <PrimaryLink href="/register">
               Crear un evento
               <ArrowRight className="size-6" aria-hidden="true" />
-            </Link>
+            </PrimaryLink>
           </div>
 
           <BalancePreviewCard />
