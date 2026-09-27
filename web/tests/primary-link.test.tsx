@@ -17,16 +17,6 @@ describe("PrimaryLink", () => {
     expect(screen.getByRole("link")).toHaveClass("h-10", "text-xl");
   });
 
-  it("aplica el tamaño chico cuando size es sm", () => {
-    render(
-      <PrimaryLink href="/" size="sm">
-        Volver al inicio
-      </PrimaryLink>
-    );
-
-    expect(screen.getByRole("link")).toHaveClass("h-8", "text-sm");
-  });
-
   it("aplica el tamaño grande cuando size es lg", () => {
     render(
       <PrimaryLink href="/" size="lg">

@@ -4,7 +4,6 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const sizeClassName = {
-  sm: "h-8 gap-2 px-3 py-1.5 text-sm",
   md: "h-10 gap-[10px] px-[14px] py-2 text-xl",
   lg: "h-12 gap-3 px-4 py-2.5 text-2xl",
 } as const;
