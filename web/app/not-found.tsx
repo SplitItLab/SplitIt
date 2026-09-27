@@ -118,7 +118,9 @@ function NotFoundBackground() {
 
 export default function NotFound() {
   const session = useSession();
-  const href = session.status === "authenticated" ? "/eventos" : "/login";
+  const isAuthenticated = session.status === "authenticated";
+  const href = isAuthenticated ? "/eventos" : "/login";
+  const ctaLabel = isAuthenticated ? "Volver a mis eventos" : "Iniciar sesión";
 
   return (
     <div className="bg-card relative flex min-h-screen flex-col overflow-hidden">
@@ -162,7 +164,7 @@ export default function NotFound() {
 
           <PrimaryLink href={href} size="lg" className="mt-8">
             <ArrowLeft className="size-5" aria-hidden="true" />
-            Volver al inicio
+            {ctaLabel}
           </PrimaryLink>
         </div>
       </main>

@@ -20,10 +20,7 @@ describe("NotFound", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "Esta página se fue de viaje"
     );
-    expect(screen.getByRole("link", { name: "Volver al inicio" })).toHaveAttribute(
-      "href",
-      "/login"
-    );
+    expect(screen.getByRole("link", { name: "Iniciar sesión" })).toHaveAttribute("href", "/login");
   });
 
   it("manda a /eventos cuando hay sesión", () => {
@@ -33,7 +30,7 @@ describe("NotFound", () => {
     });
     render(<NotFound />);
 
-    expect(screen.getByRole("link", { name: "Volver al inicio" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Volver a mis eventos" })).toHaveAttribute(
       "href",
       "/eventos"
     );
@@ -43,9 +40,6 @@ describe("NotFound", () => {
     vi.mocked(useSession).mockReturnValue({ status: "loading" });
     render(<NotFound />);
 
-    expect(screen.getByRole("link", { name: "Volver al inicio" })).toHaveAttribute(
-      "href",
-      "/login"
-    );
+    expect(screen.getByRole("link", { name: "Iniciar sesión" })).toHaveAttribute("href", "/login");
   });
 });
