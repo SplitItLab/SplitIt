@@ -4,6 +4,7 @@ import edu.austral.splitit.server.domain.model.event.Event
 import edu.austral.splitit.server.domain.model.event.EventMember
 import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.infrastructure.persistence.EventMemberRepository
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 
 @Service
@@ -52,6 +53,8 @@ class EventMemberService(
     }
 
     fun findByEventId(eventId: Long): List<EventMember> = eventMemberRepository.findAllByEventId(eventId)
+
+    fun findById(id: Long): EventMember? = eventMemberRepository.findByIdOrNull(id)
 
     fun isUserMemberOfEvent(
         eventId: Long,

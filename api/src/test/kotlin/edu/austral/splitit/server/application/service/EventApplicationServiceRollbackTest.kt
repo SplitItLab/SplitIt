@@ -8,6 +8,7 @@ import edu.austral.splitit.server.domain.model.event.InviteLink
 import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.domain.service.EventMemberService
 import edu.austral.splitit.server.domain.service.EventService
+import edu.austral.splitit.server.domain.service.ExpenseService
 import edu.austral.splitit.server.domain.service.InviteLinkService
 import edu.austral.splitit.server.domain.service.UserService
 import edu.austral.splitit.server.infrastructure.persistence.EventMemberRepository
@@ -44,6 +45,7 @@ import kotlin.test.assertTrue
     EventService::class,
     EventMemberService::class,
     InviteLinkService::class,
+    ExpenseService::class,
     UserService::class,
 )
 @TestPropertySource(
@@ -192,5 +194,60 @@ class EventApplicationServiceRollbackTest(
         assertEquals(0, eventRepository.count())
         assertEquals(0, eventMemberRepository.count())
         assertEquals(1, userRepository.count())
+    }
+
+    @Test
+    fun `addExpense persists the expense in base currency for the event owner`() {
+        val event = createEvent()
+        val member = eventMemberRepository.findAllByEventId(event.id).first()
+
+        val summary =
+            eventApplicationService.addExpense(
+                CreateExpenseCommand(
+                    userId = requireNotNull(owner.id),
+                    eventId = event.id,
+                    name = "Cena",
+                    amount = BigDecimal("5000"),
+                    currency = "ARS",
+                    paidByMemberId = requireNotNull(member.id),
+                ),
+            )
+
+        assertTrue(expenseRepository.existsById(summary.id))
+        assertEquals(1, expenseRepository.findAllByEventId(event.id).size)
+    }
+
+    @Test
+    fun `listExpenses only returns expenses that belong to the requested event`() {
+        val event = createEvent()
+        val otherEvent = createEvent()
+        val member = eventMemberRepository.findAllByEventId(event.id).first()
+        val otherMember = eventMemberRepository.findAllByEventId(otherEvent.id).first()
+
+        eventApplicationService.addExpense(
+            CreateExpenseCommand(
+                userId = requireNotNull(owner.id),
+                eventId = event.id,
+                name = "Cena",
+                amount = BigDecimal("5000"),
+                currency = "ARS",
+                paidByMemberId = requireNotNull(member.id),
+            ),
+        )
+        eventApplicationService.addExpense(
+            CreateExpenseCommand(
+                userId = requireNotNull(owner.id),
+                eventId = otherEvent.id,
+                name = "Almuerzo",
+                amount = BigDecimal("2000"),
+                currency = "ARS",
+                paidByMemberId = requireNotNull(otherMember.id),
+            ),
+        )
+
+        val expenses = eventApplicationService.listExpenses(requireNotNull(owner.id), event.id)
+
+        assertEquals(1, expenses.size)
+        assertEquals("Cena", expenses[0].name)
     }
 }
