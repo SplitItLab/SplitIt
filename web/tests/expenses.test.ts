@@ -7,6 +7,7 @@ import {
   formatExpenseDate,
   formatMoney,
   listExpenses,
+  parseExpenseAmount,
   quoteExpense,
   type Expense,
 } from "../lib/expenses";
@@ -31,8 +32,18 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 describe("formatMoney, formatExpenseDate y expenseTotal", () => {
-  it("formatea el importe en pesos argentinos sin decimales", () => {
-    expect(formatMoney(69900, "ARS")).toBe("$\u00a069.900");
+  it("formatea el importe en pesos argentinos con decimales", () => {
+    expect(formatMoney(69900, "ARS")).toBe("$\u00a069.900,00");
+    expect(formatMoney(2.5, "ARS")).toBe("$\u00a02,50");
+    expect(formatMoney(10.125, "ARS")).toBe("$\u00a010,125");
+  });
+
+  it("lee un monto con punto o con coma y rechaza el resto", () => {
+    expect(parseExpenseAmount("10.5")).toBe(10.5);
+    expect(parseExpenseAmount("10,5")).toBe(10.5);
+    expect(parseExpenseAmount("0")).toBeNull();
+    expect(parseExpenseAmount("10,12345")).toBeNull();
+    expect(parseExpenseAmount("1.000,50")).toBeNull();
   });
 
   it("formatea la fecha del gasto en español", () => {

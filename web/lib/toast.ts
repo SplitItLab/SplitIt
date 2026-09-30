@@ -12,5 +12,14 @@ const TOAST_OPTIONS = {
 } as const;
 
 export function showAppToast(type: ToastType, message: string) {
-  showToast[type](message, TOAST_OPTIONS);
+  showToast[type](escapeToastMessage(message), TOAST_OPTIONS);
+}
+
+function escapeToastMessage(message: string) {
+  return message
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }

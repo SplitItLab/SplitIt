@@ -73,9 +73,25 @@ export function formatMoney(amount: number, currency: string): string {
   return new Intl.NumberFormat("es-AR", {
     style: "currency",
     currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
   }).format(amount);
+}
+
+export function parseExpenseAmount(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  const normalized =
+    trimmed.includes(",") && !trimmed.includes(".") ? trimmed.replace(",", ".") : trimmed;
+  if (!/^\d+(\.\d+)?$/.test(normalized)) return null;
+
+  const fraction = normalized.split(".")[1] ?? "";
+  if (fraction.length > 4) return null;
+
+  const value = Number(normalized);
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return value;
 }
 
 export function formatExpenseDate(isoDate: string): string {

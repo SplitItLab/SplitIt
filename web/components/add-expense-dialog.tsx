@@ -7,6 +7,7 @@ import {
   createExpense,
   EXPENSE_CURRENCIES,
   formatMoney,
+  parseExpenseAmount,
   quoteExpense,
   type Expense,
   type ExpenseQuote,
@@ -45,11 +46,14 @@ export function AddExpenseDialog({
   const [quoteFailed, setQuoteFailed] = useState(false);
   const [quoteAttempt, setQuoteAttempt] = useState(0);
 
-  const parsedAmount = Number(amount);
-  const amountIsPositive = Number.isFinite(parsedAmount) && parsedAmount > 0;
+  const parsedAmount = parseExpenseAmount(amount);
+  const amountIsPositive = parsedAmount !== null;
   const needsQuote = currency !== event.baseCurrency;
   const quoteMatches =
-    quote !== null && quote.originalCurrency === currency && quote.originalAmount === parsedAmount;
+    parsedAmount !== null &&
+    quote !== null &&
+    quote.originalCurrency === currency &&
+    quote.originalAmount === parsedAmount;
   const waitingForQuote = needsQuote && amountIsPositive && !quoteMatches;
 
   const reset = () => {
@@ -75,12 +79,13 @@ export function AddExpenseDialog({
   };
 
   useEffect(() => {
-    if (!open || !needsQuote || !amountIsPositive) return;
+    if (!open || !needsQuote || parsedAmount === null) return;
 
+    const amountToQuote = parsedAmount;
     const controller = new AbortController();
     let cancelled = false;
     const timer = window.setTimeout(() => {
-      quoteExpense(event.id, parsedAmount, currency, { signal: controller.signal })
+      quoteExpense(event.id, amountToQuote, currency, { signal: controller.signal })
         .then((result) => {
           if (cancelled) return;
           setQuote(result);
@@ -107,7 +112,6 @@ export function AddExpenseDialog({
       controller.abort();
     };
   }, [
-    amountIsPositive,
     currency,
     event.id,
     needsQuote,
@@ -124,7 +128,7 @@ export function AddExpenseDialog({
       setFormError("Ingresá un nombre para el gasto");
       return;
     }
-    if (!amountIsPositive) {
+    if (parsedAmount === null) {
       setFormError("Ingresá un monto válido");
       return;
     }

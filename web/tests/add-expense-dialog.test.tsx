@@ -161,6 +161,30 @@ describe("AddExpenseDialog", () => {
     expect(screen.getByRole("button", { name: "Guardar gasto" })).toBeEnabled();
   });
 
+  it("acepta la coma decimal y cotiza ese monto", async () => {
+    vi.mocked(quoteExpense).mockResolvedValue({
+      originalAmount: 10.5,
+      originalCurrency: "USD",
+      baseCurrency: "ARS",
+      exchangeRate: 1450.5,
+      baseAmount: 15230.25,
+    });
+    const user = userEvent.setup();
+    renderDialog();
+
+    await user.type(screen.getByLabelText("Monto"), "10,5");
+    await user.selectOptions(screen.getByLabelText("Moneda"), "USD");
+
+    await waitFor(() =>
+      expect(quoteExpense).toHaveBeenCalledWith(
+        7,
+        10.5,
+        "USD",
+        expect.objectContaining({ signal: expect.any(AbortSignal) })
+      )
+    );
+  });
+
   it("ofrece reintentar la cotización y mantiene el guardado deshabilitado", async () => {
     vi.mocked(quoteExpense).mockRejectedValue(new EventError("server-error", "no"));
     const user = userEvent.setup();

@@ -119,7 +119,8 @@ describe("EventExpenses", () => {
 
     const foreign = screen.getByRole("heading", { name: "Taxi" }).closest("article");
     expect(visibleText(foreign)).toContain(money(2.5, "ARS"));
-    expect(visibleText(foreign)).toContain(`${money(9000, "USD")} USD`);
+    expect(visibleText(foreign)).toContain(money(9000, "USD"));
+    expect(visibleText(foreign)).not.toContain(`${money(9000, "USD")} USD`);
   });
 
   it("vuelve a pedir los gastos al reintentar", async () => {

@@ -205,8 +205,7 @@ function ExpenseCard({ expense, baseCurrency }: { expense: Expense; baseCurrency
           </p>
           {showOriginal && (
             <p className="text-text-secondary mt-0.5 text-[11px] font-semibold">
-              {formatMoney(expense.originalAmount, expense.originalCurrency)}{" "}
-              {expense.originalCurrency}
+              {formatMoney(expense.originalAmount, expense.originalCurrency)}
             </p>
           )}
         </div>
