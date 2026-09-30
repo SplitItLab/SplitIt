@@ -46,5 +46,10 @@ auth:
     secure: ${AUTH_COOKIE_SECURE:true}
     same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
 
+exchange-rate:
+  url: ${EXCHANGE_RATE_URL:https://open.er-api.com/v6/latest/USD}
+  timeout: ${EXCHANGE_RATE_TIMEOUT:5s}
+  cache-ttl: ${EXCHANGE_RATE_CACHE_TTL:30m}
+
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000,https://*.vercel.app}

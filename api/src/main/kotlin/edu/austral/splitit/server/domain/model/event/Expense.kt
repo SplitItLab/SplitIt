@@ -93,27 +93,28 @@ class Expense private constructor(
                 EXPENSE_NAME_MAX,
             )
 
-            val currency = Currency(originalCurrency)
+            val quote =
+                ExchangeQuote.create(
+                    originalAmount = originalAmount,
+                    originalCurrency = Currency(originalCurrency),
+                    baseCurrency = Currency(event.baseCurrency),
+                    rate = exchangeRate,
+                )
 
             val now = Instant.now()
             return Expense(
                 event = event,
                 paidByMember = paidByMember,
                 name = normalizedName,
-                originalAmount = originalAmount,
-                originalCurrency = currency.get(),
-                exchangeRate = exchangeRate,
-                baseAmount = calculateBaseAmount(originalAmount, exchangeRate),
+                originalAmount = quote.originalAmount,
+                originalCurrency = quote.originalCurrency.get(),
+                exchangeRate = quote.exchangeRate,
+                baseAmount = quote.baseAmount,
                 expenseDate = expenseDate,
                 createdAt = now,
                 updatedAt = now,
             )
         }
-
-        private fun calculateBaseAmount(
-            originalAmount: BigDecimal,
-            exchangeRate: BigDecimal,
-        ): BigDecimal = originalAmount.multiply(exchangeRate)
 
         private fun requireFitsNumeric(
             value: BigDecimal,

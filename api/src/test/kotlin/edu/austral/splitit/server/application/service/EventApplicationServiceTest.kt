@@ -39,6 +39,7 @@ class EventApplicationServiceTest {
             eventMemberService = eventMemberService,
             inviteLinkService = inviteLinkService,
             expenseService = expenseService,
+            exchangeQuoteService = mock(),
         )
 
     private val user = Helpers.user(name = "Mateo", email = "mateo@example.com", passwordHash = "hash")

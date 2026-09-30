@@ -267,12 +267,27 @@ export function assertExpense(client, expense, expected) {
     }
     client.assert(String(expense.eventId) === String(expected.eventId), 'Expected eventId "' + expected.eventId + '" but got "' + expense.eventId + '"')
     client.assert(expense.name === expected.name, 'Expected name "' + expected.name + '" but got "' + expense.name + '"')
-    client.assert(Number(expense.originalAmount) === Number(expected.originalAmount), "Expected originalAmount " + expected.originalAmount + " but got " + expense.originalAmount)
-    client.assert(expense.originalCurrency === expected.currency, 'Expected originalCurrency "' + expected.currency + '" but got "' + expense.originalCurrency + '"')
-    client.assert(Number(expense.baseAmount) === Number(expected.originalAmount), "Expected baseAmount " + expected.originalAmount + " but got " + expense.baseAmount)
-    client.assert(expense.baseCurrency === expected.currency, 'Expected baseCurrency "' + expected.currency + '" but got "' + expense.baseCurrency + '"')
+    assertConversion(client, expense, {
+        originalAmount: expected.originalAmount,
+        originalCurrency: expected.currency,
+        baseCurrency: expected.baseCurrency ?? expected.currency,
+    })
     client.assert(expense.paidByMember != null && typeof expense.paidByMember === "object", "Expected paidByMember object")
     client.assert(String(expense.paidByMember.id) === String(expected.paidByMemberId), 'Expected paidByMember.id "' + expected.paidByMemberId + '" but got "' + expense.paidByMember.id + '"')
     client.assert(typeof expense.paidByMember.name === "string" && expense.paidByMember.name.length > 0, "Expected paidByMember.name")
     client.assert(typeof expense.expenseDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(expense.expenseDate), "Expected expenseDate as YYYY-MM-DD")
+}
+
+export function assertConversion(client, value, expected) {
+    client.assert(Number(value.originalAmount) === Number(expected.originalAmount), "Expected originalAmount " + expected.originalAmount + " but got " + value.originalAmount)
+    client.assert(value.originalCurrency === expected.originalCurrency, 'Expected originalCurrency "' + expected.originalCurrency + '" but got "' + value.originalCurrency + '"')
+    client.assert(value.baseCurrency === expected.baseCurrency, 'Expected baseCurrency "' + expected.baseCurrency + '" but got "' + value.baseCurrency + '"')
+    const rate = Number(value.exchangeRate)
+    if (expected.originalCurrency === expected.baseCurrency) {
+        client.assert(rate === 1, "Expected exchangeRate 1 but got " + value.exchangeRate)
+    } else {
+        client.assert(rate > 0, "Expected positive exchangeRate but got " + value.exchangeRate)
+    }
+    const expectedBase = Math.round(Number(expected.originalAmount) * rate * 10000) / 10000
+    client.assert(Math.abs(Number(value.baseAmount) - expectedBase) < 0.0002, "Expected baseAmount " + expectedBase + " but got " + value.baseAmount)
 }

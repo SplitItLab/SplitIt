@@ -3,6 +3,7 @@ package edu.austral.splitit.server.application.service
 import edu.austral.splitit.server.Helpers
 import edu.austral.splitit.server.application.exception.EventDeletionConflictException
 import edu.austral.splitit.server.application.exception.EventNotFoundException
+import edu.austral.splitit.server.application.port.ExchangeRateProvider
 import edu.austral.splitit.server.domain.model.event.Expense
 import edu.austral.splitit.server.domain.model.event.InviteLink
 import edu.austral.splitit.server.domain.model.user.User
@@ -27,6 +28,7 @@ import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabas
 import org.springframework.context.annotation.Import
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.test.context.TestPropertySource
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import org.springframework.transaction.annotation.Propagation
 import org.springframework.transaction.annotation.Transactional
@@ -42,6 +44,7 @@ import kotlin.test.assertTrue
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 @Import(
     EventApplicationService::class,
+    ExchangeQuoteService::class,
     EventService::class,
     EventMemberService::class,
     InviteLinkService::class,
@@ -72,6 +75,9 @@ class EventApplicationServiceRollbackTest(
 ) {
     @MockitoSpyBean
     private lateinit var eventMemberService: EventMemberService
+
+    @MockitoBean
+    private lateinit var exchangeRateProvider: ExchangeRateProvider
 
     private lateinit var owner: User
 

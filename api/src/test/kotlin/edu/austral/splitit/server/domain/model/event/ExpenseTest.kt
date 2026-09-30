@@ -31,11 +31,30 @@ class ExpenseTest {
         assertEquals(member, expense.paidByMember)
         assertEquals(BigDecimal("5000.00"), expense.originalAmount)
         assertEquals("ARS", expense.originalCurrency)
-        assertEquals(BigDecimal.ONE, expense.exchangeRate)
-        assertEquals(BigDecimal("5000.00"), expense.baseAmount)
+        assertEquals(BigDecimal("1.000000"), expense.exchangeRate)
+        assertEquals(BigDecimal("5000.0000"), expense.baseAmount)
         assertEquals(LocalDate.of(2026, 9, 3), expense.expenseDate)
         assertNotNull(expense.createdAt)
         assertNotNull(expense.updatedAt)
+    }
+
+    @Test
+    fun `create expense in another currency stores the conversion rounded`() {
+        val expense =
+            Expense.create(
+                event = event,
+                paidByMember = member,
+                name = "Taxi",
+                originalAmount = BigDecimal("3.33"),
+                originalCurrency = "USD",
+                exchangeRate = BigDecimal("1523.96622"),
+                expenseDate = LocalDate.of(2026, 9, 28),
+            )
+
+        assertEquals(BigDecimal("3.33"), expense.originalAmount)
+        assertEquals("USD", expense.originalCurrency)
+        assertEquals(BigDecimal("1523.966220"), expense.exchangeRate)
+        assertEquals(BigDecimal("5074.8075"), expense.baseAmount)
     }
 
     @Test

@@ -18,6 +18,7 @@ class ExpenseService(
         name: String,
         amount: BigDecimal,
         currency: String,
+        exchangeRate: BigDecimal,
     ): Expense {
         val expense =
             Expense.create(
@@ -26,6 +27,7 @@ class ExpenseService(
                 name = name,
                 originalAmount = amount,
                 originalCurrency = currency,
+                exchangeRate = exchangeRate,
                 expenseDate = LocalDate.now(),
             )
         return expenseRepository.save(expense)
