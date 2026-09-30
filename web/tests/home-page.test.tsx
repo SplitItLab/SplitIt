@@ -20,10 +20,17 @@ describe("Home", () => {
     vi.mocked(useSession).mockReset();
   });
 
-  it("no muestra contenido mientras valida la sesión", () => {
+  it("muestra la landing mientras valida la sesión", () => {
     vi.mocked(useSession).mockReturnValue({ status: "loading" });
-    const { container } = render(<Home />);
-    expect(container.querySelector("h1")).toBeNull();
+    render(<Home />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Compartí el link y listo."
+    );
+    expect(screen.getByRole("link", { name: /crear un evento/i })).toHaveAttribute(
+      "href",
+      "/register"
+    );
+    expect(screen.queryByRole("status", { name: "Loading" })).toBeNull();
     expect(replace).not.toHaveBeenCalled();
   });
 
@@ -46,6 +53,10 @@ describe("Home", () => {
       user: { id: 1, name: "Ada Lovelace", email: "ada@example.com" },
     });
     render(<Home />);
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      "Compartí el link y listo."
+    );
+    expect(screen.queryByRole("status", { name: "Loading" })).toBeNull();
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/eventos"));
   });
 });

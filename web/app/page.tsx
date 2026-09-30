@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/use-session";
-import { Spinner } from "@/components/ui/spinner";
 import { PrimaryLink } from "@/components/primary-link";
 import { SplitItLogo } from "@/components/splitit-logo";
 import { ArrowRight } from "lucide-react";
@@ -113,14 +112,6 @@ export default function Home() {
       router.replace("/eventos");
     }
   }, [session.status, router]);
-
-  if (session.status === "loading" || session.status === "authenticated") {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <Spinner />
-      </div>
-    );
-  }
 
   return <LandingHero />;
 }
