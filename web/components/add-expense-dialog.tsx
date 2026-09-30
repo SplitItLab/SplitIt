@@ -1,0 +1,321 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+import { EventError, type EventDetail } from "@/lib/events";
+import {
+  createExpense,
+  EXPENSE_CURRENCIES,
+  formatMoney,
+  quoteExpense,
+  type Expense,
+  type ExpenseQuote,
+} from "@/lib/expenses";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+const QUOTE_ERROR = "No pudimos obtener el tipo de cambio.";
+const selectClassName =
+  "border-input focus-visible:border-ring focus-visible:ring-ring/50 text-text-primary rounded-[18px] border bg-transparent px-3 text-base outline-none focus-visible:ring-3";
+
+export function AddExpenseDialog({
+  open,
+  onOpenChange,
+  event,
+  onCreated,
+  onUnauthorized,
+  onNotFound,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  event: EventDetail;
+  onCreated: (expense: Expense) => void;
+  onUnauthorized: () => void;
+  onNotFound: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [amount, setAmount] = useState("");
+  const [currency, setCurrency] = useState(event.baseCurrency);
+  const [payerId, setPayerId] = useState(memberId(event));
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [quote, setQuote] = useState<ExpenseQuote | null>(null);
+  const [quoteFailed, setQuoteFailed] = useState(false);
+  const [quoteAttempt, setQuoteAttempt] = useState(0);
+
+  const parsedAmount = Number(amount);
+  const amountIsPositive = Number.isFinite(parsedAmount) && parsedAmount > 0;
+  const needsQuote = currency !== event.baseCurrency;
+  const quoteMatches =
+    quote !== null && quote.originalCurrency === currency && quote.originalAmount === parsedAmount;
+  const waitingForQuote = needsQuote && amountIsPositive && !quoteMatches;
+
+  const reset = () => {
+    setName("");
+    setAmount("");
+    setCurrency(event.baseCurrency);
+    setPayerId(memberId(event));
+    setFormError(null);
+    setSubmitting(false);
+    setQuote(null);
+    setQuoteFailed(false);
+    setQuoteAttempt(0);
+  };
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) reset();
+    onOpenChange(next);
+  };
+
+  const clearQuote = () => {
+    setQuote(null);
+    setQuoteFailed(false);
+  };
+
+  useEffect(() => {
+    if (!open || !needsQuote || !amountIsPositive) return;
+
+    const controller = new AbortController();
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      quoteExpense(event.id, parsedAmount, currency, { signal: controller.signal })
+        .then((result) => {
+          if (cancelled) return;
+          setQuote(result);
+          setQuoteFailed(false);
+        })
+        .catch((err: unknown) => {
+          if (cancelled || isAbort(err)) return;
+          if (err instanceof EventError && err.type === "unauthorized") {
+            onUnauthorized();
+            return;
+          }
+          if (err instanceof EventError && (err.type === "forbidden" || err.type === "not-found")) {
+            onNotFound();
+            return;
+          }
+          setQuote(null);
+          setQuoteFailed(true);
+        });
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [
+    amountIsPositive,
+    currency,
+    event.id,
+    needsQuote,
+    onNotFound,
+    onUnauthorized,
+    open,
+    parsedAmount,
+    quoteAttempt,
+  ]);
+
+  const submit = async () => {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setFormError("Ingresá un nombre para el gasto");
+      return;
+    }
+    if (!amountIsPositive) {
+      setFormError("Ingresá un monto válido");
+      return;
+    }
+    if (!payerId) {
+      setFormError("Seleccioná quién pagó");
+      return;
+    }
+    if (waitingForQuote || submitting) return;
+
+    setFormError(null);
+    setSubmitting(true);
+    try {
+      const created = await createExpense(event.id, {
+        name: trimmedName,
+        amount: parsedAmount,
+        currency,
+        paidByMemberId: Number(payerId),
+      });
+      onCreated(created);
+      handleOpenChange(false);
+    } catch (err: unknown) {
+      if (err instanceof EventError && err.type === "unauthorized") {
+        onUnauthorized();
+        return;
+      }
+      if (err instanceof EventError && (err.type === "forbidden" || err.type === "not-found")) {
+        onNotFound();
+        return;
+      }
+      setFormError(
+        err instanceof EventError ? err.message : "No pudimos guardar el gasto. Probá de nuevo."
+      );
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent>
+        <DialogTitle>Agregar gasto</DialogTitle>
+        <DialogDescription>Cargá quién pagó y el monto.</DialogDescription>
+        <form
+          className="space-y-4"
+          onSubmit={(event_) => {
+            event_.preventDefault();
+            void submit();
+          }}
+        >
+          <div className="space-y-2">
+            <Label htmlFor="expense-name">Nombre</Label>
+            <Input
+              id="expense-name"
+              value={name}
+              placeholder="Ej: Supermercado"
+              className="rounded-[18px]"
+              onChange={(event_) => {
+                setName(event_.target.value);
+                setFormError(null);
+              }}
+            />
+          </div>
+
+          <div className="grid grid-cols-[1fr_auto] gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="expense-amount">Monto</Label>
+              <Input
+                id="expense-amount"
+                inputMode="decimal"
+                value={amount}
+                placeholder="0"
+                className="rounded-[18px]"
+                onChange={(event_) => {
+                  setAmount(event_.target.value);
+                  setFormError(null);
+                  clearQuote();
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="expense-currency">Moneda</Label>
+              <select
+                id="expense-currency"
+                value={currency}
+                className={`${selectClassName} h-10 w-[110px]`}
+                onChange={(event_) => {
+                  setCurrency(event_.target.value);
+                  setFormError(null);
+                  clearQuote();
+                }}
+              >
+                {EXPENSE_CURRENCIES.map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {needsQuote && (amountIsPositive || quoteFailed) && (
+            <div className="border-border rounded-[16px] border px-3 py-2 text-xs font-semibold">
+              {quoteFailed ? (
+                <div className="flex flex-col items-start gap-2">
+                  <p className="text-destructive" role="alert">
+                    {QUOTE_ERROR}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setQuoteFailed(false);
+                      setQuoteAttempt((attempt) => attempt + 1);
+                    }}
+                  >
+                    Reintentar
+                  </Button>
+                </div>
+              ) : quoteMatches && quote ? (
+                <div className="text-text-secondary flex flex-col gap-0.5">
+                  <span>
+                    1 {currency} ={" "}
+                    {quote.exchangeRate.toLocaleString("es-AR", { maximumFractionDigits: 4 })}{" "}
+                    {event.baseCurrency}
+                  </span>
+                  <span className="text-text-primary">
+                    Se guardará como {formatMoney(quote.baseAmount, event.baseCurrency)}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-text-secondary">Obteniendo tipo de cambio…</span>
+              )}
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="expense-payer">Pago</Label>
+            <select
+              id="expense-payer"
+              value={payerId}
+              className={`${selectClassName} h-11 w-full`}
+              onChange={(event_) => {
+                setPayerId(event_.target.value);
+                setFormError(null);
+              }}
+            >
+              {event.members.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {formError && (
+            <p className="text-destructive text-sm font-semibold" role="alert">
+              {formError}
+            </p>
+          )}
+
+          <div className="grid grid-cols-2 gap-3 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-[18px]"
+              onClick={() => handleOpenChange(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              className="rounded-[18px]"
+              disabled={submitting || waitingForQuote}
+            >
+              Guardar gasto
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function memberId(event: EventDetail) {
+  return event.members[0] ? String(event.members[0].id) : "";
+}
+
+function isAbort(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error as { name?: unknown }).name === "AbortError"
+  );
+}

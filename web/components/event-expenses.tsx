@@ -11,6 +11,8 @@ import {
   listExpenses,
   type Expense,
 } from "@/lib/expenses";
+import { showAppToast } from "@/lib/toast";
+import { AddExpenseDialog } from "@/components/add-expense-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -90,12 +92,41 @@ export function EventExpenses({
         </section>
       )}
 
-      {state.status === "ready" && <ExpenseList event={event} expenses={state.expenses} />}
+      {state.status === "ready" && (
+        <ExpenseList
+          event={event}
+          expenses={state.expenses}
+          onCreated={(expense) => {
+            setState((current) =>
+              current.status === "ready"
+                ? { status: "ready", expenses: [expense, ...current.expenses] }
+                : current
+            );
+            showAppToast("success", `Agregamos «${expense.name}»`);
+          }}
+          onUnauthorized={onUnauthorized}
+          onNotFound={onNotFound}
+        />
+      )}
     </div>
   );
 }
 
-function ExpenseList({ event, expenses }: { event: EventDetail; expenses: Expense[] }) {
+function ExpenseList({
+  event,
+  expenses,
+  onCreated,
+  onUnauthorized,
+  onNotFound,
+}: {
+  event: EventDetail;
+  expenses: Expense[];
+  onCreated: (expense: Expense) => void;
+  onUnauthorized: () => void;
+  onNotFound: () => void;
+}) {
+  const [adding, setAdding] = useState(false);
+
   return (
     <>
       {expenses.length > 0 && (
@@ -108,11 +139,23 @@ function ExpenseList({ event, expenses }: { event: EventDetail; expenses: Expens
       )}
 
       <div className="grid gap-3 md:grid-cols-[220px]">
-        <Button type="button" className="h-14 w-full gap-2 rounded-[18px] text-base font-extrabold">
+        <Button
+          type="button"
+          className="h-14 w-full gap-2 rounded-[18px] text-base font-extrabold"
+          onClick={() => setAdding(true)}
+        >
           <Plus className="size-5" />
           Agregar gasto
         </Button>
       </div>
+      <AddExpenseDialog
+        open={adding}
+        onOpenChange={setAdding}
+        event={event}
+        onCreated={onCreated}
+        onUnauthorized={onUnauthorized}
+        onNotFound={onNotFound}
+      />
 
       {expenses.length > 0 ? (
         <div className="grid gap-3 xl:grid-cols-2">

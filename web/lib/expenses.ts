@@ -103,11 +103,12 @@ export async function listExpenses(eventId: number | string): Promise<Expense[]>
 export async function quoteExpense(
   eventId: number | string,
   amount: number,
-  currency: string
+  currency: string,
+  init?: RequestInit
 ): Promise<ExpenseQuote> {
   const params = new URLSearchParams({ amount: String(amount), currency });
   try {
-    return await request<ExpenseQuote>(`/api/events/${eventId}/expenses/quote?${params}`);
+    return await request<ExpenseQuote>(`/api/events/${eventId}/expenses/quote?${params}`, init);
   } catch (err) {
     toExpenseError(err, QUOTE_UNAVAILABLE);
   }
