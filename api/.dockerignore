@@ -7,3 +7,6 @@ HELP.md
 .git
 .gitignore
 .gitattributes
+.env*
+http
+src/test
