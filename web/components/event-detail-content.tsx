@@ -5,6 +5,7 @@ import { UserRound } from "lucide-react";
 
 import { currencyLabel, type EventDetail, type EventMember } from "@/lib/events";
 import { getInitials } from "@/lib/profile";
+import { EventExpenses } from "@/components/event-expenses";
 import { EventIcon } from "@/components/event-icon";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +18,15 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
-export function EventDetailContent({ event }: { event: EventDetail }) {
+export function EventDetailContent({
+  event,
+  onUnauthorized,
+  onNotFound,
+}: {
+  event: EventDetail;
+  onUnauthorized: () => void;
+  onNotFound: () => void;
+}) {
   const [active, setActive] = useState<TabId>("gastos");
   const baseId = useId();
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
@@ -94,16 +103,7 @@ export function EventDetailContent({ event }: { event: EventDetail }) {
 
       {active === "gastos" && (
         <section role="tabpanel" id={panelId("gastos")} aria-labelledby={tabId("gastos")}>
-          <h2 className="text-text-primary text-2xl font-extrabold">Gastos</h2>
-          <div className="border-border mt-4 rounded-[24px] border p-6 sm:p-8">
-            <div className="mx-auto max-w-sm text-center">
-              <h3 className="text-text-primary text-2xl font-extrabold">Todavía no hay gastos</h3>
-              <p className="text-text-secondary mt-2 text-sm font-medium">
-                Cuando cargues gastos, van a aparecer acá para revisar quién pagó y cuánto
-                corresponde.
-              </p>
-            </div>
-          </div>
+          <EventExpenses event={event} onUnauthorized={onUnauthorized} onNotFound={onNotFound} />
         </section>
       )}
 

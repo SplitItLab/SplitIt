@@ -13,7 +13,13 @@ vi.mock("@/lib/events", async (importOriginal) => {
   return { ...actual, getEventById: vi.fn(), getEventInviteToken: vi.fn() };
 });
 
+vi.mock("@/lib/expenses", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/expenses")>();
+  return { ...actual, listExpenses: vi.fn() };
+});
+
 import { EventError, getEventById, type EventDetail } from "@/lib/events";
+import { listExpenses } from "@/lib/expenses";
 // import { getEventInviteToken } from "@/lib/events";
 import { EventDetailView } from "../components/event-detail-view";
 
@@ -35,6 +41,8 @@ describe("EventDetailView", () => {
   beforeEach(() => {
     replace.mockClear();
     vi.mocked(getEventById).mockReset();
+    vi.mocked(listExpenses).mockReset();
+    vi.mocked(listExpenses).mockResolvedValue([]);
     // vi.mocked(getEventInviteToken).mockReset();
   });
 
@@ -116,6 +124,21 @@ describe("EventDetailView", () => {
     );
   });
 
+  it("muestra el evento como inexistente si el listado de gastos responde 403", async () => {
+    vi.mocked(getEventById).mockResolvedValue(eventDetail);
+    vi.mocked(listExpenses).mockRejectedValue(
+      new EventError("forbidden", "No tenés acceso a este evento.")
+    );
+
+    render(<EventDetailView id="1" />);
+
+    expect(
+      await screen.findByRole("heading", { name: "No encontramos este evento" })
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Viaje a Bariloche")).not.toBeInTheDocument();
+    expect(replace).not.toHaveBeenCalled();
+  });
+
   it("permite navegar entre Gastos, Saldos e Integrantes", async () => {
     vi.mocked(getEventById).mockResolvedValue(eventDetail);
 
@@ -125,7 +148,7 @@ describe("EventDetailView", () => {
       "aria-selected",
       "true"
     );
-    expect(screen.getByText("Todavía no hay gastos")).toBeInTheDocument();
+    expect(await screen.findByText("Todavía no hay gastos")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("tab", { name: "Saldos" }));
     expect(screen.getByText("Todavía no hay saldos")).toBeInTheDocument();

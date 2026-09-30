@@ -83,6 +83,10 @@ export function EventDetailView({ id }: { id: string }) {
     setState({ status: "unauthorized" });
   }, []);
 
+  const handleNotFound = useCallback(() => {
+    setState({ status: "not-found" });
+  }, []);
+
   if (state.status === "not-found") {
     return <EventNotFound />;
   }
@@ -135,7 +139,11 @@ export function EventDetailView({ id }: { id: string }) {
           )}
         </div>
 
-        <EventDetailContent event={state.event} />
+        <EventDetailContent
+          event={state.event}
+          onUnauthorized={handleUnauthorized}
+          onNotFound={handleNotFound}
+        />
 
         <InviteEventDialog
           open={inviting}
