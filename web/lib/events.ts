@@ -86,7 +86,10 @@ export class EventError extends Error {
   }
 }
 
-function toEventError(err: unknown): never {
+export function toEventError(
+  err: unknown,
+  fallbackMessage = "Ocurrió un error. Probá de nuevo."
+): never {
   if (err instanceof ApiError) {
     if (err.status === 0) {
       throw new EventError("network", "No pudimos conectar con el servidor.");
@@ -109,7 +112,7 @@ function toEventError(err: unknown): never {
         err.message || "No se puede completar la operación porque tiene registros relacionados."
       );
     }
-    throw new EventError("server-error", "Ocurrió un error. Probá de nuevo.");
+    throw new EventError("server-error", fallbackMessage);
   }
   throw err as Error;
 }

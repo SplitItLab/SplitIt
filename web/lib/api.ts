@@ -50,7 +50,13 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
         ...init?.headers,
       },
     });
-  } catch {
+  } catch (error) {
+    if (isAbortError(error)) {
+      if (error instanceof Error) throw error;
+      const abortError = new Error("The operation was aborted.");
+      abortError.name = "AbortError";
+      throw abortError;
+    }
     throw new ApiError(0, "No pudimos conectar con la API.");
   }
 
@@ -64,4 +70,13 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   return response.json() as Promise<T>;
+}
+
+function isAbortError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error as { name?: unknown }).name === "AbortError"
+  );
 }
