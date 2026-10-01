@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { EventError, type EventDetail } from "@/lib/events";
 import {
@@ -45,6 +45,7 @@ export function AddExpenseDialog({
   const [quote, setQuote] = useState<ExpenseQuote | null>(null);
   const [quoteFailed, setQuoteFailed] = useState(false);
   const [quoteAttempt, setQuoteAttempt] = useState(0);
+  const lastParsedAmountRef = useRef<number | null>(null);
 
   const parsedAmount = parseExpenseAmount(amount);
   const amountIsPositive = parsedAmount !== null;
@@ -66,6 +67,7 @@ export function AddExpenseDialog({
     setQuote(null);
     setQuoteFailed(false);
     setQuoteAttempt(0);
+    lastParsedAmountRef.current = null;
   };
 
   const handleOpenChange = (next: boolean) => {
@@ -201,9 +203,14 @@ export function AddExpenseDialog({
                 placeholder="0"
                 className="rounded-[18px]"
                 onChange={(event_) => {
-                  setAmount(event_.target.value);
+                  const next = event_.target.value;
+                  const nextParsed = parseExpenseAmount(next);
+                  if (nextParsed !== lastParsedAmountRef.current) {
+                    lastParsedAmountRef.current = nextParsed;
+                    clearQuote();
+                  }
+                  setAmount(next);
                   setFormError(null);
-                  clearQuote();
                 }}
               />
             </div>

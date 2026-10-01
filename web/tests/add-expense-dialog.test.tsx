@@ -207,6 +207,33 @@ describe("AddExpenseDialog", () => {
     expect(screen.getByRole("button", { name: "Guardar gasto" })).toBeDisabled();
   });
 
+  it("no borra la cotización al cambiar '10,5' a '10,50' (mismo valor numérico)", async () => {
+    vi.mocked(quoteExpense).mockResolvedValue({
+      originalAmount: 10.5,
+      originalCurrency: "USD",
+      baseCurrency: "ARS",
+      exchangeRate: 1450.5,
+      baseAmount: 15230.25,
+    });
+    const user = userEvent.setup();
+    renderDialog();
+
+    await user.type(screen.getByLabelText("Monto"), "10,5");
+    await user.selectOptions(screen.getByLabelText("Moneda"), "USD");
+
+    await waitFor(() => expect(quoteExpense).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText(/Se guardará como/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Guardar gasto" })).toBeEnabled();
+
+    // Append "0" → "10,50" (still 10.5 numerically)
+    await user.type(screen.getByLabelText("Monto"), "0");
+
+    // Quote should still be visible and Save should remain enabled
+    expect(screen.getByText(/Se guardará como/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Guardar gasto" })).toBeEnabled();
+    expect(quoteExpense).toHaveBeenCalledTimes(1);
+  });
+
   it("no guarda con nombre vacío, monto inválido o sin pagador", async () => {
     const user = userEvent.setup();
     const { onCreated } = renderDialog();

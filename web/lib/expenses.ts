@@ -1,5 +1,5 @@
-import { ApiError, request } from "@/lib/api";
-import { EventError } from "@/lib/events";
+import { request } from "@/lib/api";
+import { toEventError } from "@/lib/events";
 
 export const EXPENSE_CURRENCIES = ["ARS", "USD", "EUR", "BRL", "UYU", "CLP"] as const;
 
@@ -40,34 +40,6 @@ export type CreateExpenseInput = {
 const LIST_UNAVAILABLE = "No pudimos cargar los gastos. Probá de nuevo.";
 const QUOTE_UNAVAILABLE = "No pudimos obtener el tipo de cambio.";
 const SAVE_UNAVAILABLE = "No pudimos guardar el gasto. Probá de nuevo.";
-
-function toExpenseError(err: unknown, unavailableMessage: string): never {
-  if (err instanceof ApiError) {
-    if (err.status === 0) {
-      throw new EventError("network", "No pudimos conectar con el servidor.");
-    }
-    if (err.status === 401) {
-      throw new EventError("unauthorized", "Tu sesión expiró. Iniciá sesión de nuevo.");
-    }
-    if (err.status === 403) {
-      throw new EventError("forbidden", "No tenés acceso a este evento.");
-    }
-    if (err.status === 404) {
-      throw new EventError("not-found", "No encontramos este evento.");
-    }
-    if (err.status === 400 || err.status === 422) {
-      throw new EventError("validation", err.message || "Revisá los datos ingresados.");
-    }
-    if (err.status === 409) {
-      throw new EventError(
-        "conflict",
-        err.message || "No se puede completar la operación porque tiene registros relacionados."
-      );
-    }
-    throw new EventError("server-error", unavailableMessage);
-  }
-  throw err as Error;
-}
 
 export function formatMoney(amount: number, currency: string): string {
   return new Intl.NumberFormat("es-AR", {
@@ -112,7 +84,7 @@ export async function listExpenses(eventId: number | string): Promise<Expense[]>
   try {
     return await request<Expense[]>(`/api/events/${eventId}/expenses`);
   } catch (err) {
-    toExpenseError(err, LIST_UNAVAILABLE);
+    toEventError(err, LIST_UNAVAILABLE);
   }
 }
 
@@ -126,7 +98,7 @@ export async function quoteExpense(
   try {
     return await request<ExpenseQuote>(`/api/events/${eventId}/expenses/quote?${params}`, init);
   } catch (err) {
-    toExpenseError(err, QUOTE_UNAVAILABLE);
+    toEventError(err, QUOTE_UNAVAILABLE);
   }
 }
 
@@ -140,6 +112,6 @@ export async function createExpense(
       body: JSON.stringify(input),
     });
   } catch (err) {
-    toExpenseError(err, SAVE_UNAVAILABLE);
+    toEventError(err, SAVE_UNAVAILABLE);
   }
 }
