@@ -471,6 +471,41 @@ End-to-end tests
 
 Do not automatically add expensive end-to-end tests when a lower-level test provides sufficient confidence.
 
+## Reportes de QA desde Slack
+
+Los bugs se reportan con Ybug (solo en el ambiente de QA) y llegan a `#qa-splitit`.
+Ahí alguien etiqueta a `@Claude` en el hilo. Este es el trabajo:
+
+1. **Entender el reporte.** El mensaje de Ybug trae un resumen y un link; si el link
+   no abre, trabajar con lo que dice el hilo. Si no alcanza para reproducir, pedir en
+   el hilo los pasos que faltan. No adivinar.
+2. **Ubicar la historia.** La URL del reporte lleva a la pantalla; la historia y sus
+   criterios de aceptación están en `SplitItLab/roadmap`.
+3. **Clasificar**, y decirlo en el hilo antes de tocar nada:
+   - **Bug**: la pantalla contradice un criterio de aceptación, o está objetivamente
+     rota (no carga, un botón no hace nada, un número mal calculado). Se arregla.
+   - **Cambio de alcance**: "estaría bueno que...", o algo que ningún criterio pide.
+     No se toca: se responde que es decisión del PO y se termina.
+   - **No reproducible**: se dice qué se probó y se piden más datos.
+4. **Test primero.** Escribir en `web/e2e/` un test que reproduzca el bug y **falle**,
+   nombrado por el flujo y con la historia en un comentario, como el test de
+   referencia de `web/e2e/`. Correrlo y confirmar que falla por el bug y no por el
+   armado del test. Los E2E necesitan el stack levantado
+   (`docker compose up -d --build`); si no se puede levantar, subir igual el test y
+   el arreglo: los verifica el workflow de E2E al subir la rama.
+5. **Arreglar lo mínimo.** Solo el bug: nada de refactors ni limpieza al pasar.
+   `npm run test:e2e` en `web/` tiene que pasar completo.
+6. **Commitear y subir la rama.** El PR se abre solo al subirla: no usar el botón del
+   hilo. El primer commit lleva el título del PR, `Ybug #<N>: <qué se arregló>` (con `N` el
+   número que Ybug pone en su mensaje, `[<proyecto>] #N`), y en el cuerpo la historia, el criterio, el test que lo cubre y el link al hilo. Sin
+   `Closes`. Nunca se mergea desde la sesión.
+7. **Cerrar en el hilo**: qué historia y qué criterio, qué se cambió, y el nombre del
+   test que ahora cubre el bug. Avisar que el PR se abre solo y **no sugerir el botón
+   "Create PR"** ni pedirle a nadie que abra el PR.
+
+Cada bug arreglado deja su test: así la suite crece con bugs reales y el mismo bug
+no vuelve.
+
 ---
 
 # Code quality
