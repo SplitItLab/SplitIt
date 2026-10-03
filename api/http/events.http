@@ -1263,3 +1263,24 @@ client.test("los gastos permanecen aislados entre eventos", function () {
     client.assert(!ids.includes(client.global.get("usdExpenseId")), "Expected USD expense to be isolated")
 })
 %}
+
+### 67. Events — POST crear gasto cuyo importe convertido no entra en la base (400)
+POST {{baseUrl}}/api/events/{{firstEventId}}/expenses
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Compra grande",
+  "amount": 1000000000000,
+  "currency": "USD",
+  "paidByMemberId": {{firstEventOwnerMemberId}}
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza un gasto cuyo importe convertido supera la precisión permitida", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}

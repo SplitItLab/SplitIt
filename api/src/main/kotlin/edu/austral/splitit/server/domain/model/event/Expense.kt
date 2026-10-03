@@ -101,6 +101,8 @@ class Expense private constructor(
                     rate = exchangeRate,
                 )
 
+            requireFitsNumeric(quote.baseAmount, AMOUNT_PRECISION, AMOUNT_SCALE, "Base amount")
+
             val now = Instant.now()
             return Expense(
                 event = event,

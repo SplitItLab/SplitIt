@@ -182,4 +182,36 @@ class ExpenseTest {
             )
         }
     }
+
+    @Test
+    fun `create expense fails when the converted base amount exceeds the column precision`() {
+        // 1e12 USD × 1523.9662 = 1523966200000000 ARS: 16 integer digits, NUMERIC(19,4) allows 15
+        assertFailsWith<IllegalArgumentException> {
+            Expense.create(
+                event = event,
+                paidByMember = member,
+                name = "Compra grande",
+                originalAmount = BigDecimal("1000000000000"),
+                originalCurrency = "USD",
+                exchangeRate = BigDecimal("1523.9662"),
+                expenseDate = LocalDate.now(),
+            )
+        }
+    }
+
+    @Test
+    fun `create expense accepts a converted base amount at the column precision limit`() {
+        val expense =
+            Expense.create(
+                event = event,
+                paidByMember = member,
+                name = "Compra grande",
+                originalAmount = BigDecimal("100000000000"),
+                originalCurrency = "USD",
+                exchangeRate = BigDecimal("9999"),
+                expenseDate = LocalDate.now(),
+            )
+
+        assertEquals(BigDecimal("999900000000000.0000"), expense.baseAmount)
+    }
 }

@@ -8,6 +8,7 @@ import edu.austral.splitit.server.infrastructure.persistence.ExpenseRepository
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.math.BigDecimal
@@ -73,6 +74,22 @@ class ExpenseServiceTest {
                 exchangeRate = BigDecimal.ONE,
             )
         }
+    }
+
+    @Test
+    fun `addExpense does not save an expense whose converted amount does not fit the column`() {
+        assertFailsWith<IllegalArgumentException> {
+            expenseService.addExpense(
+                event = event,
+                paidByMember = payer,
+                name = "Compra grande",
+                amount = BigDecimal("1000000000000"),
+                currency = "USD",
+                exchangeRate = BigDecimal("1523.9662"),
+            )
+        }
+
+        verify(expenseRepository, never()).save(any<Expense>())
     }
 
     @Test
