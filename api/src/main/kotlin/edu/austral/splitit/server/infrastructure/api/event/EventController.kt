@@ -4,6 +4,7 @@ import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.service.CreateEventCommand
 import edu.austral.splitit.server.application.service.CreateExpenseCommand
 import edu.austral.splitit.server.application.service.EventApplicationService
+import edu.austral.splitit.server.application.service.QuoteExpenseQuery
 import edu.austral.splitit.server.application.service.UpdateEventCommand
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -15,8 +16,10 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import java.math.BigDecimal
 
 @RestController
 @RequestMapping("/api/events")
@@ -91,6 +94,26 @@ class EventController(
         val summary = eventApplicationService.addExpense(command)
 
         return ExpenseResponse.of(summary)
+    }
+
+    @GetMapping("/{eventId}/expenses/quote")
+    fun quoteExpense(
+        @AuthenticationPrincipal user: AuthUser,
+        @PathVariable eventId: Long,
+        @RequestParam amount: BigDecimal,
+        @RequestParam currency: String,
+    ): ExpenseQuoteResponse {
+        val quote =
+            eventApplicationService.quoteExpense(
+                QuoteExpenseQuery(
+                    userId = user.id,
+                    eventId = eventId,
+                    amount = amount,
+                    currency = currency,
+                ),
+            )
+
+        return ExpenseQuoteResponse.of(quote)
     }
 
     @GetMapping("/{eventId}/expenses")

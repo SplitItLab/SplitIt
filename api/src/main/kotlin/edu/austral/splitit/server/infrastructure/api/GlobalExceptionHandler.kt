@@ -4,6 +4,7 @@ import edu.austral.splitit.server.application.exception.AuthenticatedUserMissing
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
 import edu.austral.splitit.server.application.exception.EventDeletionConflictException
 import edu.austral.splitit.server.application.exception.EventNotFoundException
+import edu.austral.splitit.server.application.exception.ExchangeRateUnavailableException
 import edu.austral.splitit.server.application.exception.InvalidCredentialsException
 import edu.austral.splitit.server.application.exception.InvalidRequestException
 import org.slf4j.LoggerFactory
@@ -13,9 +14,11 @@ import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.core.AuthenticationException
 import org.springframework.web.bind.MethodArgumentNotValidException
+import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.method.annotation.HandlerMethodValidationException
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
@@ -24,6 +27,8 @@ class GlobalExceptionHandler {
         MethodArgumentNotValidException::class,
         HandlerMethodValidationException::class,
         HttpMessageNotReadableException::class,
+        MissingServletRequestParameterException::class,
+        MethodArgumentTypeMismatchException::class,
         InvalidRequestException::class,
         IllegalArgumentException::class,
     )
@@ -54,6 +59,12 @@ class GlobalExceptionHandler {
     fun handleEventDeletionConflict(exception: EventDeletionConflictException): ResponseEntity<ErrorMessage> =
         error(HttpStatus.CONFLICT, exception.message ?: EVENT_DELETION_CONFLICT_MESSAGE)
 
+    @ExceptionHandler(ExchangeRateUnavailableException::class)
+    fun handleExchangeRateUnavailable(exception: ExchangeRateUnavailableException): ResponseEntity<ErrorMessage> {
+        logger.warn("Exchange rate provider unavailable: {}", exception.cause?.message ?: exception.message)
+        return error(HttpStatus.SERVICE_UNAVAILABLE, EXCHANGE_RATE_UNAVAILABLE_MESSAGE)
+    }
+
     @ExceptionHandler(AccessDeniedException::class)
     fun rethrowAccessDenied(exception: AccessDeniedException): Unit = throw exception
 
@@ -74,6 +85,7 @@ class GlobalExceptionHandler {
         private const val UNAUTHORIZED_MESSAGE = "Unauthorized"
         private const val EVENT_NOT_FOUND_MESSAGE = "Event not found"
         private const val EVENT_DELETION_CONFLICT_MESSAGE = "Event cannot be deleted"
+        private const val EXCHANGE_RATE_UNAVAILABLE_MESSAGE = "Exchange rate unavailable"
         private const val INTERNAL_ERROR_MESSAGE = "Internal server error"
 
         private val logger =

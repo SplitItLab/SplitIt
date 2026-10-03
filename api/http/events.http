@@ -910,24 +910,34 @@ client.test("rechaza crear un gasto sin sesión", function () {
 })
 %}
 
-### 47. Events — POST crear gasto en una moneda distinta a la base (400)
+### 47. Events — POST crear gasto en una moneda distinta a la base se convierte (201)
 POST {{baseUrl}}/api/events/{{firstEventId}}/expenses
 Content-Type: application/json
 Accept: application/json
 Cookie: auth_token={{authToken}}
 
 {
-  "name": "Cena",
-  "amount": 5000,
+  "name": "Taxi",
+  "amount": 10,
   "currency": "USD",
   "paidByMemberId": {{firstEventOwnerMemberId}}
 }
 
 > {%
-import { assertError } from './scripts/assert.js'
+import { assertStatus, jsonBody, assertExpense } from './scripts/assert.js'
 
-client.test("rechaza un gasto en una moneda distinta a la base del evento", function () {
-    assertError(client, response, 400, "Invalid request data")
+client.test("registra un gasto en USD convertido a la moneda base con la cotización del servidor", function () {
+    assertStatus(client, response, 201)
+    const body = jsonBody(response)
+    assertExpense(client, body, {
+        eventId: client.global.get("firstEventId"),
+        name: "Taxi",
+        originalAmount: 10,
+        currency: "USD",
+        baseCurrency: "ARS",
+        paidByMemberId: client.global.get("firstEventOwnerMemberId"),
+    })
+    client.global.set("usdExpenseId", String(body.id))
 })
 %}
 
@@ -1044,5 +1054,233 @@ import { assertError } from './scripts/assert.js'
 
 client.test("rechaza listar los gastos de un evento ajeno con 403 Forbidden", function () {
     assertError(client, response, 403, "Forbidden")
+})
+%}
+
+### 54. Events — GET cotización de un evento ajeno (403)
+GET {{baseUrl}}/api/events/{{firstEventId}}/expenses/quote?amount=10&currency=USD
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza cotizar en un evento ajeno con 403 Forbidden", function () {
+    assertError(client, response, 403, "Forbidden")
+})
+%}
+
+### 55. Login — Dueño retoma sesión para cotizar gastos
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{eventOwnerEmail}}",
+  "password": "{{eventOwnerPassword}}"
+}
+
+> {%
+import { assertStatus, saveAuthToken } from './scripts/assert.js'
+
+client.test("el dueño vuelve a iniciar sesión para probar cotizaciones", function () {
+    assertStatus(client, response, 200)
+})
+saveAuthToken(client, response, "auth_token")
+%}
+
+### 56. Events — GET cotización en otra moneda (200)
+GET {{baseUrl}}/api/events/{{firstEventId}}/expenses/quote?amount=10&currency=USD
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody, assertConversion } from './scripts/assert.js'
+
+client.test("cotiza 10 USD en la moneda base del evento", function () {
+    assertStatus(client, response, 200)
+    assertConversion(client, jsonBody(response), {
+        originalAmount: 10,
+        originalCurrency: "USD",
+        baseCurrency: "ARS",
+    })
+})
+%}
+
+### 57. Events — GET cotización en la moneda base usa tasa 1 (200)
+GET {{baseUrl}}/api/events/{{firstEventId}}/expenses/quote?amount=5000&currency=ARS
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody, assertConversion } from './scripts/assert.js'
+
+client.test("cotizar en la moneda base devuelve tasa 1 e importe igual", function () {
+    assertStatus(client, response, 200)
+    assertConversion(client, jsonBody(response), {
+        originalAmount: 5000,
+        originalCurrency: "ARS",
+        baseCurrency: "ARS",
+    })
+})
+%}
+
+### 58. Events — GET cotización sin autenticación (401)
+# @no-cookie-jar
+GET {{baseUrl}}/api/events/{{firstEventId}}/expenses/quote?amount=10&currency=USD
+Accept: application/json
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza cotizar sin sesión", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### 59. Events — GET cotización de un evento inexistente (404)
+GET {{baseUrl}}/api/events/999999/expenses/quote?amount=10&currency=USD
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("devuelve 404 al cotizar en un evento inexistente", function () {
+    assertError(client, response, 404, "Event not found")
+})
+%}
+
+### 60. Events — GET cotización con moneda no admitida (400)
+GET {{baseUrl}}/api/events/{{firstEventId}}/expenses/quote?amount=10&currency=GBP
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza cotizar una moneda no admitida", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### 61. Events — GET cotización con monto cero (400)
+GET {{baseUrl}}/api/events/{{firstEventId}}/expenses/quote?amount=0&currency=USD
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza cotizar un monto cero", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### 62. Events — GET cotización con monto negativo (400)
+GET {{baseUrl}}/api/events/{{firstEventId}}/expenses/quote?amount=-5&currency=USD
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza cotizar un monto negativo", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### 63. Events — GET cotización sin monto (400)
+GET {{baseUrl}}/api/events/{{firstEventId}}/expenses/quote?currency=USD
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza cotizar sin monto", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### 64. Events — POST crear gasto con moneda no admitida (400)
+POST {{baseUrl}}/api/events/{{firstEventId}}/expenses
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Pub",
+  "amount": 10,
+  "currency": "GBP",
+  "paidByMemberId": {{firstEventOwnerMemberId}}
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza un gasto en una moneda no admitida", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### 65. Events — GET lista de gastos devuelve importe original, tasa e importe base (200)
+GET {{baseUrl}}/api/events/{{firstEventId}}/expenses
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody, assertExpense } from './scripts/assert.js'
+
+client.test("el gasto en USD aparece en el listado con su conversión", function () {
+    assertStatus(client, response, 200)
+    const found = jsonBody(response).find(e => String(e.id) === client.global.get("usdExpenseId"))
+    client.assert(found !== undefined, "Expected USD expense in list")
+    assertExpense(client, found, {
+        id: client.global.get("usdExpenseId"),
+        eventId: client.global.get("firstEventId"),
+        name: "Taxi",
+        originalAmount: 10,
+        currency: "USD",
+        baseCurrency: "ARS",
+        paidByMemberId: client.global.get("firstEventOwnerMemberId"),
+    })
+})
+%}
+
+### 66. Events — GET lista de gastos de otro evento no incluye gastos ajenos (200)
+GET {{baseUrl}}/api/events/{{secondEventId}}/expenses
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("los gastos permanecen aislados entre eventos", function () {
+    assertStatus(client, response, 200)
+    const ids = jsonBody(response).map(e => String(e.id))
+    client.assert(!ids.includes(client.global.get("firstExpenseId")), "Expected base currency expense to be isolated")
+    client.assert(!ids.includes(client.global.get("usdExpenseId")), "Expected USD expense to be isolated")
+})
+%}
+
+### 67. Events — POST crear gasto cuyo importe convertido no entra en la base (400)
+POST {{baseUrl}}/api/events/{{firstEventId}}/expenses
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Compra grande",
+  "amount": 1000000000000,
+  "currency": "USD",
+  "paidByMemberId": {{firstEventOwnerMemberId}}
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza un gasto cuyo importe convertido supera la precisión permitida", function () {
+    assertError(client, response, 400, "Invalid request data")
 })
 %}

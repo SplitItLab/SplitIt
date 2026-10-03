@@ -2,6 +2,9 @@ package edu.austral.splitit.server.application.service
 
 import edu.austral.splitit.server.Helpers
 import edu.austral.splitit.server.application.exception.EventNotFoundException
+import edu.austral.splitit.server.application.exception.ExchangeRateUnavailableException
+import edu.austral.splitit.server.application.port.ExchangeRateProvider
+import edu.austral.splitit.server.domain.model.event.Currency
 import edu.austral.splitit.server.domain.model.event.Event
 import edu.austral.splitit.server.domain.model.event.EventMember
 import edu.austral.splitit.server.domain.model.event.Expense
@@ -28,6 +31,7 @@ class EventApplicationServiceExpenseTest {
     private val eventMemberService: EventMemberService = mock()
     private val inviteLinkService: InviteLinkService = mock()
     private val expenseService: ExpenseService = mock()
+    private val exchangeRateProvider: ExchangeRateProvider = mock()
 
     private val eventApplicationService =
         EventApplicationService(
@@ -36,6 +40,7 @@ class EventApplicationServiceExpenseTest {
             eventMemberService = eventMemberService,
             inviteLinkService = inviteLinkService,
             expenseService = expenseService,
+            exchangeQuoteService = ExchangeQuoteService(exchangeRateProvider),
         )
 
     private val user = Helpers.user(name = "Mateo", email = "mateo@example.com", passwordHash = "hash")
@@ -67,6 +72,7 @@ class EventApplicationServiceExpenseTest {
                 name = "Cena",
                 amount = BigDecimal("5000"),
                 currency = "ARS",
+                exchangeRate = BigDecimal("1.000000"),
             ),
         ).thenReturn(savedExpense)
 
@@ -87,10 +93,12 @@ class EventApplicationServiceExpenseTest {
         assertEquals("Cena", summary.name)
         assertEquals(BigDecimal("5000"), summary.originalAmount)
         assertEquals("ARS", summary.originalCurrency)
-        assertEquals(BigDecimal("5000"), summary.baseAmount)
+        assertEquals(0, BigDecimal.ONE.compareTo(summary.exchangeRate))
+        assertEquals(0, BigDecimal("5000").compareTo(summary.baseAmount))
         assertEquals("ARS", summary.baseCurrency)
         assertEquals(100L, summary.paidByMember.id)
         assertEquals("Mateo", summary.paidByMember.name)
+        verify(exchangeRateProvider, never()).rate(any(), any())
     }
 
     @Test
@@ -110,7 +118,7 @@ class EventApplicationServiceExpenseTest {
             )
         }
 
-        verify(expenseService, never()).addExpense(any(), any(), any(), any(), any())
+        verify(expenseService, never()).addExpense(any(), any(), any(), any(), any(), any())
     }
 
     @Test
@@ -140,7 +148,7 @@ class EventApplicationServiceExpenseTest {
             )
         }
 
-        verify(expenseService, never()).addExpense(any(), any(), any(), any(), any())
+        verify(expenseService, never()).addExpense(any(), any(), any(), any(), any(), any())
     }
 
     @Test
@@ -171,7 +179,7 @@ class EventApplicationServiceExpenseTest {
             )
         }
 
-        verify(expenseService, never()).addExpense(any(), any(), any(), any(), any())
+        verify(expenseService, never()).addExpense(any(), any(), any(), any(), any(), any())
     }
 
     @Test
@@ -197,11 +205,90 @@ class EventApplicationServiceExpenseTest {
             )
         }
 
-        verify(expenseService, never()).addExpense(any(), any(), any(), any(), any())
+        verify(expenseService, never()).addExpense(any(), any(), any(), any(), any(), any())
     }
 
     @Test
-    fun `addExpense rejects a currency that does not match the event base currency`() {
+    fun `addExpense converts an expense in another currency using a server side quote`() {
+        val event =
+            Event
+                .create(owner = user, name = "Viaje a Bariloche", baseCurrency = "ARS")
+                .apply { id = 10L }
+        val payer = EventMember.create(event, "Mateo", user).apply { id = 100L }
+        val savedExpense =
+            Expense
+                .create(
+                    event = event,
+                    paidByMember = payer,
+                    name = "Taxi",
+                    originalAmount = BigDecimal("10"),
+                    originalCurrency = "USD",
+                    exchangeRate = BigDecimal("1523.966200"),
+                    expenseDate = LocalDate.now(),
+                ).apply { id = 34L }
+
+        whenever(eventService.findById(10L)).thenReturn(event)
+        whenever(eventMemberService.findById(100L)).thenReturn(payer)
+        whenever(exchangeRateProvider.rate(Currency("USD"), Currency("ARS"))).thenReturn(BigDecimal("1523.9662"))
+        whenever(
+            expenseService.addExpense(
+                event = event,
+                paidByMember = payer,
+                name = "Taxi",
+                amount = BigDecimal("10"),
+                currency = "USD",
+                exchangeRate = BigDecimal("1523.966200"),
+            ),
+        ).thenReturn(savedExpense)
+
+        val summary =
+            eventApplicationService.addExpense(
+                CreateExpenseCommand(
+                    userId = 1L,
+                    eventId = 10L,
+                    name = "Taxi",
+                    amount = BigDecimal("10"),
+                    currency = "USD",
+                    paidByMemberId = 100L,
+                ),
+            )
+
+        assertEquals("USD", summary.originalCurrency)
+        assertEquals("ARS", summary.baseCurrency)
+        assertEquals(BigDecimal("1523.966200"), summary.exchangeRate)
+        assertEquals(BigDecimal("15239.6620"), summary.baseAmount)
+    }
+
+    @Test
+    fun `addExpense does not save the expense when the exchange rate provider fails`() {
+        val event =
+            Event
+                .create(owner = user, name = "Viaje a Bariloche", baseCurrency = "ARS")
+                .apply { id = 10L }
+        val payer = EventMember.create(event, "Mateo", user).apply { id = 100L }
+
+        whenever(eventService.findById(10L)).thenReturn(event)
+        whenever(eventMemberService.findById(100L)).thenReturn(payer)
+        whenever(exchangeRateProvider.rate(any(), any())).thenThrow(ExchangeRateUnavailableException())
+
+        assertFailsWith<ExchangeRateUnavailableException> {
+            eventApplicationService.addExpense(
+                CreateExpenseCommand(
+                    userId = 1L,
+                    eventId = 10L,
+                    name = "Taxi",
+                    amount = BigDecimal("10"),
+                    currency = "USD",
+                    paidByMemberId = 100L,
+                ),
+            )
+        }
+
+        verify(expenseService, never()).addExpense(any(), any(), any(), any(), any(), any())
+    }
+
+    @Test
+    fun `addExpense rejects an unsupported currency without calling the provider`() {
         val event =
             Event
                 .create(owner = user, name = "Viaje a Bariloche", baseCurrency = "ARS")
@@ -218,13 +305,15 @@ class EventApplicationServiceExpenseTest {
                     eventId = 10L,
                     name = "Cena",
                     amount = BigDecimal("5000"),
-                    currency = "USD",
+                    currency = "GBP",
                     paidByMemberId = 100L,
                 ),
             )
         }
 
-        verify(expenseService, never()).addExpense(any(), any(), any(), any(), any())
+        verify(exchangeRateProvider, never()).rate(any(), any())
+
+        verify(expenseService, never()).addExpense(any(), any(), any(), any(), any(), any())
     }
 
     @Test
@@ -258,6 +347,7 @@ class EventApplicationServiceExpenseTest {
         assertEquals(1, result.size)
         assertEquals(34L, result[0].id)
         assertEquals("Cena", result[0].name)
+        assertEquals(0, BigDecimal.ONE.compareTo(result[0].exchangeRate))
         assertEquals(100L, result[0].paidByMember.id)
         assertEquals("Mateo", result[0].paidByMember.name)
     }
@@ -292,5 +382,63 @@ class EventApplicationServiceExpenseTest {
         }
 
         verify(expenseService, never()).findByEventId(any())
+    }
+
+    @Test
+    fun `quoteExpense converts the amount into the event base currency`() {
+        val event =
+            Event
+                .create(owner = user, name = "Viaje a Bariloche", baseCurrency = "ARS")
+                .apply { id = 10L }
+
+        whenever(eventService.findById(10L)).thenReturn(event)
+        whenever(exchangeRateProvider.rate(Currency("USD"), Currency("ARS"))).thenReturn(BigDecimal("1523.9662"))
+
+        val quote =
+            eventApplicationService.quoteExpense(
+                QuoteExpenseQuery(userId = 1L, eventId = 10L, amount = BigDecimal("10"), currency = "usd"),
+            )
+
+        assertEquals(BigDecimal("10"), quote.originalAmount)
+        assertEquals("USD", quote.originalCurrency.get())
+        assertEquals(BigDecimal("1523.966200"), quote.exchangeRate)
+        assertEquals(BigDecimal("15239.6620"), quote.baseAmount)
+        assertEquals("ARS", quote.baseCurrency.get())
+    }
+
+    @Test
+    fun `quoteExpense throws EventNotFoundException when event does not exist`() {
+        whenever(eventService.findById(999L)).thenReturn(null)
+
+        assertFailsWith<EventNotFoundException> {
+            eventApplicationService.quoteExpense(
+                QuoteExpenseQuery(userId = 1L, eventId = 999L, amount = BigDecimal("10"), currency = "USD"),
+            )
+        }
+
+        verify(exchangeRateProvider, never()).rate(any(), any())
+    }
+
+    @Test
+    fun `quoteExpense throws AccessDeniedException when user is not owner nor member`() {
+        val otherOwner =
+            Helpers
+                .user(name = "Otro", email = "otro@example.com", passwordHash = "hash")
+                .apply { id = 2L }
+        val event =
+            Event
+                .create(owner = otherOwner, name = "Privado", baseCurrency = "ARS")
+                .apply { id = 30L }
+
+        whenever(eventService.findById(30L)).thenReturn(event)
+        whenever(eventMemberService.isUserMemberOfEvent(30L, 1L)).thenReturn(false)
+
+        assertFailsWith<AccessDeniedException> {
+            eventApplicationService.quoteExpense(
+                QuoteExpenseQuery(userId = 1L, eventId = 30L, amount = BigDecimal("10"), currency = "USD"),
+            )
+        }
+
+        verify(exchangeRateProvider, never()).rate(any(), any())
     }
 }

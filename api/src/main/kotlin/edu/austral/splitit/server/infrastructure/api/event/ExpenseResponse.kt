@@ -15,6 +15,7 @@ data class ExpenseResponse(
     val name: String,
     val originalAmount: BigDecimal,
     val originalCurrency: String,
+    val exchangeRate: BigDecimal,
     val baseAmount: BigDecimal,
     val baseCurrency: String,
     val paidByMember: ExpensePayerResponse,
@@ -28,6 +29,7 @@ data class ExpenseResponse(
                 name = summary.name,
                 originalAmount = summary.originalAmount,
                 originalCurrency = summary.originalCurrency,
+                exchangeRate = summary.exchangeRate,
                 baseAmount = summary.baseAmount,
                 baseCurrency = summary.baseCurrency,
                 paidByMember =

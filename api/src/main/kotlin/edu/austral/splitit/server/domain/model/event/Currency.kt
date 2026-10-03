@@ -6,9 +6,13 @@ data class Currency private constructor(
 ) {
     fun get(): String = currency
 
+    fun isSupported(): Boolean = currency in SUPPORTED_CODES
+
     companion object {
         const val CURRENCY_LENGTH = 3
         const val VALID_REGEX = "^[A-Z]{$CURRENCY_LENGTH}$"
+
+        val SUPPORTED_CODES: Set<String> = setOf("ARS", "USD", "EUR", "BRL", "UYU", "CLP")
 
         operator fun invoke(rawCurrency: String): Currency {
             val normalizedCurrency = rawCurrency.trim().uppercase()

@@ -8,6 +8,7 @@ import edu.austral.splitit.server.infrastructure.persistence.ExpenseRepository
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.math.BigDecimal
@@ -32,7 +33,7 @@ class ExpenseServiceTest {
     }
 
     @Test
-    fun `addExpense creates and saves an expense with today's date`() {
+    fun `addExpense creates and saves an expense with the given exchange rate`() {
         echoSavedExpense()
 
         val expense =
@@ -40,14 +41,16 @@ class ExpenseServiceTest {
                 event = event,
                 paidByMember = payer,
                 name = "Cena",
-                amount = BigDecimal("5000"),
-                currency = "ARS",
+                amount = BigDecimal("10"),
+                currency = "USD",
+                exchangeRate = BigDecimal("1523.9662"),
             )
 
         assertEquals("Cena", expense.name)
-        assertEquals(BigDecimal("5000"), expense.originalAmount)
-        assertEquals("ARS", expense.originalCurrency)
-        assertEquals(BigDecimal("5000"), expense.baseAmount)
+        assertEquals(BigDecimal("10"), expense.originalAmount)
+        assertEquals("USD", expense.originalCurrency)
+        assertEquals(BigDecimal("1523.966200"), expense.exchangeRate)
+        assertEquals(BigDecimal("15239.6620"), expense.baseAmount)
         assertSame(event, expense.event)
         assertSame(payer, expense.paidByMember)
         verify(expenseRepository).save(any<Expense>())
@@ -68,8 +71,25 @@ class ExpenseServiceTest {
                 name = "Cena",
                 amount = BigDecimal("5000"),
                 currency = "ARS",
+                exchangeRate = BigDecimal.ONE,
             )
         }
+    }
+
+    @Test
+    fun `addExpense does not save an expense whose converted amount does not fit the column`() {
+        assertFailsWith<IllegalArgumentException> {
+            expenseService.addExpense(
+                event = event,
+                paidByMember = payer,
+                name = "Compra grande",
+                amount = BigDecimal("1000000000000"),
+                currency = "USD",
+                exchangeRate = BigDecimal("1523.9662"),
+            )
+        }
+
+        verify(expenseRepository, never()).save(any<Expense>())
     }
 
     @Test
