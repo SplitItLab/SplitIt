@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Spinner } from "@/components/ui/spinner";
+import { LoadingIndicator } from "@/components/loading-indicator";
 
 const DEFAULT_ICON = EVENT_ICON_OPTIONS[0].key;
 
@@ -296,8 +296,14 @@ export function CreateEventDialog({
               disabled={isSubmitting}
               className="h-10 w-full rounded-[8px] px-5 text-xl font-medium sm:w-auto"
             >
-              {isSubmitting ? <Spinner className="size-5" /> : <Plus className="size-5" />}
-              Crear evento
+              {isSubmitting ? (
+                <LoadingIndicator message="Creando evento…" spinnerClassName="size-5" />
+              ) : (
+                <>
+                  <Plus className="size-5" />
+                  Crear evento
+                </>
+              )}
             </Button>
           </div>
         </form>

@@ -14,7 +14,7 @@ import { DeleteEventDialog } from "@/components/delete-event-dialog";
 import { InviteEventDialog } from "@/components/invite-event-dialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Spinner } from "@/components/ui/spinner";
+import { LoadingIndicator } from "@/components/loading-indicator";
 
 type LoadState =
   | { status: "loading" }
@@ -181,8 +181,11 @@ export function EventDetailView({ id }: { id: string }) {
 
       {state.status === "loading" && (
         <section className="flex items-center justify-center gap-2 py-16">
-          <Spinner className="size-5" />
-          <p className="text-text-secondary text-sm font-medium">Cargando el evento…</p>
+          <LoadingIndicator
+            message="Cargando el evento…"
+            spinnerClassName="size-5"
+            className="text-text-secondary text-sm font-medium"
+          />
         </section>
       )}
 

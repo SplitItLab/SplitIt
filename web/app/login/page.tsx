@@ -8,7 +8,7 @@ import { Field, FieldLabel, FieldError, FieldGroup } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Spinner } from "@/components/ui/spinner";
+import { LoadingIndicator } from "@/components/loading-indicator";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { login, LoginError, LoginInput, loginSchema } from "@/lib/auth";
 import { Eye, EyeOff } from "lucide-react";
@@ -99,7 +99,7 @@ export default function LoginPage() {
               </Field>
 
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? <Spinner /> : "Ingresar"}
+                {isSubmitting ? <LoadingIndicator message="Validando tus datos…" /> : "Ingresar"}
               </Button>
             </FieldGroup>
           </form>

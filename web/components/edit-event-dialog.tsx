@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Spinner } from "@/components/ui/spinner";
+import { LoadingIndicator } from "@/components/loading-indicator";
 
 type EditEventDialogProps = {
   open: boolean;
@@ -189,8 +189,14 @@ export function EditEventDialog({
               disabled={isSubmitting}
               className="h-10 w-full rounded-[8px] px-5 text-xl font-medium sm:w-auto"
             >
-              {isSubmitting ? <Spinner className="size-5" /> : <Check className="size-5" />}
-              Guardar cambios
+              {isSubmitting ? (
+                <LoadingIndicator message="Guardando cambios…" spinnerClassName="size-5" />
+              ) : (
+                <>
+                  <Check className="size-5" />
+                  Guardar cambios
+                </>
+              )}
             </Button>
           </div>
         </form>
