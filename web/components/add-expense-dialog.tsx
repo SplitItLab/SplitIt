@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LoadingIndicator } from "@/components/loading-indicator";
 
 const QUOTE_ERROR = "No pudimos obtener el tipo de cambio.";
 const selectClassName =
@@ -309,7 +310,7 @@ export function AddExpenseDialog({
               className="rounded-[18px]"
               disabled={submitting || waitingForQuote}
             >
-              Guardar gasto
+              {submitting ? <LoadingIndicator message="Guardando gasto…" /> : "Guardar gasto"}
             </Button>
           </div>
         </form>
