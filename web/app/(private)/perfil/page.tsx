@@ -21,7 +21,7 @@ import { Field, FieldLabel, FieldError, FieldGroup } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Spinner } from "@/components/ui/spinner";
+import { LoadingIndicator } from "@/components/loading-indicator";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -123,7 +123,7 @@ export default function ProfilePage() {
   if (!profile) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Spinner />
+        <LoadingIndicator message="Cargando tu información…" />
       </div>
     );
   }
@@ -201,7 +201,11 @@ export default function ProfilePage() {
                       disabled={isSubmitting}
                       className="h-11 gap-2.5 rounded-md px-5"
                     >
-                      {isSubmitting ? <Spinner /> : "Guardar cambios"}
+                      {isSubmitting ? (
+                        <LoadingIndicator message="Guardando cambios…" />
+                      ) : (
+                        "Guardar cambios"
+                      )}
                     </Button>
                   </div>
                 </FieldGroup>
@@ -236,7 +240,7 @@ export default function ProfilePage() {
                 className="border-border h-11 gap-2.5 rounded-md border bg-[#F1F5F9] px-4 text-black hover:bg-[#F1F5F9]"
               >
                 {loggingOut ? (
-                  <Spinner />
+                  <LoadingIndicator message="Cerrando sesión…" />
                 ) : (
                   <>
                     Cerrar sesión

@@ -30,7 +30,7 @@ describe("Home", () => {
       "href",
       "/register"
     );
-    expect(screen.queryByRole("status", { name: "Loading" })).toBeNull();
+    expect(screen.queryByRole("status", { name: "Cargando" })).toBeNull();
     expect(replace).not.toHaveBeenCalled();
   });
 
@@ -56,7 +56,7 @@ describe("Home", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "Compartí el link y listo."
     );
-    expect(screen.queryByRole("status", { name: "Loading" })).toBeNull();
+    expect(screen.queryByRole("status", { name: "Cargando" })).toBeNull();
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/eventos"));
   });
 });

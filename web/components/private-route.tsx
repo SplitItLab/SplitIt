@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "@/lib/use-session";
-import { Spinner } from "@/components/ui/spinner";
+import { LoadingIndicator } from "@/components/loading-indicator";
 
 export function PrivateRoute({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -18,7 +18,7 @@ export function PrivateRoute({ children }: { children: React.ReactNode }) {
   if (session.status === "loading") {
     return (
       <div className="flex h-screen items-center justify-center">
-        <Spinner />
+        <LoadingIndicator message="Verificando tu sesión…" />
       </div>
     );
   }

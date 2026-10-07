@@ -8,7 +8,7 @@ import { Field, FieldLabel, FieldError, FieldGroup } from "@/components/ui/field
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Spinner } from "@/components/ui/spinner";
+import { LoadingIndicator } from "@/components/loading-indicator";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { registerUser, RegisterError, RegisterInput, registerSchema } from "@/lib/auth";
 import { showAppToast } from "@/lib/toast";
@@ -107,7 +107,7 @@ export default function RegisterPage() {
               </Field>
 
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? <Spinner /> : "Crear cuenta"}
+                {isSubmitting ? <LoadingIndicator message="Creando tu cuenta…" /> : "Crear cuenta"}
               </Button>
             </FieldGroup>
           </form>
