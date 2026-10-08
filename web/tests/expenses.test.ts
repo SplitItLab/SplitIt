@@ -9,6 +9,7 @@ import {
   listExpenses,
   parseExpenseAmount,
   quoteExpense,
+  updateExpense,
   type Expense,
 } from "../lib/expenses";
 
@@ -127,6 +128,37 @@ describe("listExpenses, quoteExpense y createExpense", () => {
       currency: "ARS",
       paidByMemberId: 12,
     });
+  });
+
+  it("envía PUT /api/events/:id/expenses/:expenseId con los datos editados", async () => {
+    const updated = { ...expense, name: "Taxi", originalAmount: 10, originalCurrency: "USD" };
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(updated));
+
+    const result = await updateExpense(7, 1, {
+      name: "Taxi",
+      amount: 10,
+      currency: "USD",
+      paidByMemberId: 13,
+    });
+
+    expect(result).toEqual(updated);
+    const [url, init] = vi.mocked(fetch).mock.calls[0];
+    expect(String(url)).toContain("/api/events/7/expenses/1");
+    expect(init?.method).toBe("PUT");
+    expect(JSON.parse(String(init?.body))).toEqual({
+      name: "Taxi",
+      amount: 10,
+      currency: "USD",
+      paidByMemberId: 13,
+    });
+  });
+
+  it("traduce un 404 de la edición a not-found", async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ message: "Expense not found" }, 404));
+
+    await expect(
+      updateExpense(7, 999, { name: "Cena", amount: 5000, currency: "ARS", paidByMemberId: 12 })
+    ).rejects.toMatchObject({ type: "not-found" });
   });
 
   it("traduce un 401 a unauthorized", async () => {

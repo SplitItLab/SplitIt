@@ -10,6 +10,7 @@ vi.mock("@/lib/expenses", async (importOriginal) => {
     listExpenses: vi.fn(),
     quoteExpense: vi.fn(),
     createExpense: vi.fn(),
+    updateExpense: vi.fn(),
   };
 });
 
@@ -23,6 +24,7 @@ import {
   formatMoney,
   listExpenses,
   quoteExpense,
+  updateExpense,
   type Expense,
 } from "@/lib/expenses";
 import { showAppToast } from "@/lib/toast";
@@ -95,6 +97,7 @@ describe("AddExpenseDialog", () => {
   beforeEach(() => {
     vi.mocked(quoteExpense).mockReset();
     vi.mocked(createExpense).mockReset();
+    vi.mocked(updateExpense).mockReset();
     vi.mocked(listExpenses).mockReset();
     vi.mocked(showAppToast).mockReset();
   });
@@ -345,6 +348,112 @@ describe("AddExpenseDialog", () => {
     await user.keyboard("{Escape}");
 
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+});
+
+describe("AddExpenseDialog en modo edición", () => {
+  beforeEach(() => {
+    vi.mocked(quoteExpense).mockReset();
+    vi.mocked(createExpense).mockReset();
+    vi.mocked(updateExpense).mockReset();
+    vi.mocked(listExpenses).mockReset();
+    vi.mocked(showAppToast).mockReset();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("precarga el gasto y envía la edición con los datos correctos", async () => {
+    vi.mocked(updateExpense).mockResolvedValue({ ...cena, name: "Cena larga", originalAmount: 25 });
+    const user = userEvent.setup();
+    const onUpdate = vi.fn();
+    const { onCreated } = renderDialog({ expense: cena, onUpdate });
+
+    expect(await screen.findByRole("dialog", { name: "Editar gasto" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Nombre")).toHaveValue("Cena");
+    expect(screen.getByLabelText("Monto")).toHaveValue("10");
+    expect(screen.getByLabelText("Moneda")).toHaveValue("ARS");
+    expect(screen.getByLabelText("Pago")).toHaveValue("12");
+
+    await user.clear(screen.getByLabelText("Nombre"));
+    await user.type(screen.getByLabelText("Nombre"), "Cena larga");
+    await user.clear(screen.getByLabelText("Monto"));
+    await user.type(screen.getByLabelText("Monto"), "25");
+    await user.selectOptions(screen.getByLabelText("Pago"), "13");
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    expect(updateExpense).toHaveBeenCalledWith(7, 1, {
+      name: "Cena larga",
+      amount: 25,
+      currency: "ARS",
+      paidByMemberId: 13,
+    });
+    await waitFor(() => expect(onUpdate).toHaveBeenCalledOnce());
+    expect(createExpense).not.toHaveBeenCalled();
+    expect(onCreated).not.toHaveBeenCalled();
+  });
+
+  it("no guarda la edición con nombre vacío o monto inválido", async () => {
+    const user = userEvent.setup();
+    renderDialog({ expense: cena, onUpdate: vi.fn() });
+
+    await user.clear(screen.getByLabelText("Nombre"));
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Ingresá un nombre para el gasto");
+
+    await user.type(screen.getByLabelText("Nombre"), "Cena");
+    await user.clear(screen.getByLabelText("Monto"));
+    await user.type(screen.getByLabelText("Monto"), "0");
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Ingresá un monto válido");
+
+    expect(updateExpense).not.toHaveBeenCalled();
+  });
+
+  it("deja el diálogo abierto y muestra el error cuando la edición responde 400", async () => {
+    vi.mocked(updateExpense).mockRejectedValue(
+      new EventError("validation", "Invalid request data")
+    );
+    const user = userEvent.setup();
+    renderDialog({ expense: cena, onUpdate: vi.fn() });
+
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Invalid request data");
+    expect(screen.getByRole("dialog", { name: "Editar gasto" })).toBeInTheDocument();
+  });
+
+  it("edita desde el lápiz de la tarjeta, reemplaza el gasto, actualiza el total y confirma", async () => {
+    vi.mocked(listExpenses).mockResolvedValue([created, cena]);
+    vi.mocked(updateExpense).mockResolvedValue({
+      ...cena,
+      name: "Cena larga",
+      originalAmount: 25,
+      baseAmount: 25,
+    });
+    const user = userEvent.setup();
+    render(<EventExpenses event={event} onUnauthorized={vi.fn()} onNotFound={vi.fn()} />);
+
+    await user.click(await screen.findByRole("button", { name: "Editar gasto Cena" }));
+    const dialog = await screen.findByRole("dialog", { name: "Editar gasto" });
+    expect(within(dialog).getByLabelText("Nombre")).toHaveValue("Cena");
+
+    await user.clear(within(dialog).getByLabelText("Nombre"));
+    await user.type(within(dialog).getByLabelText("Nombre"), "Cena larga");
+    await user.clear(within(dialog).getByLabelText("Monto"));
+    await user.type(within(dialog).getByLabelText("Monto"), "25");
+    await user.click(within(dialog).getByRole("button", { name: "Guardar cambios" }));
+
+    await waitFor(() =>
+      expect(showAppToast).toHaveBeenCalledWith("success", "Guardamos «Cena larga»")
+    );
+    const names = screen.getAllByRole("heading", { level: 3 });
+    expect(names.map((heading) => heading.textContent)).toEqual(["Supermercado", "Cena larga"]);
+    const total = screen.getByText("Total de gastos").closest("article");
+    expect(visibleText(total)).toContain(visibleTextOf(formatMoney(30, "ARS")));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(listExpenses).toHaveBeenCalledTimes(1);
   });
 });
 

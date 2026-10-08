@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 import { EventError, type EventDetail } from "@/lib/events";
 import {
@@ -11,6 +12,7 @@ import {
   quoteExpense,
   type Expense,
   type ExpenseQuote,
+  updateExpense,
 } from "@/lib/expenses";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -19,7 +21,9 @@ import { Label } from "@/components/ui/label";
 
 const QUOTE_ERROR = "No pudimos obtener el tipo de cambio.";
 const selectClassName =
-  "border-input focus-visible:border-ring focus-visible:ring-ring/50 text-text-primary rounded-[18px] border bg-transparent px-3 text-base outline-none focus-visible:ring-3";
+  "border-input focus-visible:border-ring focus-visible:ring-ring/50 text-text-primary w-full appearance-none rounded-[18px] border bg-transparent py-2 pr-9 pl-3 text-sm shadow-xs outline-none focus-visible:ring-3";
+const selectChevronClassName =
+  "text-muted-foreground pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2";
 
 export function AddExpenseDialog({
   open,
@@ -28,6 +32,8 @@ export function AddExpenseDialog({
   onCreated,
   onUnauthorized,
   onNotFound,
+  expense,
+  onUpdate,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -35,11 +41,15 @@ export function AddExpenseDialog({
   onCreated: (expense: Expense) => void;
   onUnauthorized: () => void;
   onNotFound: () => void;
+  expense?: Expense;
+  onUpdate?: (expense: Expense) => void;
 }) {
-  const [name, setName] = useState("");
-  const [amount, setAmount] = useState("");
-  const [currency, setCurrency] = useState(event.baseCurrency);
-  const [payerId, setPayerId] = useState(memberId(event));
+  const [name, setName] = useState(expense?.name ?? "");
+  const [amount, setAmount] = useState(expense ? String(expense.originalAmount) : "");
+  const [currency, setCurrency] = useState(expense?.originalCurrency ?? event.baseCurrency);
+  const [payerId, setPayerId] = useState(
+    expense ? String(expense.paidByMember.id) : memberId(event)
+  );
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [quote, setQuote] = useState<ExpenseQuote | null>(null);
@@ -143,13 +153,19 @@ export function AddExpenseDialog({
     setFormError(null);
     setSubmitting(true);
     try {
-      const created = await createExpense(event.id, {
+      const input = {
         name: trimmedName,
         amount: parsedAmount,
         currency,
         paidByMemberId: Number(payerId),
-      });
-      onCreated(created);
+      };
+      if (expense) {
+        const updated = await updateExpense(event.id, expense.id, input);
+        onUpdate?.(updated);
+      } else {
+        const created = await createExpense(event.id, input);
+        onCreated(created);
+      }
       handleOpenChange(false);
     } catch (err: unknown) {
       if (err instanceof EventError && err.type === "unauthorized") {
@@ -170,8 +186,10 @@ export function AddExpenseDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
-        <DialogTitle>Agregar gasto</DialogTitle>
-        <DialogDescription>Cargá quién pagó y el monto.</DialogDescription>
+        <DialogTitle>{expense ? "Editar gasto" : "Agregar gasto"}</DialogTitle>
+        <DialogDescription>
+          {expense ? "Modificá el nombre, monto o quién pagó." : "Cargá quién pagó y el monto."}
+        </DialogDescription>
         <form
           className="space-y-4"
           onSubmit={(event_) => {
@@ -216,22 +234,25 @@ export function AddExpenseDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="expense-currency">Moneda</Label>
-              <select
-                id="expense-currency"
-                value={currency}
-                className={`${selectClassName} h-10 w-[110px]`}
-                onChange={(event_) => {
-                  setCurrency(event_.target.value);
-                  setFormError(null);
-                  clearQuote();
-                }}
-              >
-                {EXPENSE_CURRENCIES.map((code) => (
-                  <option key={code} value={code}>
-                    {code}
-                  </option>
-                ))}
-              </select>
+              <div className="relative w-[110px]">
+                <select
+                  id="expense-currency"
+                  value={currency}
+                  className={`${selectClassName} h-10`}
+                  onChange={(event_) => {
+                    setCurrency(event_.target.value);
+                    setFormError(null);
+                    clearQuote();
+                  }}
+                >
+                  {EXPENSE_CURRENCIES.map((code) => (
+                    <option key={code} value={code}>
+                      {code}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown aria-hidden="true" className={selectChevronClassName} />
+              </div>
             </div>
           </div>
 
@@ -272,21 +293,24 @@ export function AddExpenseDialog({
 
           <div className="space-y-2">
             <Label htmlFor="expense-payer">Pago</Label>
-            <select
-              id="expense-payer"
-              value={payerId}
-              className={`${selectClassName} h-11 w-full`}
-              onChange={(event_) => {
-                setPayerId(event_.target.value);
-                setFormError(null);
-              }}
-            >
-              {event.members.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.name}
-                </option>
-              ))}
-            </select>
+            <div className="relative w-fit">
+              <select
+                id="expense-payer"
+                value={payerId}
+                className={`${selectClassName} h-11`}
+                onChange={(event_) => {
+                  setPayerId(event_.target.value);
+                  setFormError(null);
+                }}
+              >
+                {event.members.map((member) => (
+                  <option key={member.id} value={member.id}>
+                    {member.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown aria-hidden="true" className={selectChevronClassName} />
+            </div>
           </div>
 
           {formError && (
@@ -309,7 +333,7 @@ export function AddExpenseDialog({
               className="rounded-[18px]"
               disabled={submitting || waitingForQuote}
             >
-              Guardar gasto
+              {expense ? "Guardar cambios" : "Guardar gasto"}
             </Button>
           </div>
         </form>

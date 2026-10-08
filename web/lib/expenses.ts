@@ -115,3 +115,18 @@ export async function createExpense(
     toEventError(err, SAVE_UNAVAILABLE);
   }
 }
+
+export async function updateExpense(
+  eventId: number | string,
+  expenseId: number | string,
+  input: CreateExpenseInput
+): Promise<Expense> {
+  try {
+    return await request<Expense>(`/api/events/${eventId}/expenses/${expenseId}`, {
+      method: "PUT",
+      body: JSON.stringify(input),
+    });
+  } catch (err) {
+    toEventError(err, SAVE_UNAVAILABLE);
+  }
+}
