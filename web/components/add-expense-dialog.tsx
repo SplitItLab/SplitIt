@@ -334,14 +334,13 @@ export function AddExpenseDialog({
               className="rounded-[18px]"
               disabled={submitting || waitingForQuote}
             >
-
-              {submitting ?(<LoadingIndicator message= {expense? "Guardando cambios..." : "Guardando gasto…" } />
-              ) : expense? (
-                  "Guardar cambios" 
-              ) : ( 
-                 "Guardar gasto"
-              )}    
-
+              {submitting ? (
+                <LoadingIndicator message={expense ? "Guardando cambios…" : "Guardando gasto…"} />
+              ) : expense ? (
+                "Guardar cambios"
+              ) : (
+                "Guardar gasto"
+              )}
             </Button>
           </div>
         </form>
