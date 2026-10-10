@@ -298,6 +298,19 @@ describe("AddExpenseDialog", () => {
     expect(listExpenses).toHaveBeenCalledTimes(1);
   });
 
+  it("muestra el estado de carga mientras guarda el gasto", async () => {
+    vi.mocked(createExpense).mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    renderDialog();
+
+    await user.type(screen.getByLabelText("Nombre"), "Supermercado");
+    await user.type(screen.getByLabelText("Monto"), "5");
+    await user.click(screen.getByRole("button", { name: "Guardar gasto" }));
+
+    expect(screen.getByRole("status", { name: "Cargando" })).toBeInTheDocument();
+    expect(await screen.findByText("Guardando gasto…", {}, { timeout: 2000 })).toBeInTheDocument();
+  });
+
   it("avisa que la sesión venció al guardar", async () => {
     vi.mocked(createExpense).mockRejectedValue(new EventError("unauthorized", "Tu sesión expiró."));
     const user = userEvent.setup();

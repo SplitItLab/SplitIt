@@ -12,7 +12,7 @@ import { CreateEventDialog } from "@/components/create-event-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Spinner } from "@/components/ui/spinner";
+import { LoadingIndicator } from "@/components/loading-indicator";
 
 type LoadState =
   | { status: "loading" }
@@ -128,8 +128,11 @@ export default function EventsPage() {
 
       {state.status === "loading" && (
         <section className="flex items-center justify-center gap-2 py-16">
-          <Spinner className="size-5" />
-          <p className="text-text-secondary text-sm font-medium">Cargando tus eventos…</p>
+          <LoadingIndicator
+            message="Cargando tus eventos…"
+            spinnerClassName="size-5"
+            className="text-text-secondary text-sm font-medium"
+          />
         </section>
       )}
 

@@ -15,7 +15,7 @@ import { showAppToast } from "@/lib/toast";
 import { AddExpenseDialog } from "@/components/add-expense-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
+import { LoadingIndicator } from "@/components/loading-indicator";
 
 type LoadState =
   | { status: "loading" }
@@ -76,8 +76,11 @@ export function EventExpenses({
 
       {state.status === "loading" && (
         <section className="flex items-center justify-center gap-2 py-16">
-          <Spinner className="size-5" />
-          <p className="text-text-secondary text-sm font-medium">Cargando los gastos…</p>
+          <LoadingIndicator
+            message="Cargando los gastos…"
+            spinnerClassName="size-5"
+            className="text-text-secondary text-sm font-medium"
+          />
         </section>
       )}
 

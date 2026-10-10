@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
+import { LoadingIndicator } from "@/components/loading-indicator";
 
 type InviteEventDialogProps = {
   open: boolean;
@@ -127,8 +127,11 @@ export function InviteEventDialog({
 
         {state.status === "loading" && (
           <section className="flex items-center justify-center gap-2 py-6">
-            <Spinner className="size-5" />
-            <p className="text-text-secondary text-sm font-medium">Generando enlace…</p>
+            <LoadingIndicator
+              message="Generando enlace…"
+              spinnerClassName="size-5"
+              className="text-text-secondary text-sm font-medium"
+            />
           </section>
         )}
 

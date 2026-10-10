@@ -7,7 +7,7 @@ import { deleteEvent, EventError, type EventDetail } from "@/lib/events";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Spinner } from "@/components/ui/spinner";
+import { LoadingIndicator } from "@/components/loading-indicator";
 
 type DeleteEventDialogProps = {
   open: boolean;
@@ -95,7 +95,7 @@ export function DeleteEventDialog({
             onClick={handleConfirm}
             className="bg-destructive hover:bg-destructive/90 h-10 gap-2 rounded-[8px] px-4 text-xl font-medium text-white"
           >
-            {isDeleting ? <Spinner className="size-4" /> : "Eliminar evento"}
+            {isDeleting ? <LoadingIndicator message="Eliminando evento…" /> : "Eliminar evento"}
           </Button>
         </div>
       </DialogContent>

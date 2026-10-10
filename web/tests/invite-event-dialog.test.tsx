@@ -72,7 +72,10 @@ describe("InviteEventDialog", () => {
     renderDialog();
     const dialog = await screen.findByRole("dialog");
 
-    expect(within(dialog).getByText("Generando enlace…")).toBeInTheDocument();
+    expect(within(dialog).getByRole("status", { name: "Cargando" })).toBeInTheDocument();
+    expect(
+      await within(dialog).findByText("Generando enlace…", {}, { timeout: 2000 })
+    ).toBeInTheDocument();
   });
 
   it("copia la URL completa y muestra una confirmación", async () => {
