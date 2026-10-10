@@ -8,8 +8,6 @@ import edu.austral.splitit.server.application.port.EventExpenseCoverage
 import edu.austral.splitit.server.application.port.ExpenseRegistrationCount
 import edu.austral.splitit.server.application.port.LastRunPort
 import edu.austral.splitit.server.application.port.LatencyMetricsPort
-import edu.austral.splitit.server.infrastructure.kpi.EmptyLatencyMetrics
-import edu.austral.splitit.server.infrastructure.kpi.InMemoryErrorRate
 import edu.austral.splitit.server.infrastructure.kpi.InMemoryLastRun
 import org.mockito.kotlin.mock
 import org.springframework.context.annotation.Bean
@@ -29,10 +27,10 @@ class KpiScanConfig {
     fun eventExpenseCoverage(): EventExpenseCoverage = mock()
 
     @Bean
-    fun latencyMetricsPort(): LatencyMetricsPort = EmptyLatencyMetrics()
+    fun latencyMetricsPort(): LatencyMetricsPort = LatencyMetricsPort { _, _ -> null }
 
     @Bean
-    fun errorRatePort(): ErrorRatePort = InMemoryErrorRate()
+    fun errorRatePort(): ErrorRatePort = ErrorRatePort { null }
 
     @Bean
     fun backendHealthPort(): BackendHealthPort = BackendHealthPort { "OK" }
