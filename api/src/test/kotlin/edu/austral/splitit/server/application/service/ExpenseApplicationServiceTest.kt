@@ -3,6 +3,7 @@ package edu.austral.splitit.server.application.service
 import edu.austral.splitit.server.Helpers
 import edu.austral.splitit.server.application.exception.EventNotFoundException
 import edu.austral.splitit.server.application.exception.ExchangeRateUnavailableException
+import edu.austral.splitit.server.application.exception.ExpenseNotFoundException
 import edu.austral.splitit.server.application.port.ExchangeRateProvider
 import edu.austral.splitit.server.domain.model.event.Currency
 import edu.austral.splitit.server.domain.model.event.Event
@@ -11,8 +12,6 @@ import edu.austral.splitit.server.domain.model.event.Expense
 import edu.austral.splitit.server.domain.service.EventMemberService
 import edu.austral.splitit.server.domain.service.EventService
 import edu.austral.splitit.server.domain.service.ExpenseService
-import edu.austral.splitit.server.domain.service.InviteLinkService
-import edu.austral.splitit.server.domain.service.UserService
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
@@ -25,20 +24,16 @@ import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class EventApplicationServiceExpenseTest {
-    private val userService: UserService = mock()
+class ExpenseApplicationServiceTest {
     private val eventService: EventService = mock()
     private val eventMemberService: EventMemberService = mock()
-    private val inviteLinkService: InviteLinkService = mock()
     private val expenseService: ExpenseService = mock()
     private val exchangeRateProvider: ExchangeRateProvider = mock()
 
-    private val eventApplicationService =
-        EventApplicationService(
-            userService = userService,
+    private val expenseApplicationService =
+        ExpenseApplicationService(
             eventService = eventService,
             eventMemberService = eventMemberService,
-            inviteLinkService = inviteLinkService,
             expenseService = expenseService,
             exchangeQuoteService = ExchangeQuoteService(exchangeRateProvider),
         )
@@ -77,7 +72,7 @@ class EventApplicationServiceExpenseTest {
         ).thenReturn(savedExpense)
 
         val summary =
-            eventApplicationService.addExpense(
+            expenseApplicationService.addExpense(
                 CreateExpenseCommand(
                     userId = 1L,
                     eventId = 10L,
@@ -106,7 +101,7 @@ class EventApplicationServiceExpenseTest {
         whenever(eventService.findById(999L)).thenReturn(null)
 
         assertFailsWith<EventNotFoundException> {
-            eventApplicationService.addExpense(
+            expenseApplicationService.addExpense(
                 CreateExpenseCommand(
                     userId = 1L,
                     eventId = 999L,
@@ -136,7 +131,7 @@ class EventApplicationServiceExpenseTest {
         whenever(eventMemberService.isUserMemberOfEvent(30L, 1L)).thenReturn(false)
 
         assertFailsWith<AccessDeniedException> {
-            eventApplicationService.addExpense(
+            expenseApplicationService.addExpense(
                 CreateExpenseCommand(
                     userId = 1L,
                     eventId = 30L,
@@ -167,7 +162,7 @@ class EventApplicationServiceExpenseTest {
         whenever(eventMemberService.findById(200L)).thenReturn(payerFromOtherEvent)
 
         assertFailsWith<IllegalArgumentException> {
-            eventApplicationService.addExpense(
+            expenseApplicationService.addExpense(
                 CreateExpenseCommand(
                     userId = 1L,
                     eventId = 10L,
@@ -193,7 +188,7 @@ class EventApplicationServiceExpenseTest {
         whenever(eventMemberService.findById(999L)).thenReturn(null)
 
         assertFailsWith<IllegalArgumentException> {
-            eventApplicationService.addExpense(
+            expenseApplicationService.addExpense(
                 CreateExpenseCommand(
                     userId = 1L,
                     eventId = 10L,
@@ -242,7 +237,7 @@ class EventApplicationServiceExpenseTest {
         ).thenReturn(savedExpense)
 
         val summary =
-            eventApplicationService.addExpense(
+            expenseApplicationService.addExpense(
                 CreateExpenseCommand(
                     userId = 1L,
                     eventId = 10L,
@@ -272,7 +267,7 @@ class EventApplicationServiceExpenseTest {
         whenever(exchangeRateProvider.rate(any(), any())).thenThrow(ExchangeRateUnavailableException())
 
         assertFailsWith<ExchangeRateUnavailableException> {
-            eventApplicationService.addExpense(
+            expenseApplicationService.addExpense(
                 CreateExpenseCommand(
                     userId = 1L,
                     eventId = 10L,
@@ -299,7 +294,7 @@ class EventApplicationServiceExpenseTest {
         whenever(eventMemberService.findById(100L)).thenReturn(payer)
 
         assertFailsWith<IllegalArgumentException> {
-            eventApplicationService.addExpense(
+            expenseApplicationService.addExpense(
                 CreateExpenseCommand(
                     userId = 1L,
                     eventId = 10L,
@@ -342,7 +337,7 @@ class EventApplicationServiceExpenseTest {
         whenever(eventMemberService.isUserMemberOfEvent(20L, 1L)).thenReturn(true)
         whenever(expenseService.findByEventId(20L)).thenReturn(listOf(expense))
 
-        val result = eventApplicationService.listExpenses(userId = 1L, eventId = 20L)
+        val result = expenseApplicationService.listExpenses(userId = 1L, eventId = 20L)
 
         assertEquals(1, result.size)
         assertEquals(34L, result[0].id)
@@ -357,7 +352,7 @@ class EventApplicationServiceExpenseTest {
         whenever(eventService.findById(999L)).thenReturn(null)
 
         assertFailsWith<EventNotFoundException> {
-            eventApplicationService.listExpenses(userId = 1L, eventId = 999L)
+            expenseApplicationService.listExpenses(userId = 1L, eventId = 999L)
         }
 
         verify(expenseService, never()).findByEventId(any())
@@ -378,7 +373,7 @@ class EventApplicationServiceExpenseTest {
         whenever(eventMemberService.isUserMemberOfEvent(30L, 1L)).thenReturn(false)
 
         assertFailsWith<AccessDeniedException> {
-            eventApplicationService.listExpenses(userId = 1L, eventId = 30L)
+            expenseApplicationService.listExpenses(userId = 1L, eventId = 30L)
         }
 
         verify(expenseService, never()).findByEventId(any())
@@ -395,7 +390,7 @@ class EventApplicationServiceExpenseTest {
         whenever(exchangeRateProvider.rate(Currency("USD"), Currency("ARS"))).thenReturn(BigDecimal("1523.9662"))
 
         val quote =
-            eventApplicationService.quoteExpense(
+            expenseApplicationService.quoteExpense(
                 QuoteExpenseQuery(userId = 1L, eventId = 10L, amount = BigDecimal("10"), currency = "usd"),
             )
 
@@ -411,7 +406,7 @@ class EventApplicationServiceExpenseTest {
         whenever(eventService.findById(999L)).thenReturn(null)
 
         assertFailsWith<EventNotFoundException> {
-            eventApplicationService.quoteExpense(
+            expenseApplicationService.quoteExpense(
                 QuoteExpenseQuery(userId = 1L, eventId = 999L, amount = BigDecimal("10"), currency = "USD"),
             )
         }
@@ -434,11 +429,217 @@ class EventApplicationServiceExpenseTest {
         whenever(eventMemberService.isUserMemberOfEvent(30L, 1L)).thenReturn(false)
 
         assertFailsWith<AccessDeniedException> {
-            eventApplicationService.quoteExpense(
+            expenseApplicationService.quoteExpense(
                 QuoteExpenseQuery(userId = 1L, eventId = 30L, amount = BigDecimal("10"), currency = "USD"),
             )
         }
 
         verify(exchangeRateProvider, never()).rate(any(), any())
+    }
+
+    private fun updateCommand(
+        eventId: Long = 10L,
+        expenseId: Long = 34L,
+        name: String = "Taxi",
+        amount: BigDecimal = BigDecimal("10"),
+        currency: String = "USD",
+        paidByMemberId: Long = 101L,
+    ) = UpdateExpenseCommand(
+        userId = 1L,
+        eventId = eventId,
+        expenseId = expenseId,
+        name = name,
+        amount = amount,
+        currency = currency,
+        paidByMemberId = paidByMemberId,
+    )
+
+    private fun existingExpense(
+        event: Event,
+        payer: EventMember,
+    ) = Expense
+        .create(
+            event = event,
+            paidByMember = payer,
+            name = "Cena",
+            originalAmount = BigDecimal("5000"),
+            originalCurrency = "ARS",
+            expenseDate = LocalDate.now(),
+        ).apply { id = 34L }
+
+    @Test
+    fun `updateExpense changes name, amount, currency and payer quoting against the base currency`() {
+        val event =
+            Event
+                .create(owner = user, name = "Viaje a Bariloche", baseCurrency = "ARS")
+                .apply { id = 10L }
+        val payer = EventMember.create(event, "Mateo", user).apply { id = 100L }
+        val newPayer = EventMember.create(event, "Ana", null).apply { id = 101L }
+        val expense = existingExpense(event, payer)
+
+        whenever(eventService.findById(10L)).thenReturn(event)
+        whenever(expenseService.findById(34L)).thenReturn(expense)
+        whenever(eventMemberService.findById(101L)).thenReturn(newPayer)
+        whenever(exchangeRateProvider.rate(Currency("USD"), Currency("ARS"))).thenReturn(BigDecimal("1523.9662"))
+        whenever(
+            expenseService.updateExpense(
+                expense = expense,
+                paidByMember = newPayer,
+                name = "Taxi",
+                amount = BigDecimal("10"),
+                currency = "USD",
+                exchangeRate = BigDecimal("1523.966200"),
+            ),
+        ).thenAnswer {
+            expense.update(newPayer, "Taxi", BigDecimal("10"), "USD", BigDecimal("1523.966200"))
+        }
+
+        val summary = expenseApplicationService.updateExpense(updateCommand())
+
+        assertEquals(34L, summary.id)
+        assertEquals(10L, summary.eventId)
+        assertEquals("Taxi", summary.name)
+        assertEquals(BigDecimal("10"), summary.originalAmount)
+        assertEquals("USD", summary.originalCurrency)
+        assertEquals(BigDecimal("1523.966200"), summary.exchangeRate)
+        assertEquals(BigDecimal("15239.6620"), summary.baseAmount)
+        assertEquals("ARS", summary.baseCurrency)
+        assertEquals(101L, summary.paidByMember.id)
+        assertEquals("Ana", summary.paidByMember.name)
+    }
+
+    @Test
+    fun `updateExpense in the base currency does not call the exchange rate provider`() {
+        val event =
+            Event
+                .create(owner = user, name = "Viaje a Bariloche", baseCurrency = "ARS")
+                .apply { id = 10L }
+        val payer = EventMember.create(event, "Mateo", user).apply { id = 100L }
+        val expense = existingExpense(event, payer)
+
+        whenever(eventService.findById(10L)).thenReturn(event)
+        whenever(expenseService.findById(34L)).thenReturn(expense)
+        whenever(eventMemberService.findById(100L)).thenReturn(payer)
+        whenever(
+            expenseService.updateExpense(
+                expense = expense,
+                paidByMember = payer,
+                name = "Cena larga",
+                amount = BigDecimal("7000"),
+                currency = "ARS",
+                exchangeRate = BigDecimal("1.000000"),
+            ),
+        ).thenAnswer {
+            expense.update(payer, "Cena larga", BigDecimal("7000"), "ARS", BigDecimal.ONE)
+        }
+
+        val summary =
+            expenseApplicationService.updateExpense(
+                updateCommand(
+                    name = "Cena larga",
+                    amount = BigDecimal("7000"),
+                    currency = "ARS",
+                    paidByMemberId = 100L,
+                ),
+            )
+
+        assertEquals("Cena larga", summary.name)
+        assertEquals(0, BigDecimal("7000").compareTo(summary.baseAmount))
+        verify(exchangeRateProvider, never()).rate(any(), any())
+    }
+
+    @Test
+    fun `updateExpense throws EventNotFoundException when event does not exist`() {
+        whenever(eventService.findById(999L)).thenReturn(null)
+
+        assertFailsWith<EventNotFoundException> {
+            expenseApplicationService.updateExpense(updateCommand(eventId = 999L))
+        }
+
+        verify(expenseService, never()).updateExpense(any(), any(), any(), any(), any(), any())
+    }
+
+    @Test
+    fun `updateExpense throws AccessDeniedException when user is not owner nor member`() {
+        val otherOwner =
+            Helpers
+                .user(name = "Otro", email = "otro@example.com", passwordHash = "hash")
+                .apply { id = 2L }
+        val event =
+            Event
+                .create(owner = otherOwner, name = "Privado", baseCurrency = "ARS")
+                .apply { id = 30L }
+
+        whenever(eventService.findById(30L)).thenReturn(event)
+        whenever(eventMemberService.isUserMemberOfEvent(30L, 1L)).thenReturn(false)
+
+        assertFailsWith<AccessDeniedException> {
+            expenseApplicationService.updateExpense(updateCommand(eventId = 30L))
+        }
+
+        verify(expenseService, never()).updateExpense(any(), any(), any(), any(), any(), any())
+    }
+
+    @Test
+    fun `updateExpense throws ExpenseNotFoundException when expense does not exist`() {
+        val event =
+            Event
+                .create(owner = user, name = "Viaje a Bariloche", baseCurrency = "ARS")
+                .apply { id = 10L }
+
+        whenever(eventService.findById(10L)).thenReturn(event)
+        whenever(expenseService.findById(999L)).thenReturn(null)
+
+        assertFailsWith<ExpenseNotFoundException> {
+            expenseApplicationService.updateExpense(updateCommand(expenseId = 999L))
+        }
+
+        verify(expenseService, never()).updateExpense(any(), any(), any(), any(), any(), any())
+    }
+
+    @Test
+    fun `updateExpense throws ExpenseNotFoundException when expense belongs to another event`() {
+        val event =
+            Event
+                .create(owner = user, name = "Viaje a Bariloche", baseCurrency = "ARS")
+                .apply { id = 10L }
+        val otherEvent =
+            Event
+                .create(owner = user, name = "Otro evento", baseCurrency = "ARS")
+                .apply { id = 11L }
+        val otherPayer = EventMember.create(otherEvent, "Mateo", user).apply { id = 200L }
+
+        whenever(eventService.findById(10L)).thenReturn(event)
+        whenever(expenseService.findById(34L)).thenReturn(existingExpense(otherEvent, otherPayer))
+
+        assertFailsWith<ExpenseNotFoundException> {
+            expenseApplicationService.updateExpense(updateCommand())
+        }
+
+        verify(expenseService, never()).updateExpense(any(), any(), any(), any(), any(), any())
+    }
+
+    @Test
+    fun `updateExpense rejects a payer that does not belong to the event`() {
+        val event =
+            Event
+                .create(owner = user, name = "Viaje a Bariloche", baseCurrency = "ARS")
+                .apply { id = 10L }
+        val payer = EventMember.create(event, "Mateo", user).apply { id = 100L }
+        val otherEvent =
+            Event
+                .create(owner = user, name = "Otro evento", baseCurrency = "ARS")
+                .apply { id = 11L }
+        val payerFromOtherEvent = EventMember.create(otherEvent, "Ana", null).apply { id = 200L }
+
+        whenever(eventService.findById(10L)).thenReturn(event)
+        whenever(expenseService.findById(34L)).thenReturn(existingExpense(event, payer))
+        whenever(eventMemberService.findById(200L)).thenReturn(payerFromOtherEvent)
+
+        assertFailsWith<IllegalArgumentException> {
+            expenseApplicationService.updateExpense(updateCommand(paidByMemberId = 200L))
+        }
+
+        verify(expenseService, never()).updateExpense(any(), any(), any(), any(), any(), any())
     }
 }
