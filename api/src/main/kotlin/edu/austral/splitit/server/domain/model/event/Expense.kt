@@ -52,6 +52,38 @@ class Expense private constructor(
     @Column(name = "updated_at", nullable = false)
     var updatedAt: Instant = Instant.now(),
 ) {
+    fun update(
+        paidByMember: EventMember,
+        name: String,
+        originalAmount: BigDecimal,
+        originalCurrency: String,
+        exchangeRate: BigDecimal,
+    ): Expense {
+        val validated =
+            validate(
+                event = event,
+                paidByMember = paidByMember,
+                name = name,
+                originalAmount = originalAmount,
+                originalCurrency = originalCurrency,
+                exchangeRate = exchangeRate,
+            )
+
+        this.paidByMember = paidByMember
+        this.name = validated.name
+        this.originalAmount = validated.quote.originalAmount
+        this.originalCurrency = validated.quote.originalCurrency.get()
+        this.exchangeRate = validated.quote.exchangeRate
+        this.baseAmount = validated.quote.baseAmount
+        this.updatedAt = Instant.now()
+        return this
+    }
+
+    private data class ValidatedExpense(
+        val name: String,
+        val quote: ExchangeQuote,
+    )
+
     companion object {
         const val EXPENSE_NAME_MIN = 1
         const val EXPENSE_NAME_MAX = 150
@@ -71,6 +103,39 @@ class Expense private constructor(
             exchangeRate: BigDecimal = BigDecimal.ONE,
             expenseDate: LocalDate,
         ): Expense {
+            val validated =
+                validate(
+                    event = event,
+                    paidByMember = paidByMember,
+                    name = name,
+                    originalAmount = originalAmount,
+                    originalCurrency = originalCurrency,
+                    exchangeRate = exchangeRate,
+                )
+
+            val now = Instant.now()
+            return Expense(
+                event = event,
+                paidByMember = paidByMember,
+                name = validated.name,
+                originalAmount = validated.quote.originalAmount,
+                originalCurrency = validated.quote.originalCurrency.get(),
+                exchangeRate = validated.quote.exchangeRate,
+                baseAmount = validated.quote.baseAmount,
+                expenseDate = expenseDate,
+                createdAt = now,
+                updatedAt = now,
+            )
+        }
+
+        private fun validate(
+            event: Event,
+            paidByMember: EventMember,
+            name: String,
+            originalAmount: BigDecimal,
+            originalCurrency: String,
+            exchangeRate: BigDecimal,
+        ): ValidatedExpense {
             require(
                 paidByMember.event === event ||
                     (paidByMember.event.id != null && paidByMember.event.id == event.id),
@@ -103,19 +168,7 @@ class Expense private constructor(
 
             requireFitsNumeric(quote.baseAmount, AMOUNT_PRECISION, AMOUNT_SCALE, "Base amount")
 
-            val now = Instant.now()
-            return Expense(
-                event = event,
-                paidByMember = paidByMember,
-                name = normalizedName,
-                originalAmount = quote.originalAmount,
-                originalCurrency = quote.originalCurrency.get(),
-                exchangeRate = quote.exchangeRate,
-                baseAmount = quote.baseAmount,
-                expenseDate = expenseDate,
-                createdAt = now,
-                updatedAt = now,
-            )
+            return ValidatedExpense(name = normalizedName, quote = quote)
         }
 
         private fun requireFitsNumeric(

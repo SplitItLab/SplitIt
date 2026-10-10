@@ -9,6 +9,7 @@ import edu.austral.splitit.server.application.service.EventApplicationService
 import edu.austral.splitit.server.application.service.EventDetail
 import edu.austral.splitit.server.application.service.EventMemberSummary
 import edu.austral.splitit.server.application.service.EventSummary
+import edu.austral.splitit.server.application.service.ExpenseApplicationService
 import edu.austral.splitit.server.application.service.UpdateEventCommand
 import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
 import edu.austral.splitit.server.infrastructure.config.SecurityConfig
@@ -60,6 +61,9 @@ class EventControllerTest(
 ) {
     @MockitoBean
     private lateinit var eventApplicationService: EventApplicationService
+
+    @MockitoBean
+    private lateinit var expenseApplicationService: ExpenseApplicationService
 
     @MockitoBean
     private lateinit var tokenProvider: TokenProvider

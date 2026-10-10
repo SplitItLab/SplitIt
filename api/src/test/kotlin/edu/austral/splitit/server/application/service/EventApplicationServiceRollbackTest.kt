@@ -44,6 +44,7 @@ import kotlin.test.assertTrue
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 @Import(
     EventApplicationService::class,
+    ExpenseApplicationService::class,
     ExchangeQuoteService::class,
     EventService::class,
     EventMemberService::class,
@@ -67,6 +68,7 @@ import kotlin.test.assertTrue
 )
 class EventApplicationServiceRollbackTest(
     @Autowired private val eventApplicationService: EventApplicationService,
+    @Autowired private val expenseApplicationService: ExpenseApplicationService,
     @Autowired private val userRepository: UserRepository,
     @Autowired private val eventRepository: EventRepository,
     @Autowired private val eventMemberRepository: EventMemberRepository,
@@ -208,7 +210,7 @@ class EventApplicationServiceRollbackTest(
         val member = eventMemberRepository.findAllByEventId(event.id).first()
 
         val summary =
-            eventApplicationService.addExpense(
+            expenseApplicationService.addExpense(
                 CreateExpenseCommand(
                     userId = requireNotNull(owner.id),
                     eventId = event.id,
@@ -230,7 +232,7 @@ class EventApplicationServiceRollbackTest(
         val member = eventMemberRepository.findAllByEventId(event.id).first()
         val otherMember = eventMemberRepository.findAllByEventId(otherEvent.id).first()
 
-        eventApplicationService.addExpense(
+        expenseApplicationService.addExpense(
             CreateExpenseCommand(
                 userId = requireNotNull(owner.id),
                 eventId = event.id,
@@ -240,7 +242,7 @@ class EventApplicationServiceRollbackTest(
                 paidByMemberId = requireNotNull(member.id),
             ),
         )
-        eventApplicationService.addExpense(
+        expenseApplicationService.addExpense(
             CreateExpenseCommand(
                 userId = requireNotNull(owner.id),
                 eventId = otherEvent.id,
@@ -251,7 +253,7 @@ class EventApplicationServiceRollbackTest(
             ),
         )
 
-        val expenses = eventApplicationService.listExpenses(requireNotNull(owner.id), event.id)
+        val expenses = expenseApplicationService.listExpenses(requireNotNull(owner.id), event.id)
 
         assertEquals(1, expenses.size)
         assertEquals("Cena", expenses[0].name)

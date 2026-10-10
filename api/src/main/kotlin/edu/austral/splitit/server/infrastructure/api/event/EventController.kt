@@ -4,8 +4,10 @@ import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.service.CreateEventCommand
 import edu.austral.splitit.server.application.service.CreateExpenseCommand
 import edu.austral.splitit.server.application.service.EventApplicationService
+import edu.austral.splitit.server.application.service.ExpenseApplicationService
 import edu.austral.splitit.server.application.service.QuoteExpenseQuery
 import edu.austral.splitit.server.application.service.UpdateEventCommand
+import edu.austral.splitit.server.application.service.UpdateExpenseCommand
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -25,6 +27,7 @@ import java.math.BigDecimal
 @RequestMapping("/api/events")
 class EventController(
     private val eventApplicationService: EventApplicationService,
+    private val expenseApplicationService: ExpenseApplicationService,
 ) {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -91,7 +94,30 @@ class EventController(
                 paidByMemberId = request.paidByMemberId,
             )
 
-        val summary = eventApplicationService.addExpense(command)
+        val summary = expenseApplicationService.addExpense(command)
+
+        return ExpenseResponse.of(summary)
+    }
+
+    @PutMapping("/{eventId}/expenses/{expenseId}")
+    fun updateExpense(
+        @AuthenticationPrincipal user: AuthUser,
+        @PathVariable eventId: Long,
+        @PathVariable expenseId: Long,
+        @Valid @RequestBody request: UpdateExpenseRequest,
+    ): ExpenseResponse {
+        val command =
+            UpdateExpenseCommand(
+                userId = user.id,
+                eventId = eventId,
+                expenseId = expenseId,
+                name = request.name,
+                amount = request.amount,
+                currency = request.currency,
+                paidByMemberId = request.paidByMemberId,
+            )
+
+        val summary = expenseApplicationService.updateExpense(command)
 
         return ExpenseResponse.of(summary)
     }
@@ -104,7 +130,7 @@ class EventController(
         @RequestParam currency: String,
     ): ExpenseQuoteResponse {
         val quote =
-            eventApplicationService.quoteExpense(
+            expenseApplicationService.quoteExpense(
                 QuoteExpenseQuery(
                     userId = user.id,
                     eventId = eventId,
@@ -121,7 +147,7 @@ class EventController(
         @AuthenticationPrincipal user: AuthUser,
         @PathVariable eventId: Long,
     ): List<ExpenseResponse> {
-        val summaries = eventApplicationService.listExpenses(user.id, eventId)
+        val summaries = expenseApplicationService.listExpenses(user.id, eventId)
 
         return summaries.map { ExpenseResponse.of(it) }
     }

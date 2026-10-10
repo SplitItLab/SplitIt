@@ -5,6 +5,7 @@ import edu.austral.splitit.server.application.exception.EmailAlreadyInUseExcepti
 import edu.austral.splitit.server.application.exception.EventDeletionConflictException
 import edu.austral.splitit.server.application.exception.EventNotFoundException
 import edu.austral.splitit.server.application.exception.ExchangeRateUnavailableException
+import edu.austral.splitit.server.application.exception.ExpenseNotFoundException
 import edu.austral.splitit.server.application.exception.InvalidCredentialsException
 import edu.austral.splitit.server.application.exception.InvalidRequestException
 import org.slf4j.LoggerFactory
@@ -51,9 +52,9 @@ class GlobalExceptionHandler {
     fun handleAuthenticatedUserMissing(exception: AuthenticatedUserMissingException): ResponseEntity<ErrorMessage> =
         error(HttpStatus.UNAUTHORIZED, exception.message ?: UNAUTHORIZED_MESSAGE)
 
-    @ExceptionHandler(EventNotFoundException::class)
-    fun handleEventNotFound(exception: EventNotFoundException): ResponseEntity<ErrorMessage> =
-        error(HttpStatus.NOT_FOUND, exception.message ?: EVENT_NOT_FOUND_MESSAGE)
+    @ExceptionHandler(EventNotFoundException::class, ExpenseNotFoundException::class)
+    fun handleNotFound(exception: RuntimeException): ResponseEntity<ErrorMessage> =
+        error(HttpStatus.NOT_FOUND, exception.message ?: NOT_FOUND_MESSAGE)
 
     @ExceptionHandler(EventDeletionConflictException::class)
     fun handleEventDeletionConflict(exception: EventDeletionConflictException): ResponseEntity<ErrorMessage> =
@@ -83,7 +84,7 @@ class GlobalExceptionHandler {
         private const val EMAIL_ALREADY_IN_USE_MESSAGE = "Email already in use"
         private const val INVALID_CREDENTIALS_MESSAGE = "Invalid credentials"
         private const val UNAUTHORIZED_MESSAGE = "Unauthorized"
-        private const val EVENT_NOT_FOUND_MESSAGE = "Event not found"
+        private const val NOT_FOUND_MESSAGE = "Not found"
         private const val EVENT_DELETION_CONFLICT_MESSAGE = "Event cannot be deleted"
         private const val EXCHANGE_RATE_UNAVAILABLE_MESSAGE = "Exchange rate unavailable"
         private const val INTERNAL_ERROR_MESSAGE = "Internal server error"

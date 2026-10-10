@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Plus, Receipt } from "lucide-react";
+import { Pencil, Plus, Receipt } from "lucide-react";
 
 import { EventError, type EventDetail } from "@/lib/events";
 import {
@@ -107,6 +107,19 @@ export function EventExpenses({
             );
             showAppToast("success", `Agregamos «${expense.name}»`);
           }}
+          onUpdate={(updated) => {
+            setState((current) =>
+              current.status === "ready"
+                ? {
+                    status: "ready",
+                    expenses: current.expenses.map((expense) =>
+                      expense.id === updated.id ? updated : expense
+                    ),
+                  }
+                : current
+            );
+            showAppToast("success", `Guardamos «${updated.name}»`);
+          }}
           onUnauthorized={onUnauthorized}
           onNotFound={onNotFound}
         />
@@ -121,15 +134,17 @@ function ExpenseList({
   onCreated,
   onUnauthorized,
   onNotFound,
+  onUpdate,
 }: {
   event: EventDetail;
   expenses: Expense[];
   onCreated: (expense: Expense) => void;
   onUnauthorized: () => void;
   onNotFound: () => void;
+  onUpdate: (expense: Expense) => void;
 }) {
   const [adding, setAdding] = useState(false);
-
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   return (
     <>
       {expenses.length > 0 && (
@@ -159,11 +174,30 @@ function ExpenseList({
         onUnauthorized={onUnauthorized}
         onNotFound={onNotFound}
       />
-
+      {editingExpense && (
+        <AddExpenseDialog
+          key={editingExpense.id}
+          open
+          onOpenChange={(open) => {
+            if (!open) setEditingExpense(null);
+          }}
+          event={event}
+          expense={editingExpense}
+          onCreated={onCreated}
+          onUpdate={onUpdate}
+          onUnauthorized={onUnauthorized}
+          onNotFound={onNotFound}
+        />
+      )}
       {expenses.length > 0 ? (
         <div className="grid gap-3 xl:grid-cols-2">
           {expenses.map((expense) => (
-            <ExpenseCard key={expense.id} expense={expense} baseCurrency={event.baseCurrency} />
+            <ExpenseCard
+              key={expense.id}
+              expense={expense}
+              baseCurrency={event.baseCurrency}
+              onUpdate={() => setEditingExpense(expense)}
+            />
           ))}
         </div>
       ) : (
@@ -181,7 +215,15 @@ function ExpenseList({
   );
 }
 
-function ExpenseCard({ expense, baseCurrency }: { expense: Expense; baseCurrency: string }) {
+function ExpenseCard({
+  expense,
+  baseCurrency,
+  onUpdate,
+}: {
+  expense: Expense;
+  baseCurrency: string;
+  onUpdate: () => void;
+}) {
   const showOriginal = expense.originalCurrency !== baseCurrency;
 
   return (
@@ -202,7 +244,7 @@ function ExpenseCard({ expense, baseCurrency }: { expense: Expense; baseCurrency
             Pagó {expense.paidByMember.name}
           </p>
         </div>
-        <div className="shrink-0 text-right">
+        <div className="flex shrink-0 flex-col items-end">
           <p className="text-primary text-sm font-extrabold">
             {formatMoney(expense.baseAmount, baseCurrency)}
           </p>
@@ -211,6 +253,18 @@ function ExpenseCard({ expense, baseCurrency }: { expense: Expense; baseCurrency
               {formatMoney(expense.originalAmount, expense.originalCurrency)}
             </p>
           )}
+          <div className="mt-3 flex justify-end gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={`Editar gasto ${expense.name}`}
+              onClick={onUpdate}
+              className="text-muted-foreground hover:text-foreground size-8 rounded-full"
+            >
+              <Pencil className="size-4" />
+            </Button>
+          </div>
         </div>
       </div>
     </article>

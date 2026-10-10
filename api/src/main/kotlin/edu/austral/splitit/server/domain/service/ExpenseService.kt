@@ -4,6 +4,7 @@ import edu.austral.splitit.server.domain.model.event.Event
 import edu.austral.splitit.server.domain.model.event.EventMember
 import edu.austral.splitit.server.domain.model.event.Expense
 import edu.austral.splitit.server.infrastructure.persistence.ExpenseRepository
+import org.springframework.data.repository.findByIdOrNull
 import org.springframework.stereotype.Service
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -32,6 +33,27 @@ class ExpenseService(
             )
         return expenseRepository.save(expense)
     }
+
+    fun updateExpense(
+        expense: Expense,
+        paidByMember: EventMember,
+        name: String,
+        amount: BigDecimal,
+        currency: String,
+        exchangeRate: BigDecimal,
+    ): Expense {
+        val updated =
+            expense.update(
+                paidByMember = paidByMember,
+                name = name,
+                originalAmount = amount,
+                originalCurrency = currency,
+                exchangeRate = exchangeRate,
+            )
+        return expenseRepository.save(updated)
+    }
+
+    fun findById(id: Long): Expense? = expenseRepository.findByIdOrNull(id)
 
     fun findByEventId(eventId: Long): List<Expense> = expenseRepository.findAllOrderedByEventId(eventId)
 }

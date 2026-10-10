@@ -7,6 +7,7 @@ import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class ExpenseTest {
     private val owner = Helpers.user(name = "Dueño", email = "dueno@example.com", passwordHash = "hash")
@@ -213,5 +214,78 @@ class ExpenseTest {
             )
 
         assertEquals(BigDecimal("999900000000000.0000"), expense.baseAmount)
+    }
+
+    private fun cena() =
+        Expense.create(
+            event = event,
+            paidByMember = member,
+            name = "Cena",
+            originalAmount = BigDecimal("5000"),
+            originalCurrency = "ARS",
+            expenseDate = LocalDate.of(2026, 9, 3),
+        )
+
+    @Test
+    fun `update changes name, amount, currency and payer recalculating the base amount`() {
+        val expense = cena()
+        val otherMember = EventMember.create(event = event, displayName = "Ana")
+        val previousUpdatedAt = expense.updatedAt
+
+        expense.update(
+            paidByMember = otherMember,
+            name = "  Taxi  ",
+            originalAmount = BigDecimal("10"),
+            originalCurrency = "usd",
+            exchangeRate = BigDecimal("1523.9662"),
+        )
+
+        assertEquals("Taxi", expense.name)
+        assertEquals(otherMember, expense.paidByMember)
+        assertEquals(BigDecimal("10"), expense.originalAmount)
+        assertEquals("USD", expense.originalCurrency)
+        assertEquals(BigDecimal("1523.966200"), expense.exchangeRate)
+        assertEquals(BigDecimal("15239.6620"), expense.baseAmount)
+        assertEquals(LocalDate.of(2026, 9, 3), expense.expenseDate)
+        assertTrue(!expense.updatedAt.isBefore(previousUpdatedAt))
+    }
+
+    @Test
+    fun `update fails with blank name or non positive amount`() {
+        val expense = cena()
+
+        assertFailsWith<IllegalArgumentException> {
+            expense.update(member, "   ", BigDecimal("10"), "ARS", BigDecimal.ONE)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            expense.update(member, "Cena", BigDecimal.ZERO, "ARS", BigDecimal.ONE)
+        }
+        assertFailsWith<IllegalArgumentException> {
+            expense.update(member, "Cena", BigDecimal("-1"), "ARS", BigDecimal.ONE)
+        }
+        assertEquals("Cena", expense.name)
+        assertEquals(BigDecimal("5000"), expense.originalAmount)
+    }
+
+    @Test
+    fun `update fails when the payer belongs to another event`() {
+        val expense = cena()
+        val otherEvent = Event.create(owner = owner, name = "Otro Evento", baseCurrency = "ARS")
+        val otherMember = EventMember.create(event = otherEvent, displayName = "Otro")
+
+        assertFailsWith<IllegalArgumentException> {
+            expense.update(otherMember, "Cena", BigDecimal("10"), "ARS", BigDecimal.ONE)
+        }
+        assertEquals(member, expense.paidByMember)
+    }
+
+    @Test
+    fun `update fails when the converted base amount exceeds the column precision`() {
+        val expense = cena()
+
+        assertFailsWith<IllegalArgumentException> {
+            expense.update(member, "Compra grande", BigDecimal("1000000000000"), "USD", BigDecimal("1523.9662"))
+        }
+        assertEquals(BigDecimal("5000.0000"), expense.baseAmount)
     }
 }
