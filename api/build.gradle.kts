@@ -54,6 +54,7 @@ dependencies {
 
     // Web MVC (controllers, REST, etc.)
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
+    implementation("org.springframework.boot:spring-boot-micrometer-metrics")
 
     // Spring Security (JWT se firma con jjwt; BCrypt viene en este starter)
     implementation("org.springframework.boot:spring-boot-starter-security")

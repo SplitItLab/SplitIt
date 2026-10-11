@@ -4,6 +4,7 @@ import edu.austral.splitit.server.domain.model.event.Event
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import java.time.Instant
 
 interface EventRepository : JpaRepository<Event, Long> {
     @Query(
@@ -22,4 +23,20 @@ interface EventRepository : JpaRepository<Event, Long> {
     fun countExpensesByEventId(
         @Param("eventId") eventId: Long,
     ): Long
+
+    fun countByCreatedAtGreaterThanEqualAndCreatedAtLessThanEqual(
+        from: Instant,
+        to: Instant,
+    ): Long
+
+    @Query(
+        """
+        SELECT COUNT(e) FROM Event e
+        WHERE EXISTS (
+            SELECT 1 FROM Expense x
+            WHERE x.event.id = e.id
+        )
+        """,
+    )
+    fun countWithAtLeastOneExpense(): Long
 }
