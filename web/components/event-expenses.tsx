@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pencil, Plus, Receipt } from "lucide-react";
+import { Pencil, Plus, Receipt, Trash2 } from "lucide-react";
 
 import { EventError, type EventDetail } from "@/lib/events";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/lib/expenses";
 import { showAppToast } from "@/lib/toast";
 import { AddExpenseDialog } from "@/components/add-expense-dialog";
+import { DeleteExpenseDialog } from "@/components/delete-expense-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { LoadingIndicator } from "@/components/loading-indicator";
@@ -120,6 +121,22 @@ export function EventExpenses({
             );
             showAppToast("success", `Guardamos «${updated.name}»`);
           }}
+          onDeleted={(deleted) => {
+            setState((current) =>
+              current.status === "ready"
+                ? {
+                    status: "ready",
+                    expenses: current.expenses.filter((expense) => expense.id !== deleted.id),
+                  }
+                : current
+            );
+            showAppToast("success", `Eliminamos «${deleted.name}»`);
+          }}
+          onAlreadyDeleted={(expense) => {
+            // El 404 puede ser del gasto o del evento: recargar la lista lo distingue.
+            load();
+            showAppToast("info", `«${expense.name}» ya había sido eliminado`);
+          }}
           onUnauthorized={onUnauthorized}
           onNotFound={onNotFound}
         />
@@ -135,6 +152,8 @@ function ExpenseList({
   onUnauthorized,
   onNotFound,
   onUpdate,
+  onDeleted,
+  onAlreadyDeleted,
 }: {
   event: EventDetail;
   expenses: Expense[];
@@ -142,9 +161,12 @@ function ExpenseList({
   onUnauthorized: () => void;
   onNotFound: () => void;
   onUpdate: (expense: Expense) => void;
+  onDeleted: (expense: Expense) => void;
+  onAlreadyDeleted: (expense: Expense) => void;
 }) {
   const [adding, setAdding] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
   return (
     <>
       {expenses.length > 0 && (
@@ -189,6 +211,26 @@ function ExpenseList({
           onNotFound={onNotFound}
         />
       )}
+      {deletingExpense && (
+        <DeleteExpenseDialog
+          key={deletingExpense.id}
+          open
+          onOpenChange={(open) => {
+            if (!open) setDeletingExpense(null);
+          }}
+          expense={deletingExpense}
+          onDeleted={(deleted) => {
+            setDeletingExpense(null);
+            onDeleted(deleted);
+          }}
+          onAlreadyDeleted={(expense) => {
+            setDeletingExpense(null);
+            onAlreadyDeleted(expense);
+          }}
+          onUnauthorized={onUnauthorized}
+          onNotFound={onNotFound}
+        />
+      )}
       {expenses.length > 0 ? (
         <div className="grid gap-3 xl:grid-cols-2">
           {expenses.map((expense) => (
@@ -197,6 +239,7 @@ function ExpenseList({
               expense={expense}
               baseCurrency={event.baseCurrency}
               onUpdate={() => setEditingExpense(expense)}
+              onDelete={() => setDeletingExpense(expense)}
             />
           ))}
         </div>
@@ -219,10 +262,12 @@ function ExpenseCard({
   expense,
   baseCurrency,
   onUpdate,
+  onDelete,
 }: {
   expense: Expense;
   baseCurrency: string;
   onUpdate: () => void;
+  onDelete: () => void;
 }) {
   const showOriginal = expense.originalCurrency !== baseCurrency;
 
@@ -263,6 +308,16 @@ function ExpenseCard({
               className="text-muted-foreground hover:text-foreground size-8 rounded-full"
             >
               <Pencil className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label={`Eliminar gasto ${expense.name}`}
+              onClick={onDelete}
+              className="text-muted-foreground hover:text-foreground size-8 rounded-full"
+            >
+              <Trash2 className="size-4" />
             </Button>
           </div>
         </div>

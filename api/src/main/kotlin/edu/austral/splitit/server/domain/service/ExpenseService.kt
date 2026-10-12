@@ -53,6 +53,10 @@ class ExpenseService(
         return expenseRepository.save(updated)
     }
 
+    fun deleteExpense(expense: Expense) {
+        expenseRepository.delete(expense)
+    }
+
     fun findById(id: Long): Expense? = expenseRepository.findByIdOrNull(id)
 
     fun findByEventId(eventId: Long): List<Expense> = expenseRepository.findAllOrderedByEventId(eventId)

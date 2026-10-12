@@ -173,6 +173,22 @@ class ExpenseApplicationService(
         )
     }
 
+    @Transactional
+    fun deleteExpense(
+        userId: Long,
+        eventId: Long,
+        expenseId: Long,
+    ) {
+        val event = findEventForMember(userId, eventId)
+
+        val expense = expenseService.findById(expenseId)
+        if (expense == null || expense.event.id != event.id) {
+            throw ExpenseNotFoundException()
+        }
+
+        expenseService.deleteExpense(expense)
+    }
+
     @Transactional(readOnly = true)
     fun listExpenses(
         userId: Long,

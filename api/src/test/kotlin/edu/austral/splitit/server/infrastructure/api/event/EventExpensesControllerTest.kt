@@ -22,6 +22,8 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.check
+import org.mockito.kotlin.doNothing
+import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -34,6 +36,7 @@ import org.springframework.security.access.AccessDeniedException
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
@@ -568,5 +571,95 @@ class EventExpensesControllerTest(
                     .content("""{"name":"Cena","amount":5000,"currency":"ARS","paidByMemberId":99}"""),
             ).andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.message").value("Invalid request data"))
+    }
+
+    @Test
+    fun `delete expense removes the expense and returns 204`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+
+        mockMvc
+            .perform(
+                delete("/api/events/7/expenses/34")
+                    .cookie(Cookie("auth_token", "good-token")),
+            ).andExpect(status().isNoContent)
+
+        verify(expenseApplicationService).deleteExpense(1L, 7L, 34L)
+    }
+
+    @Test
+    fun `delete expense returns 401 without session`() {
+        mockMvc
+            .perform(delete("/api/events/7/expenses/34"))
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.message").value("Unauthorized"))
+
+        verify(expenseApplicationService, never()).deleteExpense(any(), any(), any())
+    }
+
+    @Test
+    fun `delete expense returns 403 when user has no access to the event`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+        doThrow(AccessDeniedException("Forbidden"))
+            .whenever(expenseApplicationService)
+            .deleteExpense(any(), any(), any())
+
+        mockMvc
+            .perform(
+                delete("/api/events/7/expenses/34")
+                    .cookie(Cookie("auth_token", "good-token")),
+            ).andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.message").value("Forbidden"))
+    }
+
+    @Test
+    fun `delete expense returns 404 when event does not exist`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+        doThrow(EventNotFoundException())
+            .whenever(expenseApplicationService)
+            .deleteExpense(any(), any(), any())
+
+        mockMvc
+            .perform(
+                delete("/api/events/999/expenses/34")
+                    .cookie(Cookie("auth_token", "good-token")),
+            ).andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.message").value("Event not found"))
+    }
+
+    @Test
+    fun `delete expense returns 404 when expense does not exist`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+        doThrow(ExpenseNotFoundException())
+            .whenever(expenseApplicationService)
+            .deleteExpense(any(), any(), any())
+
+        mockMvc
+            .perform(
+                delete("/api/events/7/expenses/999")
+                    .cookie(Cookie("auth_token", "good-token")),
+            ).andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.message").value("Expense not found"))
+    }
+
+    @Test
+    fun `delete expense twice returns 204 and then 404`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+        doNothing()
+            .doThrow(ExpenseNotFoundException())
+            .whenever(expenseApplicationService)
+            .deleteExpense(1L, 7L, 34L)
+
+        mockMvc
+            .perform(
+                delete("/api/events/7/expenses/34")
+                    .cookie(Cookie("auth_token", "good-token")),
+            ).andExpect(status().isNoContent)
+
+        mockMvc
+            .perform(
+                delete("/api/events/7/expenses/34")
+                    .cookie(Cookie("auth_token", "good-token")),
+            ).andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.message").value("Expense not found"))
     }
 }

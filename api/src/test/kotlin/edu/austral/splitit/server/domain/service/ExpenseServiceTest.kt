@@ -145,6 +145,24 @@ class ExpenseServiceTest {
     }
 
     @Test
+    fun `deleteExpense deletes the given expense`() {
+        val expense =
+            Expense
+                .create(
+                    event = event,
+                    paidByMember = payer,
+                    name = "Cena",
+                    originalAmount = BigDecimal("5000"),
+                    originalCurrency = "ARS",
+                    expenseDate = LocalDate.now(),
+                ).apply { id = 34L }
+
+        expenseService.deleteExpense(expense)
+
+        verify(expenseRepository).delete(expense)
+    }
+
+    @Test
     fun `updateExpense does not save an invalid change`() {
         val expense =
             Expense.create(
