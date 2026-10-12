@@ -132,6 +132,11 @@ export function EventExpenses({
             );
             showAppToast("success", `Eliminamos «${deleted.name}»`);
           }}
+          onAlreadyDeleted={(expense) => {
+            // El 404 puede ser del gasto o del evento: recargar la lista lo distingue.
+            load();
+            showAppToast("info", `«${expense.name}» ya había sido eliminado`);
+          }}
           onUnauthorized={onUnauthorized}
           onNotFound={onNotFound}
         />
@@ -148,6 +153,7 @@ function ExpenseList({
   onNotFound,
   onUpdate,
   onDeleted,
+  onAlreadyDeleted,
 }: {
   event: EventDetail;
   expenses: Expense[];
@@ -156,6 +162,7 @@ function ExpenseList({
   onNotFound: () => void;
   onUpdate: (expense: Expense) => void;
   onDeleted: (expense: Expense) => void;
+  onAlreadyDeleted: (expense: Expense) => void;
 }) {
   const [adding, setAdding] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -215,6 +222,10 @@ function ExpenseList({
           onDeleted={(deleted) => {
             setDeletingExpense(null);
             onDeleted(deleted);
+          }}
+          onAlreadyDeleted={(expense) => {
+            setDeletingExpense(null);
+            onAlreadyDeleted(expense);
           }}
           onUnauthorized={onUnauthorized}
           onNotFound={onNotFound}

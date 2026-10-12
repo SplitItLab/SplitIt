@@ -66,6 +66,7 @@ function renderDialog(overrides: Partial<Parameters<typeof DeleteExpenseDialog>[
     onOpenChange: vi.fn(),
     expense: carne,
     onDeleted: vi.fn(),
+    onAlreadyDeleted: vi.fn(),
     onUnauthorized: vi.fn(),
     onNotFound: vi.fn(),
     ...overrides,
@@ -160,24 +161,42 @@ describe("DeleteExpenseDialog", () => {
     expect(onDeleted).not.toHaveBeenCalled();
   });
 
-  it("trata un 403 o un 404 como evento no encontrado", async () => {
+  it("trata un 403 como evento no encontrado", async () => {
     vi.mocked(deleteExpense).mockRejectedValue(
       new EventError("forbidden", "No tenés acceso a este evento.")
     );
     const user = userEvent.setup();
-    const { onNotFound, onDeleted } = renderDialog();
+    const { onNotFound, onAlreadyDeleted, onDeleted } = renderDialog();
     const dialog = await screen.findByRole("dialog");
 
     await user.click(within(dialog).getByRole("button", { name: "Eliminar" }));
 
     await waitFor(() => expect(onNotFound).toHaveBeenCalledOnce());
+    expect(onAlreadyDeleted).not.toHaveBeenCalled();
+    expect(onDeleted).not.toHaveBeenCalled();
+  });
+
+  it("trata un 404 como gasto ya eliminado, sin dar el evento por perdido", async () => {
+    vi.mocked(deleteExpense).mockRejectedValue(
+      new EventError("not-found", "No encontramos este evento.")
+    );
+    const user = userEvent.setup();
+    const { onNotFound, onAlreadyDeleted, onDeleted } = renderDialog();
+    const dialog = await screen.findByRole("dialog");
+
+    await user.click(within(dialog).getByRole("button", { name: "Eliminar" }));
+
+    await waitFor(() => expect(onAlreadyDeleted).toHaveBeenCalledWith(carne));
+    expect(onNotFound).not.toHaveBeenCalled();
     expect(onDeleted).not.toHaveBeenCalled();
   });
 });
 
 describe("EventExpenses — eliminar gasto", () => {
   function renderExpenses() {
-    render(<EventExpenses event={event} onUnauthorized={vi.fn()} onNotFound={vi.fn()} />);
+    const onNotFound = vi.fn();
+    render(<EventExpenses event={event} onUnauthorized={vi.fn()} onNotFound={onNotFound} />);
+    return { onNotFound };
   }
 
   it("cancelar deja el gasto en la lista y el total igual", async () => {
@@ -216,5 +235,48 @@ describe("EventExpenses — eliminar gasto", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(deleteExpense).toHaveBeenCalledWith(7, 1);
     expect(listExpenses).toHaveBeenCalledTimes(1);
+  });
+
+  it("si el gasto ya fue eliminado en otra pestaña, actualiza la lista y mantiene el evento", async () => {
+    vi.mocked(listExpenses)
+      .mockResolvedValueOnce([carne, bebidas])
+      .mockResolvedValueOnce([bebidas]);
+    vi.mocked(deleteExpense).mockRejectedValue(
+      new EventError("not-found", "No encontramos este evento.")
+    );
+    const user = userEvent.setup();
+    const { onNotFound } = renderExpenses();
+
+    await user.click(await screen.findByRole("button", { name: "Eliminar gasto Carne y achuras" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Eliminar" }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("heading", { name: "Carne y achuras" })).not.toBeInTheDocument()
+    );
+    expect(screen.getByRole("heading", { name: "Bebidas" })).toBeInTheDocument();
+    const total = screen.getByText("Total de gastos").closest("article");
+    expect(visibleText(total)).toContain(money(14500, "ARS"));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(showAppToast).toHaveBeenCalledWith("info", "«Carne y achuras» ya había sido eliminado");
+    expect(listExpenses).toHaveBeenCalledTimes(2);
+    expect(onNotFound).not.toHaveBeenCalled();
+  });
+
+  it("si lo que ya no existe es el evento, lo trata como evento no encontrado", async () => {
+    vi.mocked(listExpenses)
+      .mockResolvedValueOnce([carne, bebidas])
+      .mockRejectedValueOnce(new EventError("not-found", "No encontramos este evento."));
+    vi.mocked(deleteExpense).mockRejectedValue(
+      new EventError("not-found", "No encontramos este evento.")
+    );
+    const user = userEvent.setup();
+    const { onNotFound } = renderExpenses();
+
+    await user.click(await screen.findByRole("button", { name: "Eliminar gasto Carne y achuras" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Eliminar" }));
+
+    await waitFor(() => expect(onNotFound).toHaveBeenCalledOnce());
   });
 });

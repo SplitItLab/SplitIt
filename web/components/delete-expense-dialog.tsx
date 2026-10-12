@@ -15,6 +15,7 @@ type DeleteExpenseDialogProps = {
   onOpenChange: (open: boolean) => void;
   expense: Expense;
   onDeleted: (expense: Expense) => void;
+  onAlreadyDeleted: (expense: Expense) => void;
   onUnauthorized: () => void;
   onNotFound: () => void;
 };
@@ -24,6 +25,7 @@ export function DeleteExpenseDialog({
   onOpenChange,
   expense,
   onDeleted,
+  onAlreadyDeleted,
   onUnauthorized,
   onNotFound,
 }: DeleteExpenseDialogProps) {
@@ -47,7 +49,11 @@ export function DeleteExpenseDialog({
         onUnauthorized();
         return;
       }
-      if (err instanceof EventError && (err.type === "forbidden" || err.type === "not-found")) {
+      if (err instanceof EventError && err.type === "not-found") {
+        onAlreadyDeleted(expense);
+        return;
+      }
+      if (err instanceof EventError && err.type === "forbidden") {
         onNotFound();
         return;
       }
