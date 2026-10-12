@@ -20,14 +20,14 @@ El destino final (Dataverse u otra plataforma) se define la semana que viene. De
 
 Un caso de uso, `RunKpiReport`, arma la ventana del día en UTC y llama a `KpiEngine.calculate`. No conoce el ambiente. Entrega la lista a un puerto `KpiExporter`.
 
-Spring crea un solo exportador según `KPI_EXPORT_MODE`:
+Spring crea un solo `KpiSnapshotExporter` según `KPI_EXPORT_MODE`. Los dos modos escriben la misma tabla. Cambia el canal:
 
-| Modo | Bean | Qué hace esta semana |
-| --- | --- | --- |
-| `local` (default, y si la variable no está) | `LocalKpiExporter` | Inserta en `kpi_snapshot` con `channel = local`. `delivered = false`. |
-| `report` | `ReportKpiExporter` | Inserta en la misma tabla con `channel = report`. `delivered = true`. |
+| Modo | Canal |
+| --- | --- |
+| `local` (default, y si la variable no está) | `local` |
+| `report` | `report` |
 
-El default es `local`. Production de Vercel tiene que setear `KPI_EXPORT_MODE=report`. Preview y local no. Los únicos valores son `local` y `report`. Otro valor hace que la aplicación no arranque, porque no hay exportador.
+El default es `local`. Production de Vercel tiene que setear `KPI_EXPORT_MODE=report`. Preview y local no. Los únicos valores son `local` y `report`. Otro valor hace que la aplicación no arranque.
 
 La corrida se dispara de dos maneras, las dos en código:
 
@@ -36,7 +36,7 @@ La corrida se dispara de dos maneras, las dos en código:
 
 `GET /api/kpi-runs` lista solo el canal del exportador activo. Cada corrida agrega una fila. Dos días dejan dos filas. El mismo día, corrido dos veces, deja dos filas de ese día.
 
-La tabla es el destino de esta semana. La semana que viene se reemplaza `ReportKpiExporter`. `RunKpiReport` y el motor no se tocan.
+La tabla es el destino de esta semana. La semana que viene se agrega otro `KpiExporter` y `KpiExportConfig` lo elige para `report`. `RunKpiReport`, el motor y el canal `local` no se tocan.
 
 ## Alternativa descartada
 
@@ -48,18 +48,18 @@ Descartado: el backend de prod es un contenedor en Vercel. El disco no conserva 
 
 Quien dispara la corrida mira la respuesta o el log. No hace falta leer el código.
 
-`POST /api/kpi-runs` responde 201 con `destination`, `delivered`, `reportDay`, `id` y un resultado por KPI. `numericValue` o `textValue` trae el número o el texto. Los dos vienen null si ese KPI no tuvo dato.
+`POST /api/kpi-runs` responde 201 con `destination`, `reportDay`, `id` y un resultado por KPI. `numericValue` o `textValue` trae el número o el texto. Los dos vienen null si ese KPI no tuvo dato. `destination` es el canal donde quedó la corrida.
 
 `GET /api/kpi-runs` devuelve esas corridas, de la más vieja a la más nueva, solo del canal activo.
 
 El cron loguea el resumen y, en una línea por KPI, el id y el valor (`null` si no hubo dato):
 
 ```text
-KPI run stored. destination={} delivered={} reportDay={} id={} kpiCount={}
+KPI run stored. destination={} reportDay={} id={} kpiCount={}
 KPI value. id={} value={}
 ```
 
-En dev, `destination` es `local` y `delivered` es `false`. Esta query no devuelve filas:
+En dev, `destination` es `local`. Esta query no devuelve filas:
 
 ```sql
 SELECT s.id, s.report_day, s.calculated_at, v.kpi_id, v.numeric_value, v.text_value
@@ -71,7 +71,7 @@ ORDER BY s.id, v.kpi_id;
 
 Las corridas de dev están en `channel = 'local'`.
 
-En prod, con `KPI_EXPORT_MODE=report`, la misma query muestra una fila de valores por KPI de cada corrida, y el POST dice `destination: "report"`, `delivered: true`.
+En prod, con `KPI_EXPORT_MODE=report`, la misma query muestra una fila de valores por KPI de cada corrida, y el POST dice `destination: "report"`.
 
 El archivo `api/http/kpi-runs.http` recorre el camino local: login, dos días distintos, y el GET que los encuentra.
 

@@ -6,7 +6,7 @@
 #   La API tiene que estar en {{baseUrl}} (por defecto localhost:8080).
 #
 # En local y en dev, KPI_EXPORT_MODE queda en local: la corrida se guarda
-# con destination "local" y delivered false. No escribe el canal report.
+# con destination "local". No escribe el canal report.
 # En production de Vercel hay que setear KPI_EXPORT_MODE=report.
 #
 @baseUrl = http://localhost:8080
@@ -64,7 +64,6 @@ client.test("guarda la corrida de ayer en el destino local", function () {
     assertStatus(client, response, 201)
     const body = jsonBody(response)
     client.assert(body.destination === "local", "Expected destination local but got " + body.destination)
-    client.assert(body.delivered === false, "Dev run must not deliver")
     client.assert(Array.isArray(body.results) && body.results.length === 7, "Expected the 7 KPIs")
     client.global.set("firstRunId", body.id)
     client.global.set("firstReportDay", body.reportDay)
@@ -89,7 +88,7 @@ client.test("guarda un segundo día distinto", function () {
     const body = jsonBody(response)
     client.assert(body.reportDay === "2026-01-15", "Expected reportDay 2026-01-15 but got " + body.reportDay)
     client.assert(body.reportDay !== client.global.get("firstReportDay"), "The two runs must be different days")
-    client.assert(body.delivered === false, "Dev run must not deliver")
+    client.assert(body.destination === "local", "Dev run stays on the local channel")
     client.global.set("secondRunId", body.id)
 })
 %}

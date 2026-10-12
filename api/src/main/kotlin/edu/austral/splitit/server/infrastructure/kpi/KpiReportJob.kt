@@ -16,9 +16,8 @@ class KpiReportJob(
     fun runDaily() {
         val receipt = runKpiReport.run()
         logger.info(
-            "KPI run stored. destination={} delivered={} reportDay={} id={} kpiCount={}",
+            "KPI run stored. destination={} reportDay={} id={} kpiCount={}",
             receipt.destination,
-            receipt.delivered,
             receipt.reportDay,
             receipt.id,
             receipt.results.size,

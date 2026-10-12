@@ -43,7 +43,6 @@ class RunKpiReportTest {
 
         assertEquals(1L, receipt.id)
         assertEquals("local", receipt.destination)
-        assertEquals(false, receipt.delivered)
         assertEquals(LocalDate.parse("2026-10-11"), receipt.reportDay)
         assertEquals(exported.windowFrom, receipt.windowFrom)
         assertEquals(exported.windowTo, receipt.windowTo)
@@ -87,10 +86,6 @@ class RunKpiReportTest {
     private class RecordingExporter : KpiExporter {
         val exported = mutableListOf<KpiRun>()
 
-        override val destination: String = "local"
-
-        override val delivers: Boolean = false
-
         override fun export(run: KpiRun): KpiRunReceipt {
             exported += run
             return receipt(exported.size.toLong(), run)
@@ -107,8 +102,7 @@ class RunKpiReportTest {
         ): KpiRunReceipt =
             KpiRunReceipt(
                 id = id,
-                destination = destination,
-                delivered = delivers,
+                destination = "local",
                 reportDay = run.reportDay,
                 windowFrom = run.windowFrom,
                 windowTo = run.windowTo,

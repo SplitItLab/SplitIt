@@ -41,18 +41,24 @@ class JpaKpiSnapshotStore(
     }
 }
 
+private fun KpiValue?.toColumns(): Pair<Double?, String?> =
+    when (this) {
+        null -> null to null
+        is KpiValue.Numeric -> amount to null
+        is KpiValue.Text -> null to text
+    }
+
 private fun KpiResult.toEntity(
     snapshot: KpiSnapshotEntity,
     sortOrder: Int,
 ): KpiSnapshotValueEntity {
-    val numeric = value as? KpiValue.Numeric
-    val text = value as? KpiValue.Text
+    val (numericValue, textValue) = value.toColumns()
     return KpiSnapshotValueEntity(
         snapshot = snapshot,
         kpiId = id,
         sortOrder = sortOrder,
-        numericValue = numeric?.amount,
-        textValue = text?.text,
+        numericValue = numericValue,
+        textValue = textValue,
     )
 }
 
@@ -61,7 +67,6 @@ private fun KpiSnapshotEntity.toReceipt(): KpiRunReceipt {
     return KpiRunReceipt(
         id = storedId,
         destination = channel,
-        delivered = false,
         reportDay = reportDay,
         windowFrom = windowFrom,
         windowTo = windowTo,

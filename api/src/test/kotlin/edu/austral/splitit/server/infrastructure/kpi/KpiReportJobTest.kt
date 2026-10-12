@@ -49,7 +49,7 @@ class KpiReportJobTest {
 
         assertEquals(
             listOf(
-                "KPI run stored. destination=report delivered=true reportDay=2026-10-11 id=3 kpiCount=3",
+                "KPI run stored. destination=report reportDay=2026-10-11 id=3 kpiCount=3",
                 "KPI value. id=events-created-per-day value=4.0",
                 "KPI value. id=backend-health value=OK",
                 "KPI value. id=error-rate-5xx-24h value=null",
@@ -71,7 +71,6 @@ class KpiReportJobTest {
         KpiRunReceipt(
             id = 3,
             destination = "report",
-            delivered = true,
             reportDay = LocalDate.parse("2026-10-11"),
             windowFrom = Instant.parse("2026-10-11T00:00:00Z"),
             windowTo = Instant.parse("2026-10-11T23:59:59.999999999Z"),

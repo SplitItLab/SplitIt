@@ -14,7 +14,6 @@ data class KpiRun(
 data class KpiRunReceipt(
     val id: Long,
     val destination: String,
-    val delivered: Boolean,
     val reportDay: LocalDate,
     val windowFrom: Instant,
     val windowTo: Instant,

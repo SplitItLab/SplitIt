@@ -49,26 +49,16 @@ class KpiSnapshotEntity(
     }
 }
 
-class KpiSnapshotValueId(
-    var snapshot: Long = 0,
-    var kpiId: String = "",
-) : Serializable {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) {
-            return true
+data class KpiSnapshotValueId
+    @JvmOverloads
+    constructor(
+        var snapshot: Long = 0,
+        var kpiId: String = "",
+    ) : Serializable {
+        companion object {
+            private const val serialVersionUID: Long = 1L
         }
-        if (other !is KpiSnapshotValueId) {
-            return false
-        }
-        return snapshot == other.snapshot && kpiId == other.kpiId
     }
-
-    override fun hashCode(): Int = 31 * snapshot.hashCode() + kpiId.hashCode()
-
-    private companion object {
-        const val serialVersionUID: Long = 1L
-    }
-}
 
 @Entity
 @Table(name = "kpi_snapshot_value")

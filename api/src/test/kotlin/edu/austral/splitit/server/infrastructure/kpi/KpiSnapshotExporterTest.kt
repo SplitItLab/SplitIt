@@ -15,10 +15,8 @@ import java.time.Instant
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
-class KpiExporterChannelTest {
+class KpiSnapshotExporterTest {
     private val store = mock<JpaKpiSnapshotStore>()
     private val run =
         KpiRun(
@@ -36,39 +34,18 @@ class KpiExporterChannelTest {
         )
 
     @Test
-    fun `local exporter writes the local channel and does not deliver`() {
-        whenever(store.append(any(), any())).thenAnswer { invocation ->
-            stored(invocation.getArgument(0))
-        }
-        whenever(store.list("local")).thenReturn(listOf(stored("local")))
-        val exporter = LocalKpiExporter(store)
-
-        val receipt = exporter.export(run)
-        val listed = exporter.list()
-
-        assertEquals("local", receipt.destination)
-        assertFalse(receipt.delivered)
-        assertEquals("local", listed.single().destination)
-        verify(store).append("local", run)
-        verify(store).list("local")
-        verify(store, never()).append(org.mockito.kotlin.eq("report"), any())
-        verify(store, never()).list("report")
-    }
-
-    @Test
-    fun `report exporter writes the report channel and marks the run delivered`() {
+    fun `export and list stay on the channel the exporter was given`() {
         whenever(store.append(any(), any())).thenAnswer { invocation ->
             stored(invocation.getArgument(0))
         }
         whenever(store.list("report")).thenReturn(listOf(stored("report")))
-        val exporter = ReportKpiExporter(store)
+        val exporter = KpiSnapshotExporter(store, "report")
 
         val receipt = exporter.export(run)
         val listed = exporter.list()
 
         assertEquals("report", receipt.destination)
-        assertTrue(receipt.delivered)
-        assertTrue(listed.single().delivered)
+        assertEquals("report", listed.single().destination)
         verify(store).append("report", run)
         verify(store).list("report")
         verify(store, never()).append(org.mockito.kotlin.eq("local"), any())
@@ -79,7 +56,6 @@ class KpiExporterChannelTest {
         KpiRunReceipt(
             id = 1,
             destination = channel,
-            delivered = false,
             reportDay = run.reportDay,
             windowFrom = run.windowFrom,
             windowTo = run.windowTo,

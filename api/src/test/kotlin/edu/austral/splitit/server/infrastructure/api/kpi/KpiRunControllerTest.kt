@@ -66,7 +66,6 @@ class KpiRunControllerTest(
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.id").value(8))
             .andExpect(jsonPath("$.destination").value("local"))
-            .andExpect(jsonPath("$.delivered").value(false))
             .andExpect(jsonPath("$.reportDay").value("2026-10-11"))
             .andExpect(jsonPath("$.windowFrom").value("2026-10-11T00:00:00Z"))
             .andExpect(jsonPath("$.windowTo").value("2026-10-11T23:59:59.999999999Z"))
@@ -145,7 +144,7 @@ class KpiRunControllerTest(
             .andExpect(jsonPath("$[0].reportDay").value("2026-10-10"))
             .andExpect(jsonPath("$[1].reportDay").value("2026-10-11"))
             .andExpect(jsonPath("$[0].destination").value("local"))
-            .andExpect(jsonPath("$[1].delivered").value(false))
+            .andExpect(jsonPath("$[1].destination").value("local"))
     }
 
     @Test
@@ -165,7 +164,6 @@ class KpiRunControllerTest(
         KpiRunReceipt(
             id = id,
             destination = "local",
-            delivered = false,
             reportDay = day,
             windowFrom = Instant.parse("${day}T00:00:00Z"),
             windowTo = Instant.parse("${day}T23:59:59.999999999Z"),

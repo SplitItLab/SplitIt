@@ -1,6 +1,7 @@
 package edu.austral.splitit.server.infrastructure.api.kpi
 
 import edu.austral.splitit.server.application.service.KpiRunReceipt
+import edu.austral.splitit.server.domain.kpi.KpiResult
 import edu.austral.splitit.server.domain.kpi.KpiValue
 import java.time.Instant
 import java.time.LocalDate
@@ -8,7 +9,6 @@ import java.time.LocalDate
 data class KpiRunResponse(
     val id: Long,
     val destination: String,
-    val delivered: Boolean,
     val reportDay: LocalDate,
     val windowFrom: Instant,
     val windowTo: Instant,
@@ -20,23 +20,27 @@ data class KpiRunResponse(
             KpiRunResponse(
                 id = receipt.id,
                 destination = receipt.destination,
-                delivered = receipt.delivered,
                 reportDay = receipt.reportDay,
                 windowFrom = receipt.windowFrom,
                 windowTo = receipt.windowTo,
                 calculatedAt = receipt.calculatedAt,
-                results =
-                    receipt.results.map { result ->
-                        val numeric = result.value as? KpiValue.Numeric
-                        val text = result.value as? KpiValue.Text
-                        KpiResultResponse(
-                            id = result.id,
-                            numericValue = numeric?.amount,
-                            textValue = text?.text,
-                        )
-                    },
+                results = receipt.results.map { result -> result.toResponse() },
             )
     }
+}
+
+private fun KpiResult.toResponse(): KpiResultResponse {
+    val (numericValue, textValue) =
+        when (val stored = value) {
+            null -> null to null
+            is KpiValue.Numeric -> stored.amount to null
+            is KpiValue.Text -> null to stored.text
+        }
+    return KpiResultResponse(
+        id = id,
+        numericValue = numericValue,
+        textValue = textValue,
+    )
 }
 
 data class KpiResultResponse(

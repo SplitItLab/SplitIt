@@ -48,7 +48,6 @@ class JpaKpiSnapshotStoreTest(
             listed.map { it.reportDay },
         )
         assertEquals("local", listed[0].destination)
-        assertEquals(false, listed[0].delivered)
         assertEquals(WINDOW_FROM, listed[0].windowFrom)
         assertEquals(WINDOW_TO, listed[0].windowTo)
         assertEquals(CALCULATED_AT, listed[0].calculatedAt)

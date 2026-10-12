@@ -5,18 +5,11 @@ import edu.austral.splitit.server.application.service.KpiRun
 import edu.austral.splitit.server.application.service.KpiRunReceipt
 import edu.austral.splitit.server.infrastructure.persistence.JpaKpiSnapshotStore
 
-class ReportKpiExporter(
+class KpiSnapshotExporter(
     private val store: JpaKpiSnapshotStore,
+    private val channel: String,
 ) : KpiExporter {
-    override val destination: String = CHANNEL
+    override fun export(run: KpiRun): KpiRunReceipt = store.append(channel, run)
 
-    override val delivers: Boolean = true
-
-    override fun export(run: KpiRun): KpiRunReceipt = store.append(CHANNEL, run).copy(delivered = true)
-
-    override fun list(): List<KpiRunReceipt> = store.list(CHANNEL).map { it.copy(delivered = true) }
-
-    companion object {
-        const val CHANNEL = "report"
-    }
+    override fun list(): List<KpiRunReceipt> = store.list(channel)
 }
