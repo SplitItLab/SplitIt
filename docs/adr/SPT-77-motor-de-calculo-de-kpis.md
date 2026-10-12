@@ -17,8 +17,9 @@ Necesitamos un componente que, al ejecutarse, calcule los 7 KPIs definidos en SP
 El motor no se ocupa de:
 
 - a dónde se envían o persisten los valores (SPT-78),
-- cuándo o cada cuánto se ejecuta (SPT-78),
-- instrumentación de requests (interceptor, histogramas, Micrometer) — queda para un ticket posterior.
+- cuándo o cada cuánto se ejecuta (SPT-78).
+
+La instrumentación de requests entrantes sí está: Micrometer observa cada request HTTP y deja las muestras en los puertos de latencia y de tasa 5xx. El cálculo de cada KPI no intercepta nada; solo lee el puerto.
 
 Los KPIs son de naturaleza distinta (negocio, performance, salud del sistema). El diseño debe permitir agregar un octavo KPI sin modificar el código de los 7 existentes.
 
@@ -57,8 +58,8 @@ Agregar un nuevo KPI = crear una clase nueva que implemente `Kpi` y anotarla. Ce
 | Eventos creados por día | Repositorios/services existentes (misma base) | Implementación real |
 | Gastos registrados por día | Repositorios/services existentes | Implementación real |
 | % eventos con ≥1 gasto | Repositorios/services existentes | Implementación real |
-| Latencia p95 POST /expenses | Puerto `LatencyMetricsPort` | Implementación stub (sin data real) |
-| Tasa error 5xx últimas 24h | Puerto `ErrorRatePort` | Implementación stub (sin data real). El puerto y los tests deben reflejar que 4xx no cuenta como error |
+| Latencia p95 POST /expenses | Puerto `LatencyMetricsPort` | `InMemoryRequestMetrics`, alimentado por las observaciones de Micrometer |
+| Tasa error 5xx últimas 24h | Puerto `ErrorRatePort` | La misma fuente. 4xx no cuenta como error. Null si no hay muestras en la ventana |
 | Health check backend | `/api/status` existente (devuelve OK) | Llamada o chequeo equivalente |
 | Última ejecución exitosa del job | Puerto `LastRunPort` | Implementación in-memory por ahora |
 
@@ -79,7 +80,9 @@ interface LastRunPort {
 }
 ```
 
-Cada KPI depende únicamente del puerto que necesita. Las implementaciones stub/in-memory viven en este ticket. La instrumentación real (interceptor + Micrometer) y la persistencia del last-run quedan fuera de scope.
+Cada KPI depende únicamente del puerto que necesita. La persistencia del last-run queda fuera de scope: sigue en memoria y se pierde al reiniciar.
+
+Los requests entrantes se observan con Micrometer (`spring-boot-micrometer-metrics`). `ServerRequestMetricsHandler` implementa `ObservationHandler` sobre `ServerRequestObservationContext`. Al terminar cada request guarda método, ruta, status y duración en `InMemoryRequestMetrics`. Los timers de Micrometer no responden “p95 de esta ventana”, así que los puertos leen ese store (retención de 25 horas, en memoria). Una muestra con status menor a 100 no se guarda. 4xx entra en el total y no suma como error.
 
 ### Manejo de errores
 
@@ -99,9 +102,9 @@ Calcular todo en un solo servicio sin interfaz `Kpi`.
 
 Descartado: mismo problema de extensibilidad y mezcla de responsabilidades.
 
-Instrumentar requests a mano (histogramas propios) en este ticket.
+Instrumentar requests a mano, con histogramas propios.
 
-Descartado por scope. Se difiere. Micrometer (o equivalente) se evaluará cuando se haga la instrumentación. Los puertos `LatencyMetricsPort` y `ErrorRatePort` dejan el contrato listo.
+Descartado. Se usa Micrometer, que ya observa los requests del servidor. Los puertos `LatencyMetricsPort` y `ErrorRatePort` quedan como contrato. El store en memoria existe solo porque el timer de Micrometer no está partido por ventana.
 
 Timestamp de última corrida como campo mutable en el engine.
 
@@ -119,9 +122,7 @@ Core de cálculo puro e inmutable: `KpiCalculationContext` y `KpiResult` son dat
 
 Agregar KPIs futuros es barato y no requiere tocar código existente (cumple criterio de aceptación + test del 8vo KPI).
 
-Los KPIs 4 y 5 no tendrán datos reales hasta que exista la instrumentación de requests. Los tests los cubren contra los puertos stub.
-
-El last-run se pierde al reiniciar el proceso (aceptable en este ticket).
+Los KPIs de latencia y de tasa 5xx leen muestras reales del proceso. Sin requests en la ventana, el valor es null. Esas muestras se pierden al reiniciar, igual que el last-run.
 
 Se deja este ADR como registro corto de alternativas (cumple criterio de aceptación).
 
@@ -129,8 +130,7 @@ Se deja este ADR como registro corto de alternativas (cumple criterio de aceptac
 
 - Envío o persistencia de los valores calculados.
 - Programación / cron / job scheduler.
-- Interceptor de requests e histogramas reales (Micrometer u otro).
-- Instrumentación de llamadas salientes.
+- Instrumentación de llamadas salientes. Las observaciones cubren requests entrantes.
 
 ## Criterios de aceptación cubiertos
 
