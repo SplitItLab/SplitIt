@@ -1,6 +1,7 @@
 package edu.austral.splitit.server.infrastructure.api.event
 
 import edu.austral.splitit.server.application.port.AuthUser
+import edu.austral.splitit.server.application.service.BalanceSummary
 import edu.austral.splitit.server.application.service.CreateEventCommand
 import edu.austral.splitit.server.application.service.CreateExpenseCommand
 import edu.austral.splitit.server.application.service.EventApplicationService
@@ -125,6 +126,12 @@ class EventController(
 
         return summaries.map { ExpenseResponse.of(it) }
     }
+
+    @GetMapping("/{eventId}/balances")
+    fun listBalances(
+        @AuthenticationPrincipal user: AuthUser,
+        @PathVariable eventId: Long,
+    ): List<BalanceSummary> = eventApplicationService.listBalances(user.id, eventId)
 
     @PutMapping("/{id}")
     fun updateEvent(

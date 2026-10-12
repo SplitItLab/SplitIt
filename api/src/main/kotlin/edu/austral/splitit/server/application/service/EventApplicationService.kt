@@ -4,6 +4,7 @@ import edu.austral.splitit.server.application.exception.EventDeletionConflictExc
 import edu.austral.splitit.server.application.exception.EventNotFoundException
 import edu.austral.splitit.server.domain.model.event.Event
 import edu.austral.splitit.server.domain.model.event.ExchangeQuote
+import edu.austral.splitit.server.domain.service.BalanceCalculator
 import edu.austral.splitit.server.domain.service.EventMemberService
 import edu.austral.splitit.server.domain.service.EventService
 import edu.austral.splitit.server.domain.service.ExpenseService
@@ -58,6 +59,12 @@ data class EventMemberSummary(
     val name: String,
     val email: String?,
     val isGuest: Boolean,
+)
+
+data class BalanceSummary(
+    val memberId: Long,
+    val memberName: String,
+    val netBalance: BigDecimal,
 )
 
 data class CreateExpenseCommand(
@@ -228,7 +235,7 @@ class EventApplicationService(
 
     @Transactional(readOnly = true)
     fun quoteExpense(query: QuoteExpenseQuery): ExchangeQuote {
-        val event = findEventForMember(query.userId, query.eventId)
+        val event = findEventForMember(eventService, eventMemberService, query.userId, query.eventId)
 
         return exchangeQuoteService.quote(
             amount = query.amount,
@@ -239,7 +246,7 @@ class EventApplicationService(
 
     @Transactional
     fun addExpense(command: CreateExpenseCommand): ExpenseSummary {
-        val event = findEventForMember(command.userId, command.eventId)
+        val event = findEventForMember(eventService, eventMemberService, command.userId, command.eventId)
 
         val paidByMember = eventMemberService.findById(command.paidByMemberId)
         require(paidByMember != null && paidByMember.event.id == event.id) {
@@ -286,7 +293,7 @@ class EventApplicationService(
         userId: Long,
         eventId: Long,
     ): List<ExpenseSummary> {
-        val event = findEventForMember(userId, eventId)
+        val event = findEventForMember(eventService, eventMemberService, userId, eventId)
 
         return expenseService.findByEventId(eventId).map { expense ->
             ExpenseSummary(
@@ -304,6 +311,25 @@ class EventApplicationService(
                         name = expense.paidByMember.displayName,
                     ),
                 expenseDate = expense.expenseDate,
+            )
+        }
+    }
+
+    @Transactional(readOnly = true)
+    fun listBalances(
+        userId: Long,
+        eventId: Long,
+    ): List<BalanceSummary> {
+        findEventForMember(eventService, eventMemberService, userId, eventId)
+
+        val members = eventMemberService.findByEventId(eventId)
+        val expenses = expenseService.findByEventId(eventId)
+
+        return BalanceCalculator.calculate(members, expenses).map { balance ->
+            BalanceSummary(
+                memberId = balance.memberId,
+                memberName = balance.memberName,
+                netBalance = balance.netBalance,
             )
         }
     }
@@ -359,24 +385,26 @@ class EventApplicationService(
         }
     }
 
-    private fun findEventForMember(
-        userId: Long,
-        eventId: Long,
-    ): Event {
-        val event = eventService.findById(eventId) ?: throw EventNotFoundException()
-
-        val isOwner = event.owner.id == userId
-        val isMember = isOwner || eventMemberService.isUserMemberOfEvent(eventId, userId)
-        if (!isMember) {
-            throw AccessDeniedException("Forbidden")
-        }
-
-        return event
-    }
-
     private fun ensureDeletable(eventId: Long) {
         if (eventService.hasExpenses(eventId)) {
             throw EventDeletionConflictException()
         }
     }
+}
+
+private fun findEventForMember(
+    eventService: EventService,
+    eventMemberService: EventMemberService,
+    userId: Long,
+    eventId: Long,
+): Event {
+    val event = eventService.findById(eventId) ?: throw EventNotFoundException()
+
+    val isOwner = event.owner.id == userId
+    val isMember = isOwner || eventMemberService.isUserMemberOfEvent(eventId, userId)
+    if (!isMember) {
+        throw AccessDeniedException("Forbidden")
+    }
+
+    return event
 }
