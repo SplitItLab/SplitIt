@@ -6,6 +6,7 @@ import java.math.BigDecimal
 import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -287,5 +288,23 @@ class ExpenseTest {
             expense.update(member, "Compra grande", BigDecimal("1000000000000"), "USD", BigDecimal("1523.9662"))
         }
         assertEquals(BigDecimal("5000.0000"), expense.baseAmount)
+    }
+
+    @Test
+    fun `isInCurrency compares against the original currency ignoring case`() {
+        val expense =
+            Expense.create(
+                event = event,
+                paidByMember = member,
+                name = "Taxi",
+                originalAmount = BigDecimal("10"),
+                originalCurrency = "USD",
+                exchangeRate = BigDecimal("1523.9662"),
+                expenseDate = LocalDate.now(),
+            )
+
+        assertTrue(expense.isInCurrency("USD"))
+        assertTrue(expense.isInCurrency("usd"))
+        assertFalse(expense.isInCurrency("ARS"))
     }
 }

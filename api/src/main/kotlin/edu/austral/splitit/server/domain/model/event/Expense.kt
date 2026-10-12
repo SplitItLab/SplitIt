@@ -79,6 +79,8 @@ class Expense private constructor(
         return this
     }
 
+    fun isInCurrency(currency: String): Boolean = Currency(currency) == Currency(originalCurrency)
+
     private data class ValidatedExpense(
         val name: String,
         val quote: ExchangeQuote,

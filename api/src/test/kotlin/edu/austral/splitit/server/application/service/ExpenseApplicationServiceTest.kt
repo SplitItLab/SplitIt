@@ -509,6 +509,54 @@ class ExpenseApplicationServiceTest {
     }
 
     @Test
+    fun `updateExpense keeps the original exchange rate when only the name and payer change`() {
+        val event =
+            Event
+                .create(owner = user, name = "Viaje a Bariloche", baseCurrency = "ARS")
+                .apply { id = 10L }
+        val payer = EventMember.create(event, "Mateo", user).apply { id = 100L }
+        val newPayer = EventMember.create(event, "Ana", null).apply { id = 101L }
+        val expense =
+            Expense
+                .create(
+                    event = event,
+                    paidByMember = payer,
+                    name = "Taxi",
+                    originalAmount = BigDecimal("10"),
+                    originalCurrency = "USD",
+                    exchangeRate = BigDecimal("1523.9662"),
+                    expenseDate = LocalDate.now(),
+                ).apply { id = 34L }
+
+        whenever(eventService.findById(10L)).thenReturn(event)
+        whenever(expenseService.findById(34L)).thenReturn(expense)
+        whenever(eventMemberService.findById(101L)).thenReturn(newPayer)
+        whenever(
+            expenseService.updateExpense(
+                expense = expense,
+                paidByMember = newPayer,
+                name = "Taxi al aeropuerto",
+                amount = BigDecimal("10"),
+                currency = "USD",
+                exchangeRate = BigDecimal("1523.966200"),
+            ),
+        ).thenAnswer {
+            expense.update(newPayer, "Taxi al aeropuerto", BigDecimal("10"), "USD", BigDecimal("1523.966200"))
+        }
+
+        val summary =
+            expenseApplicationService.updateExpense(
+                updateCommand(name = "Taxi al aeropuerto", currency = "USD", paidByMemberId = 101L),
+            )
+
+        assertEquals("Taxi al aeropuerto", summary.name)
+        assertEquals(101L, summary.paidByMember.id)
+        assertEquals(BigDecimal("1523.966200"), summary.exchangeRate)
+        assertEquals(BigDecimal("15239.6620"), summary.baseAmount)
+        verify(exchangeRateProvider, never()).rate(any(), any())
+    }
+
+    @Test
     fun `updateExpense in the base currency does not call the exchange rate provider`() {
         val event =
             Event

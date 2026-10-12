@@ -133,21 +133,26 @@ class ExpenseApplicationService(
             "Paying member must belong to the requested event"
         }
 
-        val quote =
-            exchangeQuoteService.quote(
-                amount = command.amount,
-                currency = command.currency,
-                baseCurrency = event.baseCurrency,
-            )
+        val exchangeRate =
+            if (expense.isInCurrency(command.currency)) {
+                expense.exchangeRate
+            } else {
+                exchangeQuoteService
+                    .quote(
+                        amount = command.amount,
+                        currency = command.currency,
+                        baseCurrency = event.baseCurrency,
+                    ).exchangeRate
+            }
 
         val updated =
             expenseService.updateExpense(
                 expense = expense,
                 paidByMember = paidByMember,
                 name = command.name,
-                amount = quote.originalAmount,
-                currency = quote.originalCurrency.get(),
-                exchangeRate = quote.exchangeRate,
+                amount = command.amount,
+                currency = command.currency,
+                exchangeRate = exchangeRate,
             )
 
         return ExpenseSummary(
