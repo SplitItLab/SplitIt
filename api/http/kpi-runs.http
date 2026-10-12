@@ -5,6 +5,9 @@
 #   VS Code: REST Client; ejecutá cada bloque `###`.
 #   La API tiene que estar en {{baseUrl}} (por defecto localhost:8080).
 #
+# La corrida la hace KpiReportJob (03:15 UTC). No hay POST: cualquier sesión
+# podría dispararla. Este archivo solo consulta las corridas ya guardadas.
+#
 # En local y en dev, KPI_EXPORT_MODE queda en local: la corrida se guarda
 # con destination "local". No escribe el canal report.
 # En production de Vercel hay que setear KPI_EXPORT_MODE=report.
@@ -52,25 +55,7 @@ client.test("inicia sesión", function () {
 saveAuthToken(client, response, "auth_token")
 %}
 
-### 3. KPI runs — POST sin día (ayer UTC)
-POST {{baseUrl}}/api/kpi-runs
-Accept: application/json
-Cookie: auth_token={{authToken}}
-
-> {%
-import { assertStatus, jsonBody } from './scripts/assert.js'
-
-client.test("guarda la corrida de ayer en el destino local", function () {
-    assertStatus(client, response, 201)
-    const body = jsonBody(response)
-    client.assert(body.destination === "local", "Expected destination local but got " + body.destination)
-    client.assert(Array.isArray(body.results) && body.results.length === 7, "Expected the 7 KPIs")
-    client.global.set("firstRunId", body.id)
-    client.global.set("firstReportDay", body.reportDay)
-})
-%}
-
-### 4. KPI runs — POST de otro día
+### 3. KPI runs — POST no dispara una corrida
 POST {{baseUrl}}/api/kpi-runs
 Content-Type: application/json
 Accept: application/json
@@ -81,19 +66,14 @@ Cookie: auth_token={{authToken}}
 }
 
 > {%
-import { assertStatus, jsonBody } from './scripts/assert.js'
+import { assertStatus } from './scripts/assert.js'
 
-client.test("guarda un segundo día distinto", function () {
-    assertStatus(client, response, 201)
-    const body = jsonBody(response)
-    client.assert(body.reportDay === "2026-01-15", "Expected reportDay 2026-01-15 but got " + body.reportDay)
-    client.assert(body.reportDay !== client.global.get("firstReportDay"), "The two runs must be different days")
-    client.assert(body.destination === "local", "Dev run stays on the local channel")
-    client.global.set("secondRunId", body.id)
+client.test("un usuario autenticado no puede disparar la corrida", function () {
+    assertStatus(client, response, 405)
 })
 %}
 
-### 5. KPI runs — GET consulta las corridas guardadas
+### 4. KPI runs — GET consulta las corridas guardadas
 GET {{baseUrl}}/api/kpi-runs
 Accept: application/json
 Cookie: auth_token={{authToken}}
@@ -101,15 +81,9 @@ Cookie: auth_token={{authToken}}
 > {%
 import { assertStatus, jsonBody } from './scripts/assert.js'
 
-client.test("las dos corridas quedan consultables", function () {
+client.test("la lista de corridas responde 200", function () {
     assertStatus(client, response, 200)
     const body = jsonBody(response)
     client.assert(Array.isArray(body), "Expected a list")
-    const ids = body.map(function (run) { return run.id })
-    client.assert(ids.indexOf(client.global.get("firstRunId")) >= 0, "Missing the first run")
-    client.assert(ids.indexOf(client.global.get("secondRunId")) >= 0, "Missing the second run")
-    const days = body.map(function (run) { return run.reportDay })
-    const distinct = days.filter(function (day, index) { return days.indexOf(day) === index })
-    client.assert(distinct.length >= 2, "Expected at least two distinct report days")
 })
 %}
