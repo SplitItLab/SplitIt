@@ -33,7 +33,7 @@ class RunKpiReportTest {
         val context = argumentCaptor<KpiCalculationContext>()
         verify(engine).calculate(context.capture())
         assertEquals(Instant.parse("2026-10-11T00:00:00Z"), context.firstValue.from)
-        assertEquals(Instant.parse("2026-10-11T23:59:59.999999999Z"), context.firstValue.to)
+        assertEquals(Instant.parse("2026-10-11T23:59:59.999999Z"), context.firstValue.to)
 
         val exported = exporter.exported.single()
         assertEquals(LocalDate.parse("2026-10-11"), exported.reportDay)
@@ -71,7 +71,7 @@ class RunKpiReportTest {
 
         assertEquals(LocalDate.parse("2026-10-12"), receipt.reportDay)
         assertEquals(Instant.parse("2026-10-12T00:00:00Z"), receipt.windowFrom)
-        assertEquals(Instant.parse("2026-10-12T23:59:59.999999999Z"), receipt.windowTo)
+        assertEquals(Instant.parse("2026-10-12T23:59:59.999999Z"), receipt.windowTo)
     }
 
     private fun results(): List<KpiResult> =

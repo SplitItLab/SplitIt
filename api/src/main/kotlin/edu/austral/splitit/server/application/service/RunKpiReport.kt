@@ -21,7 +21,8 @@ class RunKpiReport(
                 .plusDays(1)
                 .atStartOfDay(ZoneOffset.UTC)
                 .toInstant()
-                .minusNanos(1)
+                // TIMESTAMP(6) rounds 1 ns before midnight up to the next day.
+                .minusNanos(1_000)
         val results = engine.calculate(KpiCalculationContext(from, to))
         return exporter.export(
             KpiRun(
