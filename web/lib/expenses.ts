@@ -40,6 +40,7 @@ export type CreateExpenseInput = {
 const LIST_UNAVAILABLE = "No pudimos cargar los gastos. Probá de nuevo.";
 const QUOTE_UNAVAILABLE = "No pudimos obtener el tipo de cambio.";
 const SAVE_UNAVAILABLE = "No pudimos guardar el gasto. Probá de nuevo.";
+const DELETE_UNAVAILABLE = "No pudimos eliminar el gasto. Probá de nuevo.";
 
 export function formatMoney(amount: number, currency: string): string {
   return new Intl.NumberFormat("es-AR", {
@@ -128,5 +129,16 @@ export async function updateExpense(
     });
   } catch (err) {
     toEventError(err, SAVE_UNAVAILABLE);
+  }
+}
+
+export async function deleteExpense(
+  eventId: number | string,
+  expenseId: number | string
+): Promise<void> {
+  try {
+    await request<void>(`/api/events/${eventId}/expenses/${expenseId}`, { method: "DELETE" });
+  } catch (err) {
+    toEventError(err, DELETE_UNAVAILABLE);
   }
 }
