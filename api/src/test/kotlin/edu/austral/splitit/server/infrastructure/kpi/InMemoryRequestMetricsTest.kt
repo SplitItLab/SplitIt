@@ -4,6 +4,7 @@ import edu.austral.splitit.server.application.kpi.KpiEndpoints
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.time.ZoneId
 import java.time.ZoneOffset
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -83,11 +84,27 @@ class InMemoryRequestMetricsTest {
     fun `samples older than the retention are dropped`() {
         val freshClock = Clock.fixed(end, ZoneOffset.UTC)
         val store = InMemoryRequestMetrics(freshClock)
-        store.record(sample("GET /api/status", 500, Duration.ofMillis(1), end.minus(Duration.ofHours(26))))
+        store.record(sample("GET /api/status", 500, Duration.ofMillis(1), end.minus(Duration.ofHours(49))))
         store.record(sample("GET /api/status", 200, Duration.ofMillis(1), end.minus(Duration.ofHours(1))))
 
         val wide = end.minus(Duration.ofDays(3))..end
         assertEquals(0.0, store.rate5xx(wide))
+    }
+
+    @Test
+    fun `a sample from the start of the previous day is still there at the daily report`() {
+        val dayStart = Instant.parse("2026-10-12T00:00:00Z")
+        val reportAt = Instant.parse("2026-10-13T03:15:00Z")
+        val clock = MutableClock(dayStart)
+        val store = InMemoryRequestMetrics(clock)
+        store.record(sample(KpiEndpoints.POST_EXPENSES, 500, Duration.ofMillis(40), dayStart))
+
+        clock.set(reportAt)
+        store.record(sample("GET /api/status", 200, Duration.ofMillis(1), reportAt))
+
+        val reportedDay = dayStart..Instant.parse("2026-10-13T00:00:00Z").minusNanos(1_000)
+        assertEquals(1.0, store.rate5xx(reportedDay))
+        assertEquals(Duration.ofMillis(40), store.p95(KpiEndpoints.POST_EXPENSES, reportedDay))
     }
 
     private fun sample(
@@ -96,4 +113,18 @@ class InMemoryRequestMetricsTest {
         duration: Duration,
         at: Instant,
     ) = RequestSample(endpoint, statusCode, duration, at)
+
+    private class MutableClock(
+        private var now: Instant,
+    ) : Clock() {
+        fun set(instant: Instant) {
+            now = instant
+        }
+
+        override fun getZone(): ZoneId = ZoneOffset.UTC
+
+        override fun withZone(zone: ZoneId): Clock = this
+
+        override fun instant(): Instant = now
+    }
 }
