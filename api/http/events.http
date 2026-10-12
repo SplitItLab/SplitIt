@@ -1660,3 +1660,115 @@ client.test("rechaza editar un gasto de un evento ajeno con 403 Forbidden", func
     assertError(client, response, 403, "Forbidden")
 })
 %}
+
+### 85. Events — DELETE eliminar un gasto de un evento ajeno (403)
+DELETE {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza eliminar un gasto de un evento ajeno con 403 Forbidden", function () {
+    assertError(client, response, 403, "Forbidden")
+})
+%}
+
+### 86. Events — DELETE eliminar gasto sin autenticación (401)
+# @no-cookie-jar
+DELETE {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
+Accept: application/json
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza eliminar un gasto sin sesión", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### 87. Login — Dueño retoma sesión para eliminar gastos
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{eventOwnerEmail}}",
+  "password": "{{eventOwnerPassword}}"
+}
+
+> {%
+import { assertStatus, saveAuthToken } from './scripts/assert.js'
+
+client.test("retoma sesión del dueño para eliminar gastos", function () {
+    assertStatus(client, response, 200)
+})
+saveAuthToken(client, response, "auth_token")
+%}
+
+### 88. Events — DELETE eliminar un gasto desde otro evento (404)
+DELETE {{baseUrl}}/api/events/{{secondEventId}}/expenses/{{firstExpenseId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("no permite eliminar un gasto a través de un evento al que no pertenece", function () {
+    assertError(client, response, 404, "Expense not found")
+})
+%}
+
+### 89. Events — DELETE eliminar un gasto de un evento inexistente (404)
+DELETE {{baseUrl}}/api/events/999999/expenses/{{firstExpenseId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("devuelve 404 al eliminar un gasto de un evento inexistente", function () {
+    assertError(client, response, 404, "Event not found")
+})
+%}
+
+### 90. Events — DELETE eliminar un gasto como dueño (204)
+DELETE {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertNoContent } from './scripts/assert.js'
+
+client.test("el dueño elimina un gasto del evento", function () {
+    assertNoContent(client, response)
+})
+%}
+
+### 91. Events — GET lista de gastos ya no incluye el gasto eliminado (200)
+GET {{baseUrl}}/api/events/{{firstEventId}}/expenses
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("el gasto eliminado deja de aparecer en la lista", function () {
+    assertStatus(client, response, 200)
+    const found = jsonBody(response).find(e => String(e.id) === client.global.get("firstExpenseId"))
+    client.assert(found === undefined, "Expected deleted expense to be absent")
+})
+%}
+
+### 92. Events — DELETE eliminar el mismo gasto otra vez (404)
+DELETE {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("eliminar dos veces el mismo gasto devuelve 404", function () {
+    assertError(client, response, 404, "Expense not found")
+})
+%}

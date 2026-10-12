@@ -122,6 +122,16 @@ class EventController(
         return ExpenseResponse.of(summary)
     }
 
+    @DeleteMapping("/{eventId}/expenses/{expenseId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun deleteExpense(
+        @AuthenticationPrincipal user: AuthUser,
+        @PathVariable eventId: Long,
+        @PathVariable expenseId: Long,
+    ) {
+        expenseApplicationService.deleteExpense(user.id, eventId, expenseId)
+    }
+
     @GetMapping("/{eventId}/expenses/quote")
     fun quoteExpense(
         @AuthenticationPrincipal user: AuthUser,
