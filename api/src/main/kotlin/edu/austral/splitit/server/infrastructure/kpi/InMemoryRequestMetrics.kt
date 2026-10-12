@@ -19,9 +19,14 @@ class InMemoryRequestMetrics(
 
     fun record(sample: RequestSample) {
         val cutoff = clock.instant().minus(RETENTION)
-        samples.removeIf { it.at.isBefore(cutoff) }
-        if (!sample.at.isBefore(cutoff)) {
-            samples.add(sample)
+        // peek then poll is not atomic: another request can drop a sample that is still inside the window.
+        synchronized(samples) {
+            while (samples.peek()?.at?.isBefore(cutoff) == true) {
+                samples.poll()
+            }
+            if (!sample.at.isBefore(cutoff)) {
+                samples.add(sample)
+            }
         }
     }
 

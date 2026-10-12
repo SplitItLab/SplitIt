@@ -82,13 +82,51 @@ class InMemoryRequestMetricsTest {
 
     @Test
     fun `samples older than the retention are dropped`() {
-        val freshClock = Clock.fixed(end, ZoneOffset.UTC)
-        val store = InMemoryRequestMetrics(freshClock)
-        store.record(sample("GET /api/status", 500, Duration.ofMillis(1), end.minus(Duration.ofHours(49))))
-        store.record(sample("GET /api/status", 200, Duration.ofMillis(1), end.minus(Duration.ofHours(1))))
+        val clock = MutableClock(end)
+        val store = InMemoryRequestMetrics(clock)
+        repeat(3) {
+            store.record(sample("GET /api/status", 500, Duration.ofMillis(1), end))
+        }
+        clock.advance(Duration.ofHours(49))
+        store.record(sample("GET /api/status", 200, Duration.ofMillis(1), clock.instant()))
+
+        val wide = end.minus(Duration.ofDays(1))..clock.instant()
+        assertEquals(0.0, store.rate5xx(wide))
+    }
+
+    @Test
+    fun `a sample exactly at the retention cutoff is kept`() {
+        val cutoff = end.minus(Duration.ofHours(48))
+        metrics.record(sample("GET /api/status", 500, Duration.ofMillis(1), cutoff))
+        metrics.record(sample("GET /api/status", 200, Duration.ofMillis(1), end))
 
         val wide = end.minus(Duration.ofDays(3))..end
+        assertEquals(0.5, metrics.rate5xx(wide))
+    }
+
+    @Test
+    fun `a sample one nanosecond before the cutoff is dropped`() {
+        val sampleTime = end.minus(Duration.ofHours(48))
+        val clock = MutableClock(sampleTime.plus(Duration.ofHours(48)).minusNanos(1))
+        val store = InMemoryRequestMetrics(clock)
+        store.record(sample("GET /api/status", 500, Duration.ofMillis(1), sampleTime))
+        clock.advance(Duration.ofNanos(2))
+        store.record(sample("GET /api/status", 200, Duration.ofMillis(1), clock.instant()))
+
+        val wide = sampleTime.minus(Duration.ofDays(1))..clock.instant()
         assertEquals(0.0, store.rate5xx(wide))
+    }
+
+    @Test
+    fun `only expired samples leave the window empty`() {
+        val clock = MutableClock(end)
+        val store = InMemoryRequestMetrics(clock)
+        store.record(sample("GET /api/status", 500, Duration.ofMillis(1), end))
+        clock.advance(Duration.ofHours(49))
+        store.record(sample("GET /api/status", 500, Duration.ofMillis(1), clock.instant().minus(Duration.ofHours(49))))
+
+        val wide = end.minus(Duration.ofDays(1))..clock.instant()
+        assertNull(store.rate5xx(wide))
     }
 
     @Test
@@ -119,6 +157,10 @@ class InMemoryRequestMetricsTest {
     ) : Clock() {
         fun set(instant: Instant) {
             now = instant
+        }
+
+        fun advance(duration: Duration) {
+            now = now.plus(duration)
         }
 
         override fun getZone(): ZoneId = ZoneOffset.UTC

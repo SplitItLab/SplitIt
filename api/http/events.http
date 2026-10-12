@@ -1284,3 +1284,491 @@ client.test("rechaza un gasto cuyo importe convertido supera la precisión permi
     assertError(client, response, 400, "Invalid request data")
 })
 %}
+
+### 68. Events — GET detalle para capturar un integrante invitado como nuevo pagador
+GET {{baseUrl}}/api/events/{{firstEventId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("obtiene un integrante invitado para cambiar el pagador", function () {
+    assertStatus(client, response, 200)
+    const guestMember = jsonBody(response).members.find(m => m.isGuest)
+    client.assert(guestMember !== undefined, "Expected guest member")
+    client.global.set("firstEventGuestMemberId", String(guestMember.id))
+})
+%}
+
+### 69. Events — PUT editar nombre, monto y pagador de un gasto en la moneda base (200)
+PUT {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Cena larga",
+  "amount": 7500,
+  "currency": "ARS",
+  "paidByMemberId": {{firstEventGuestMemberId}}
+}
+
+> {%
+import { assertStatus, jsonBody, assertExpense } from './scripts/assert.js'
+
+client.test("edita nombre, monto y pagador del gasto", function () {
+    assertStatus(client, response, 200)
+    assertExpense(client, jsonBody(response), {
+        id: client.global.get("firstExpenseId"),
+        eventId: client.global.get("firstEventId"),
+        name: "Cena larga",
+        originalAmount: 7500,
+        currency: "ARS",
+        paidByMemberId: client.global.get("firstEventGuestMemberId"),
+    })
+})
+%}
+
+### 70. Events — GET lista de gastos refleja la edición (200)
+GET {{baseUrl}}/api/events/{{firstEventId}}/expenses
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody, assertExpense } from './scripts/assert.js'
+
+client.test("el listado devuelve el gasto con los datos editados", function () {
+    assertStatus(client, response, 200)
+    const found = jsonBody(response).find(e => String(e.id) === client.global.get("firstExpenseId"))
+    client.assert(found !== undefined, "Expected edited expense in list")
+    assertExpense(client, found, {
+        id: client.global.get("firstExpenseId"),
+        eventId: client.global.get("firstEventId"),
+        name: "Cena larga",
+        originalAmount: 7500,
+        currency: "ARS",
+        paidByMemberId: client.global.get("firstEventGuestMemberId"),
+    })
+})
+%}
+
+### 71. Events — GET lista de gastos para guardar la cotización original del gasto en USD
+GET {{baseUrl}}/api/events/{{firstEventId}}/expenses
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("guarda la tasa y el importe base con los que se registró el gasto en USD", function () {
+    assertStatus(client, response, 200)
+    const found = jsonBody(response).find(e => String(e.id) === client.global.get("usdExpenseId"))
+    client.assert(found !== undefined, "Expected USD expense in list")
+    client.global.set("usdExpenseExchangeRate", String(found.exchangeRate))
+    client.global.set("usdExpenseBaseAmount", String(found.baseAmount))
+})
+%}
+
+### 72. Events — PUT editar solo nombre y pagador de un gasto en USD conserva la cotización (200)
+PUT {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{usdExpenseId}}
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Taxi al aeropuerto",
+  "amount": 10,
+  "currency": "USD",
+  "paidByMemberId": {{firstEventGuestMemberId}}
+}
+
+> {%
+import { assertStatus, jsonBody, assertExpense } from './scripts/assert.js'
+
+client.test("mantiene la tasa y el importe base si la moneda no cambia", function () {
+    assertStatus(client, response, 200)
+    const body = jsonBody(response)
+    assertExpense(client, body, {
+        id: client.global.get("usdExpenseId"),
+        eventId: client.global.get("firstEventId"),
+        name: "Taxi al aeropuerto",
+        originalAmount: 10,
+        currency: "USD",
+        baseCurrency: "ARS",
+        paidByMemberId: client.global.get("firstEventGuestMemberId"),
+    })
+    client.assert(
+        Number(body.exchangeRate) === Number(client.global.get("usdExpenseExchangeRate")),
+        "Expected original exchangeRate " + client.global.get("usdExpenseExchangeRate") + " but got " + body.exchangeRate,
+    )
+    client.assert(
+        Number(body.baseAmount) === Number(client.global.get("usdExpenseBaseAmount")),
+        "Expected original baseAmount " + client.global.get("usdExpenseBaseAmount") + " but got " + body.baseAmount,
+    )
+})
+%}
+
+### 73. Events — PUT cambiar la moneda de un gasto vuelve a cotizar contra la moneda base (200)
+PUT {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{usdExpenseId}}
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Taxi al aeropuerto",
+  "amount": 15000,
+  "currency": "ARS",
+  "paidByMemberId": {{firstEventGuestMemberId}}
+}
+
+> {%
+import { assertStatus, jsonBody, assertExpense } from './scripts/assert.js'
+
+client.test("al pasar a la moneda base el gasto queda con tasa 1", function () {
+    assertStatus(client, response, 200)
+    assertExpense(client, jsonBody(response), {
+        id: client.global.get("usdExpenseId"),
+        eventId: client.global.get("firstEventId"),
+        name: "Taxi al aeropuerto",
+        originalAmount: 15000,
+        currency: "ARS",
+        paidByMemberId: client.global.get("firstEventGuestMemberId"),
+    })
+})
+%}
+
+### 74. Events — PUT editar gasto con nombre en blanco (400)
+PUT {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "   ",
+  "amount": 7500,
+  "currency": "ARS",
+  "paidByMemberId": {{firstEventOwnerMemberId}}
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza editar un gasto con nombre en blanco", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### 75. Events — PUT editar gasto con monto cero (400)
+PUT {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Cena larga",
+  "amount": 0,
+  "currency": "ARS",
+  "paidByMemberId": {{firstEventOwnerMemberId}}
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza editar un gasto con monto cero", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### 76. Events — PUT editar gasto sin pagador (400)
+PUT {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Cena larga",
+  "amount": 7500,
+  "currency": "ARS"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza editar un gasto sin pagador", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### 77. Events — GET detalle del segundo evento para capturar su integrante
+GET {{baseUrl}}/api/events/{{secondEventId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("obtiene el integrante del segundo evento", function () {
+    assertStatus(client, response, 200)
+    const member = jsonBody(response).members[0]
+    client.assert(member !== undefined, "Expected a member in the second event")
+    client.global.set("secondEventOwnerMemberId", String(member.id))
+})
+%}
+
+### 78. Events — PUT editar gasto con pagador de otro evento (400)
+PUT {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Cena larga",
+  "amount": 7500,
+  "currency": "ARS",
+  "paidByMemberId": {{secondEventOwnerMemberId}}
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza un pagador que no pertenece al evento del gasto", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### 79. Events — PUT editar un gasto desde otro evento (404)
+PUT {{baseUrl}}/api/events/{{secondEventId}}/expenses/{{firstExpenseId}}
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Cena larga",
+  "amount": 7500,
+  "currency": "ARS",
+  "paidByMemberId": {{secondEventOwnerMemberId}}
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("no permite editar un gasto a través de un evento al que no pertenece", function () {
+    assertError(client, response, 404, "Expense not found")
+})
+%}
+
+### 80. Events — PUT editar un gasto inexistente (404)
+PUT {{baseUrl}}/api/events/{{firstEventId}}/expenses/999999
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Cena larga",
+  "amount": 7500,
+  "currency": "ARS",
+  "paidByMemberId": {{firstEventOwnerMemberId}}
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("devuelve 404 al editar un gasto inexistente", function () {
+    assertError(client, response, 404, "Expense not found")
+})
+%}
+
+### 81. Events — PUT editar un gasto de un evento inexistente (404)
+PUT {{baseUrl}}/api/events/999999/expenses/{{firstExpenseId}}
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Cena larga",
+  "amount": 7500,
+  "currency": "ARS",
+  "paidByMemberId": {{firstEventOwnerMemberId}}
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("devuelve 404 al editar un gasto de un evento inexistente", function () {
+    assertError(client, response, 404, "Event not found")
+})
+%}
+
+### 82. Events — PUT editar gasto sin autenticación (401)
+# @no-cookie-jar
+PUT {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Cena larga",
+  "amount": 7500,
+  "currency": "ARS",
+  "paidByMemberId": {{firstEventOwnerMemberId}}
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza editar un gasto sin sesión", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### 83. Login — Usuario ajeno para probar permisos de edición de gastos
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{otherUserEmail}}",
+  "password": "{{otherUserPassword}}"
+}
+
+> {%
+import { assertStatus, saveAuthToken } from './scripts/assert.js'
+
+client.test("inicia sesión como usuario ajeno para probar la edición de gastos", function () {
+    assertStatus(client, response, 200)
+})
+saveAuthToken(client, response, "auth_token")
+%}
+
+### 84. Events — PUT editar un gasto de un evento ajeno (403)
+PUT {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Cena ajena",
+  "amount": 1,
+  "currency": "ARS",
+  "paidByMemberId": {{firstEventOwnerMemberId}}
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza editar un gasto de un evento ajeno con 403 Forbidden", function () {
+    assertError(client, response, 403, "Forbidden")
+})
+%}
+
+### 85. Events — DELETE eliminar un gasto de un evento ajeno (403)
+DELETE {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza eliminar un gasto de un evento ajeno con 403 Forbidden", function () {
+    assertError(client, response, 403, "Forbidden")
+})
+%}
+
+### 86. Events — DELETE eliminar gasto sin autenticación (401)
+# @no-cookie-jar
+DELETE {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
+Accept: application/json
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza eliminar un gasto sin sesión", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### 87. Login — Dueño retoma sesión para eliminar gastos
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{eventOwnerEmail}}",
+  "password": "{{eventOwnerPassword}}"
+}
+
+> {%
+import { assertStatus, saveAuthToken } from './scripts/assert.js'
+
+client.test("retoma sesión del dueño para eliminar gastos", function () {
+    assertStatus(client, response, 200)
+})
+saveAuthToken(client, response, "auth_token")
+%}
+
+### 88. Events — DELETE eliminar un gasto desde otro evento (404)
+DELETE {{baseUrl}}/api/events/{{secondEventId}}/expenses/{{firstExpenseId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("no permite eliminar un gasto a través de un evento al que no pertenece", function () {
+    assertError(client, response, 404, "Expense not found")
+})
+%}
+
+### 89. Events — DELETE eliminar un gasto de un evento inexistente (404)
+DELETE {{baseUrl}}/api/events/999999/expenses/{{firstExpenseId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("devuelve 404 al eliminar un gasto de un evento inexistente", function () {
+    assertError(client, response, 404, "Event not found")
+})
+%}
+
+### 90. Events — DELETE eliminar un gasto como dueño (204)
+DELETE {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertNoContent } from './scripts/assert.js'
+
+client.test("el dueño elimina un gasto del evento", function () {
+    assertNoContent(client, response)
+})
+%}
+
+### 91. Events — GET lista de gastos ya no incluye el gasto eliminado (200)
+GET {{baseUrl}}/api/events/{{firstEventId}}/expenses
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("el gasto eliminado deja de aparecer en la lista", function () {
+    assertStatus(client, response, 200)
+    const found = jsonBody(response).find(e => String(e.id) === client.global.get("firstExpenseId"))
+    client.assert(found === undefined, "Expected deleted expense to be absent")
+})
+%}
+
+### 92. Events — DELETE eliminar el mismo gasto otra vez (404)
+DELETE {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("eliminar dos veces el mismo gasto devuelve 404", function () {
+    assertError(client, response, 404, "Expense not found")
+})
+%}
