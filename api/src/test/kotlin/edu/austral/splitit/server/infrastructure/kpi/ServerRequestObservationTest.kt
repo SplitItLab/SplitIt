@@ -2,6 +2,7 @@ package edu.austral.splitit.server.infrastructure.kpi
 
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.EventApplicationService
+import edu.austral.splitit.server.application.service.ExpenseApplicationService
 import edu.austral.splitit.server.infrastructure.api.StatusController
 import edu.austral.splitit.server.infrastructure.api.event.EventController
 import edu.austral.splitit.server.infrastructure.config.SecurityConfig
@@ -57,6 +58,9 @@ class ServerRequestObservationTest(
 ) {
     @MockitoBean
     private lateinit var eventApplicationService: EventApplicationService
+
+    @MockitoBean
+    private lateinit var expenseApplicationService: ExpenseApplicationService
 
     @MockitoBean
     private lateinit var tokenProvider: TokenProvider

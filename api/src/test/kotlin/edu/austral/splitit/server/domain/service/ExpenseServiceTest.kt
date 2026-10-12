@@ -110,4 +110,63 @@ class ExpenseServiceTest {
 
         assertEquals(listOf(expense), result)
     }
+
+    @Test
+    fun `updateExpense updates the expense and saves it`() {
+        echoSavedExpense()
+        val expense =
+            Expense
+                .create(
+                    event = event,
+                    paidByMember = payer,
+                    name = "Cena",
+                    originalAmount = BigDecimal("5000"),
+                    originalCurrency = "ARS",
+                    expenseDate = LocalDate.now(),
+                ).apply { id = 34L }
+        val otherPayer = EventMember.create(event, "Ana", null).apply { id = 101L }
+
+        val updated =
+            expenseService.updateExpense(
+                expense = expense,
+                paidByMember = otherPayer,
+                name = "Taxi",
+                amount = BigDecimal("10"),
+                currency = "USD",
+                exchangeRate = BigDecimal("1523.9662"),
+            )
+
+        assertEquals(34L, updated.id)
+        assertEquals("Taxi", updated.name)
+        assertEquals("USD", updated.originalCurrency)
+        assertEquals(BigDecimal("15239.6620"), updated.baseAmount)
+        assertSame(otherPayer, updated.paidByMember)
+        verify(expenseRepository).save(expense)
+    }
+
+    @Test
+    fun `updateExpense does not save an invalid change`() {
+        val expense =
+            Expense.create(
+                event = event,
+                paidByMember = payer,
+                name = "Cena",
+                originalAmount = BigDecimal("5000"),
+                originalCurrency = "ARS",
+                expenseDate = LocalDate.now(),
+            )
+
+        assertFailsWith<IllegalArgumentException> {
+            expenseService.updateExpense(
+                expense = expense,
+                paidByMember = payer,
+                name = "   ",
+                amount = BigDecimal("10"),
+                currency = "ARS",
+                exchangeRate = BigDecimal.ONE,
+            )
+        }
+
+        verify(expenseRepository, never()).save(any<Expense>())
+    }
 }
