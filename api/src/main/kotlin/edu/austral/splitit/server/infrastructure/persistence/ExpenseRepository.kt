@@ -4,6 +4,7 @@ import edu.austral.splitit.server.domain.model.event.Expense
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
+import java.time.Instant
 
 interface ExpenseRepository : JpaRepository<Expense, Long> {
     fun findAllByEventId(eventId: Long): List<Expense>
@@ -20,4 +21,9 @@ interface ExpenseRepository : JpaRepository<Expense, Long> {
     ): List<Expense>
 
     fun findAllByPaidByMemberId(paidByMemberId: Long): List<Expense>
+
+    fun countByCreatedAtGreaterThanEqualAndCreatedAtLessThanEqual(
+        from: Instant,
+        to: Instant,
+    ): Long
 }
