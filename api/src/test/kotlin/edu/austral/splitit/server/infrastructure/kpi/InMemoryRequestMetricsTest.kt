@@ -87,7 +87,7 @@ class InMemoryRequestMetricsTest {
         repeat(3) {
             store.record(sample("GET /api/status", 500, Duration.ofMillis(1), end))
         }
-        clock.advance(Duration.ofHours(26))
+        clock.advance(Duration.ofHours(49))
         store.record(sample("GET /api/status", 200, Duration.ofMillis(1), clock.instant()))
 
         val wide = end.minus(Duration.ofDays(1))..clock.instant()
@@ -96,7 +96,7 @@ class InMemoryRequestMetricsTest {
 
     @Test
     fun `a sample exactly at the retention cutoff is kept`() {
-        val cutoff = end.minus(Duration.ofHours(25))
+        val cutoff = end.minus(Duration.ofHours(48))
         metrics.record(sample("GET /api/status", 500, Duration.ofMillis(1), cutoff))
         metrics.record(sample("GET /api/status", 200, Duration.ofMillis(1), end))
 
@@ -106,8 +106,8 @@ class InMemoryRequestMetricsTest {
 
     @Test
     fun `a sample one nanosecond before the cutoff is dropped`() {
-        val sampleTime = end.minus(Duration.ofHours(25))
-        val clock = MutableClock(sampleTime.plus(Duration.ofHours(25)).minusNanos(1))
+        val sampleTime = end.minus(Duration.ofHours(48))
+        val clock = MutableClock(sampleTime.plus(Duration.ofHours(48)).minusNanos(1))
         val store = InMemoryRequestMetrics(clock)
         store.record(sample("GET /api/status", 500, Duration.ofMillis(1), sampleTime))
         clock.advance(Duration.ofNanos(2))
@@ -122,11 +122,27 @@ class InMemoryRequestMetricsTest {
         val clock = MutableClock(end)
         val store = InMemoryRequestMetrics(clock)
         store.record(sample("GET /api/status", 500, Duration.ofMillis(1), end))
-        clock.advance(Duration.ofHours(26))
-        store.record(sample("GET /api/status", 500, Duration.ofMillis(1), clock.instant().minus(Duration.ofHours(26))))
+        clock.advance(Duration.ofHours(49))
+        store.record(sample("GET /api/status", 500, Duration.ofMillis(1), clock.instant().minus(Duration.ofHours(49))))
 
         val wide = end.minus(Duration.ofDays(1))..clock.instant()
         assertNull(store.rate5xx(wide))
+    }
+
+    @Test
+    fun `a sample from the start of the previous day is still there at the daily report`() {
+        val dayStart = Instant.parse("2026-10-12T00:00:00Z")
+        val reportAt = Instant.parse("2026-10-13T03:15:00Z")
+        val clock = MutableClock(dayStart)
+        val store = InMemoryRequestMetrics(clock)
+        store.record(sample(KpiEndpoints.POST_EXPENSES, 500, Duration.ofMillis(40), dayStart))
+
+        clock.set(reportAt)
+        store.record(sample("GET /api/status", 200, Duration.ofMillis(1), reportAt))
+
+        val reportedDay = dayStart..Instant.parse("2026-10-13T00:00:00Z").minusNanos(1_000)
+        assertEquals(1.0, store.rate5xx(reportedDay))
+        assertEquals(Duration.ofMillis(40), store.p95(KpiEndpoints.POST_EXPENSES, reportedDay))
     }
 
     private fun sample(
@@ -139,6 +155,10 @@ class InMemoryRequestMetricsTest {
     private class MutableClock(
         private var now: Instant,
     ) : Clock() {
+        fun set(instant: Instant) {
+            now = instant
+        }
+
         fun advance(duration: Duration) {
             now = now.plus(duration)
         }
