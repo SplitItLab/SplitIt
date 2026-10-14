@@ -6,6 +6,7 @@ import edu.austral.splitit.server.domain.kpi.KpiResult
 import edu.austral.splitit.server.domain.kpi.KpiValue
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.test.web.client.ExpectedCount.never
 import org.springframework.test.web.client.MockRestServiceServer
@@ -16,6 +17,7 @@ import org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPat
 import org.springframework.test.web.client.match.MockRestRequestMatchers.method
 import org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo
 import org.springframework.test.web.client.response.MockRestResponseCreators.withServerError
+import org.springframework.test.web.client.response.MockRestResponseCreators.withStatus
 import org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess
 import org.springframework.web.client.RestClient
 import java.time.Instant
@@ -31,6 +33,11 @@ class SupabaseKpiExporterTest {
     private val calculatedAt = Instant.parse("2026-10-12T03:15:00Z")
     private val catalogUrl = "$base/rest/v1/kpi_catalog"
     private val measurementUrl = "$base/rest/v1/measurement?on_conflict=project_id,kpi_id,date,env"
+
+    private val fullCatalog =
+        """[{"id":"events_created_per_day"},{"id":"expenses_registered_per_day"},
+        {"id":"events_with_expense_percent"},{"id":"post_expenses_latency_p95"},
+        {"id":"error_rate_5xx_24h"},{"id":"backend_health"},{"id":"last_successful_run"}]"""
 
     private val builder = RestClient.builder()
     private val server = MockRestServiceServer.bindTo(builder).build()
@@ -110,12 +117,7 @@ class SupabaseKpiExporterTest {
         server
             .expect(requestTo("$catalogUrl?select=id"))
             .andRespond(
-                withSuccess(
-                    """[{"id":"events_created_per_day"},{"id":"expenses_registered_per_day"},
-                    {"id":"events_with_expense_percent"},{"id":"post_expenses_latency_p95"},
-                    {"id":"error_rate_5xx_24h"},{"id":"backend_health"},{"id":"last_successful_run"}]""",
-                    MediaType.APPLICATION_JSON,
-                ),
+                withSuccess(fullCatalog, MediaType.APPLICATION_JSON),
             )
         server
             .expect(requestTo(measurementUrl))
@@ -125,6 +127,41 @@ class SupabaseKpiExporterTest {
         exporter().export(run)
 
         server.verify()
+    }
+
+    @Test
+    fun `sends the batch when another instance registered the catalog first`() {
+        server.expect(requestTo("$catalogUrl?select=id")).andRespond(withSuccess("[]", MediaType.APPLICATION_JSON))
+        server
+            .expect(requestTo(catalogUrl))
+            .andExpect(method(HttpMethod.POST))
+            .andRespond(withStatus(HttpStatus.CONFLICT))
+        server
+            .expect(requestTo("$catalogUrl?select=id"))
+            .andRespond(withSuccess(fullCatalog, MediaType.APPLICATION_JSON))
+        server.expect(requestTo(measurementUrl)).andRespond(withSuccess())
+
+        exporter().export(run)
+
+        server.verify()
+    }
+
+    @Test
+    fun `does not send the batch when the catalog is still incomplete after a conflict`() {
+        server.expect(requestTo("$catalogUrl?select=id")).andRespond(withSuccess("[]", MediaType.APPLICATION_JSON))
+        server
+            .expect(requestTo(catalogUrl))
+            .andExpect(method(HttpMethod.POST))
+            .andRespond(withStatus(HttpStatus.CONFLICT))
+        server
+            .expect(requestTo("$catalogUrl?select=id"))
+            .andRespond(withSuccess("""[{"id":"events_created_per_day"}]""", MediaType.APPLICATION_JSON))
+        server.expect(never(), requestTo(measurementUrl)).andRespond(withSuccess())
+
+        val receipt = exporter().export(run)
+
+        server.verify()
+        assertEquals("supabase", receipt.destination)
     }
 
     @Test

@@ -7,6 +7,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
+import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.RestClient
 import org.springframework.web.client.RestClientException
 import org.springframework.web.client.body
@@ -87,6 +88,19 @@ class SupabaseKpiExporter(
     }
 
     private fun registerMissingCatalogEntries() {
+        val missing = missingCatalogEntries()
+        if (missing.isEmpty()) return
+        try {
+            post(CATALOG_PATH, missing.map { it.catalogBody() }, ignoreDuplicates = false)
+            logger.info("KPI catalog registered. env={} kpis={}", settings.env, missing.map { it.platformId })
+        } catch (conflict: HttpClientErrorException.Conflict) {
+            // Another instance registered them between the read and the post.
+            val stillMissing = missingCatalogEntries()
+            if (stillMissing.isNotEmpty()) throw conflict
+        }
+    }
+
+    private fun missingCatalogEntries(): List<SupabaseKpi> {
         val registered =
             restClient
                 .get()
@@ -97,11 +111,7 @@ class SupabaseKpiExporter(
                 .orEmpty()
                 .map { it.id }
                 .toSet()
-        val missing = SupabaseKpiCatalog.entries.filter { it.platformId !in registered }
-        if (missing.isNotEmpty()) {
-            post(CATALOG_PATH, missing.map { it.catalogBody() }, ignoreDuplicates = false)
-            logger.info("KPI catalog registered. env={} kpis={}", settings.env, missing.map { it.platformId })
-        }
+        return SupabaseKpiCatalog.entries.filter { it.platformId !in registered }
     }
 
     private fun post(
