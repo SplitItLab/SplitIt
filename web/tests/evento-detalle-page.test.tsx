@@ -18,6 +18,11 @@ vi.mock("@/lib/expenses", async (importOriginal) => {
   return { ...actual, listExpenses: vi.fn() };
 });
 
+vi.mock("@/lib/balances", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/balances")>();
+  return { ...actual, listBalances: vi.fn() };
+});
+
 vi.mock("@/lib/settlements", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/settlements")>();
   return { ...actual, listSuggestedPayments: vi.fn() };
@@ -25,6 +30,7 @@ vi.mock("@/lib/settlements", async (importOriginal) => {
 
 import { EventError, getEventById, type EventDetail } from "@/lib/events";
 import { listExpenses } from "@/lib/expenses";
+import { listBalances } from "@/lib/balances";
 import { listSuggestedPayments } from "@/lib/settlements";
 // import { getEventInviteToken } from "@/lib/events";
 import { EventDetailView } from "../components/event-detail-view";
@@ -49,6 +55,8 @@ describe("EventDetailView", () => {
     vi.mocked(getEventById).mockReset();
     vi.mocked(listExpenses).mockReset();
     vi.mocked(listExpenses).mockResolvedValue([]);
+    vi.mocked(listBalances).mockReset();
+    vi.mocked(listBalances).mockResolvedValue([]);
     vi.mocked(listSuggestedPayments).mockReset();
     vi.mocked(listSuggestedPayments).mockResolvedValue([]);
     // vi.mocked(getEventInviteToken).mockReset();
@@ -159,7 +167,8 @@ describe("EventDetailView", () => {
     expect(await screen.findByText("Todavía no hay gastos")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("tab", { name: "Saldos" }));
-    expect(screen.getByText("Todavía no hay saldos")).toBeInTheDocument();
+    expect(await screen.findByText("Todavía no hay saldos")).toBeInTheDocument();
+    expect(listBalances).toHaveBeenCalledWith(1);
 
     await userEvent.click(screen.getByRole("tab", { name: "Integrantes" }));
     expect(screen.getByRole("heading", { name: "Integrantes" })).toBeInTheDocument();

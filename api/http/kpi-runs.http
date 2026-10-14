@@ -1,0 +1,89 @@
+# KPI runs — SplitIt API
+#
+# Cómo usar
+#   IntelliJ: Run All en este archivo (env "local"). Los asserts salen en la pestaña Tests.
+#   VS Code: REST Client; ejecutá cada bloque `###`.
+#   La API tiene que estar en {{baseUrl}} (por defecto localhost:8080).
+#
+# La corrida la hace KpiReportJob (03:15 UTC). No hay POST: cualquier sesión
+# podría dispararla. Este archivo solo consulta las corridas ya guardadas.
+#
+# En local y en dev, KPI_EXPORT_MODE queda en local: la corrida se guarda
+# con destination "local". No escribe el canal report.
+# En production de Vercel hay que setear KPI_EXPORT_MODE=report.
+#
+@baseUrl = http://localhost:8080
+@kpiUserEmail = kpi.runner-{{$timestamp}}@example.com
+@kpiUserPassword = una-clave-segura
+
+### 1. Seed — Crear cuenta para disparar la corrida
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "KPI Runner",
+  "email": "{{kpiUserEmail}}",
+  "password": "{{kpiUserPassword}}"
+}
+
+> {%
+import { assertStatus } from './scripts/assert.js'
+
+client.test("crea usuario para la corrida de KPIs", function () {
+    assertStatus(client, response, 201)
+})
+%}
+
+### 2. Login — Iniciar sesión y capturar cookie
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{kpiUserEmail}}",
+  "password": "{{kpiUserPassword}}"
+}
+
+> {%
+import { assertStatus, assertSetCookieHttpOnly, saveAuthToken } from './scripts/assert.js'
+
+client.test("inicia sesión", function () {
+    assertStatus(client, response, 200)
+    assertSetCookieHttpOnly(client, response, "auth_token")
+})
+saveAuthToken(client, response, "auth_token")
+%}
+
+### 3. KPI runs — POST no dispara una corrida
+POST {{baseUrl}}/api/kpi-runs
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "reportDay": "2026-01-15"
+}
+
+> {%
+import { assertStatus } from './scripts/assert.js'
+
+client.test("un usuario autenticado no puede disparar la corrida", function () {
+    assertStatus(client, response, 405)
+})
+%}
+
+### 4. KPI runs — GET consulta las corridas guardadas
+GET {{baseUrl}}/api/kpi-runs
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("la lista de corridas responde 200", function () {
+    assertStatus(client, response, 200)
+    const body = jsonBody(response)
+    client.assert(Array.isArray(body), "Expected a list")
+})
+%}

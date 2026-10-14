@@ -15,6 +15,7 @@ import org.springframework.test.context.TestPropertySource
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 import kotlin.test.assertEquals
 
 @DataJpaTest
@@ -74,6 +75,31 @@ class JpaKpiActivityQueryTest(
         assertEquals(2, query.countEventsWithAtLeastOneExpense())
         assertEquals(4, query.countEvents())
     }
+
+    @Test
+    fun `a creation at midnight counts only in the new day`() {
+        val midnight = Instant.parse("2026-10-11T00:00:00Z")
+        val owner = userRepository.findAll().single()
+        val eventAtMidnight = eventRepository.findAll().single { it.name == "Viaje posterior" }
+        persistExpense(eventAtMidnight, owner, midnight)
+
+        val day = LocalDate.parse("2026-10-10")
+        val previousTo = endOfDay(day)
+        val newDay = day.plusDays(1)
+        val newDayEnd = endOfDay(newDay)
+
+        assertEquals(2, query.countEventsCreated(from, previousTo))
+        assertEquals(1, query.countEventsCreated(midnight, newDayEnd))
+        assertEquals(2, query.countExpensesRegistered(from, previousTo))
+        assertEquals(1, query.countExpensesRegistered(midnight, newDayEnd))
+    }
+
+    private fun endOfDay(day: LocalDate): Instant =
+        day
+            .plusDays(1)
+            .atStartOfDay(ZoneOffset.UTC)
+            .toInstant()
+            .minusNanos(1_000)
 
     private fun persistEvent(
         owner: User,

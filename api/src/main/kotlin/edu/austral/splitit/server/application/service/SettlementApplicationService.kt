@@ -9,13 +9,6 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
 
-// TODO(SPT-83): borrar cuando mergee SPT-83; lo define BalanceApplicationService con este mismo shape.
-data class BalanceSummary(
-    val memberId: Long,
-    val memberName: String,
-    val netBalance: BigDecimal,
-)
-
 data class SuggestedPaymentMemberSummary(
     val id: Long,
     val name: String,
