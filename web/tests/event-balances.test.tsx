@@ -55,7 +55,7 @@ describe("EventBalances", () => {
     cleanup();
   });
 
-  it("muestra el vacío cuando todos los saldos están en cero", async () => {
+  it("muestra a cada integrante en cero cuando nadie debe", async () => {
     vi.mocked(listBalances).mockResolvedValue([
       { ...ana, netBalance: 0 },
       { ...luis, netBalance: 0 },
@@ -64,12 +64,21 @@ describe("EventBalances", () => {
     renderBalances();
 
     expect(
-      await screen.findByRole("heading", { name: "Todavía no hay saldos" })
+      await screen.findByRole("heading", { name: "Saldo por integrante" })
     ).toBeInTheDocument();
+    expect(screen.getAllByText("en cero")).toHaveLength(2);
     expect(
-      screen.getByText(
-        "Cuando el evento tenga gastos cargados, acá vas a ver cuánto le corresponde a cada integrante."
-      )
+      screen.queryByRole("heading", { name: "Todavía no hay saldos" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("muestra el vacío cuando el evento no tiene integrantes", async () => {
+    vi.mocked(listBalances).mockResolvedValue([]);
+
+    renderBalances();
+
+    expect(
+      await screen.findByRole("heading", { name: "Todavía no hay saldos" })
     ).toBeInTheDocument();
     expect(screen.queryByText("Saldo por integrante")).not.toBeInTheDocument();
   });

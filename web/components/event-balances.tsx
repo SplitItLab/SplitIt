@@ -90,7 +90,7 @@ export function EventBalances({
       )}
 
       {state.status === "ready" &&
-        (state.balances.every((balance) => balance.netBalance === 0) ? (
+        (state.balances.length === 0 ? (
           <div className="border-border rounded-[24px] border p-6 sm:p-8">
             <div className="mx-auto max-w-sm text-center">
               <h3 className="text-text-primary text-2xl font-extrabold">Todavía no hay saldos</h3>

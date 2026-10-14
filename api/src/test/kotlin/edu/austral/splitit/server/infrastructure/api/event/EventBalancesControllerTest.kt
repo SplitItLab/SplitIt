@@ -3,8 +3,8 @@ package edu.austral.splitit.server.infrastructure.api.event
 import edu.austral.splitit.server.application.exception.EventNotFoundException
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
+import edu.austral.splitit.server.application.service.BalanceApplicationService
 import edu.austral.splitit.server.application.service.BalanceSummary
-import edu.austral.splitit.server.application.service.EventApplicationService
 import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
 import edu.austral.splitit.server.infrastructure.config.SecurityConfig
 import jakarta.servlet.http.Cookie
@@ -46,7 +46,7 @@ class EventBalancesControllerTest(
     @Autowired private val mockMvc: MockMvc,
 ) {
     @MockitoBean
-    private lateinit var eventApplicationService: EventApplicationService
+    private lateinit var balanceApplicationService: BalanceApplicationService
 
     @MockitoBean
     private lateinit var tokenProvider: TokenProvider
@@ -63,7 +63,7 @@ class EventBalancesControllerTest(
     @Test
     fun `get balances returns each member net balance`() {
         whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
-        whenever(eventApplicationService.listBalances(1L, 7L)).thenReturn(
+        whenever(balanceApplicationService.listBalances(1L, 7L)).thenReturn(
             listOf(
                 BalanceSummary(memberId = 1L, memberName = "Ana", netBalance = BigDecimal("50.0000")),
                 BalanceSummary(memberId = 2L, memberName = "Luis", netBalance = BigDecimal("-50.0000")),
@@ -82,7 +82,7 @@ class EventBalancesControllerTest(
             .andExpect(jsonPath("$[1].memberName").value("Luis"))
             .andExpect(jsonPath("$[1].netBalance").value(-50.0))
 
-        verify(eventApplicationService).listBalances(1L, 7L)
+        verify(balanceApplicationService).listBalances(1L, 7L)
     }
 
     @Test
@@ -92,13 +92,13 @@ class EventBalancesControllerTest(
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.message").value("Unauthorized"))
 
-        verify(eventApplicationService, never()).listBalances(any(), any())
+        verify(balanceApplicationService, never()).listBalances(any(), any())
     }
 
     @Test
     fun `get balances returns 403 when user has no access to the event`() {
         whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
-        whenever(eventApplicationService.listBalances(any(), any()))
+        whenever(balanceApplicationService.listBalances(any(), any()))
             .thenThrow(AccessDeniedException("Forbidden"))
 
         mockMvc
@@ -112,7 +112,7 @@ class EventBalancesControllerTest(
     @Test
     fun `get balances returns 404 when event does not exist`() {
         whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
-        whenever(eventApplicationService.listBalances(any(), any()))
+        whenever(balanceApplicationService.listBalances(any(), any()))
             .thenThrow(EventNotFoundException())
 
         mockMvc

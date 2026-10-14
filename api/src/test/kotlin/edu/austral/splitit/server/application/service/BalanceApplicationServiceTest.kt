@@ -8,8 +8,6 @@ import edu.austral.splitit.server.domain.model.event.Expense
 import edu.austral.splitit.server.domain.service.EventMemberService
 import edu.austral.splitit.server.domain.service.EventService
 import edu.austral.splitit.server.domain.service.ExpenseService
-import edu.austral.splitit.server.domain.service.InviteLinkService
-import edu.austral.splitit.server.domain.service.UserService
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
@@ -22,19 +20,15 @@ import java.time.LocalDate
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-class EventApplicationServiceBalanceTest {
-    private val userService: UserService = mock()
+class BalanceApplicationServiceTest {
     private val eventService: EventService = mock()
     private val eventMemberService: EventMemberService = mock()
-    private val inviteLinkService: InviteLinkService = mock()
     private val expenseService: ExpenseService = mock()
 
-    private val eventApplicationService =
-        EventApplicationService(
-            userService = userService,
+    private val balanceApplicationService =
+        BalanceApplicationService(
             eventService = eventService,
             eventMemberService = eventMemberService,
-            inviteLinkService = inviteLinkService,
             expenseService = expenseService,
         )
 
@@ -62,7 +56,7 @@ class EventApplicationServiceBalanceTest {
         whenever(eventMemberService.findByEventId(10L)).thenReturn(listOf(ana, luis))
         whenever(expenseService.findByEventId(10L)).thenReturn(listOf(expense))
 
-        val balances = eventApplicationService.listBalances(userId = 1L, eventId = 10L)
+        val balances = balanceApplicationService.listBalances(userId = 1L, eventId = 10L)
 
         assertEquals(
             listOf(
@@ -78,7 +72,7 @@ class EventApplicationServiceBalanceTest {
         whenever(eventService.findById(999L)).thenReturn(null)
 
         assertFailsWith<EventNotFoundException> {
-            eventApplicationService.listBalances(userId = 1L, eventId = 999L)
+            balanceApplicationService.listBalances(userId = 1L, eventId = 999L)
         }
 
         verify(eventMemberService, never()).findByEventId(any())
@@ -100,7 +94,7 @@ class EventApplicationServiceBalanceTest {
         whenever(eventMemberService.isUserMemberOfEvent(30L, 1L)).thenReturn(false)
 
         assertFailsWith<AccessDeniedException> {
-            eventApplicationService.listBalances(userId = 1L, eventId = 30L)
+            balanceApplicationService.listBalances(userId = 1L, eventId = 30L)
         }
 
         verify(eventMemberService, never()).findByEventId(any())
