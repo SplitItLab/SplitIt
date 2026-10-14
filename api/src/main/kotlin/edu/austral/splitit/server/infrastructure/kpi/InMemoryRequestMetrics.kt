@@ -19,9 +19,14 @@ class InMemoryRequestMetrics(
 
     fun record(sample: RequestSample) {
         val cutoff = clock.instant().minus(RETENTION)
-        samples.removeIf { it.at.isBefore(cutoff) }
-        if (!sample.at.isBefore(cutoff)) {
-            samples.add(sample)
+        // peek then poll is not atomic: another request can drop a sample that is still inside the window.
+        synchronized(samples) {
+            while (samples.peek()?.at?.isBefore(cutoff) == true) {
+                samples.poll()
+            }
+            if (!sample.at.isBefore(cutoff)) {
+                samples.add(sample)
+            }
         }
     }
 
@@ -54,7 +59,9 @@ class InMemoryRequestMetrics(
 
     private companion object {
         const val PERCENTILE = 0.95
-        const val RETENTION_HOURS = 25L
+
+        // The report runs at 03:15 UTC, so the first sample of the previous day is 27h 15m old.
+        const val RETENTION_HOURS = 48L
         val RETENTION: Duration = Duration.ofHours(RETENTION_HOURS)
         const val SERVER_ERROR_MIN = 500
         const val SERVER_ERROR_MAX = 599

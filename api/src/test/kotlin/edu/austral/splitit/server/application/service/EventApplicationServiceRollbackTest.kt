@@ -3,6 +3,7 @@ package edu.austral.splitit.server.application.service
 import edu.austral.splitit.server.Helpers
 import edu.austral.splitit.server.application.exception.EventDeletionConflictException
 import edu.austral.splitit.server.application.exception.EventNotFoundException
+import edu.austral.splitit.server.application.exception.ExpenseNotFoundException
 import edu.austral.splitit.server.application.port.ExchangeRateProvider
 import edu.austral.splitit.server.domain.model.event.Expense
 import edu.austral.splitit.server.domain.model.event.InviteLink
@@ -44,6 +45,7 @@ import kotlin.test.assertTrue
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 @Import(
     EventApplicationService::class,
+    ExpenseApplicationService::class,
     ExchangeQuoteService::class,
     EventService::class,
     EventMemberService::class,
@@ -67,6 +69,7 @@ import kotlin.test.assertTrue
 )
 class EventApplicationServiceRollbackTest(
     @Autowired private val eventApplicationService: EventApplicationService,
+    @Autowired private val expenseApplicationService: ExpenseApplicationService,
     @Autowired private val userRepository: UserRepository,
     @Autowired private val eventRepository: EventRepository,
     @Autowired private val eventMemberRepository: EventMemberRepository,
@@ -208,7 +211,7 @@ class EventApplicationServiceRollbackTest(
         val member = eventMemberRepository.findAllByEventId(event.id).first()
 
         val summary =
-            eventApplicationService.addExpense(
+            expenseApplicationService.addExpense(
                 CreateExpenseCommand(
                     userId = requireNotNull(owner.id),
                     eventId = event.id,
@@ -230,7 +233,7 @@ class EventApplicationServiceRollbackTest(
         val member = eventMemberRepository.findAllByEventId(event.id).first()
         val otherMember = eventMemberRepository.findAllByEventId(otherEvent.id).first()
 
-        eventApplicationService.addExpense(
+        expenseApplicationService.addExpense(
             CreateExpenseCommand(
                 userId = requireNotNull(owner.id),
                 eventId = event.id,
@@ -240,7 +243,7 @@ class EventApplicationServiceRollbackTest(
                 paidByMemberId = requireNotNull(member.id),
             ),
         )
-        eventApplicationService.addExpense(
+        expenseApplicationService.addExpense(
             CreateExpenseCommand(
                 userId = requireNotNull(owner.id),
                 eventId = otherEvent.id,
@@ -251,9 +254,32 @@ class EventApplicationServiceRollbackTest(
             ),
         )
 
-        val expenses = eventApplicationService.listExpenses(requireNotNull(owner.id), event.id)
+        val expenses = expenseApplicationService.listExpenses(requireNotNull(owner.id), event.id)
 
         assertEquals(1, expenses.size)
         assertEquals("Cena", expenses[0].name)
+    }
+
+    @Test
+    fun `deleteExpense removes the expense from the event list and the total no longer includes it`() {
+        val event = createEvent()
+        val ownerId = requireNotNull(owner.id)
+        val memberId = requireNotNull(eventMemberRepository.findAllByEventId(event.id).first().id)
+        val dinner =
+            expenseApplicationService.addExpense(
+                CreateExpenseCommand(ownerId, event.id, "Cena", BigDecimal("5000"), "ARS", memberId),
+            )
+        expenseApplicationService.addExpense(
+            CreateExpenseCommand(ownerId, event.id, "Bebidas", BigDecimal("1500"), "ARS", memberId),
+        )
+
+        expenseApplicationService.deleteExpense(ownerId, event.id, dinner.id)
+
+        val remaining = expenseApplicationService.listExpenses(ownerId, event.id)
+        assertEquals(listOf("Bebidas"), remaining.map { it.name })
+        assertEquals(0, BigDecimal("1500").compareTo(remaining.sumOf { it.baseAmount }))
+        assertFailsWith<ExpenseNotFoundException> {
+            expenseApplicationService.deleteExpense(ownerId, event.id, dinner.id)
+        }
     }
 }

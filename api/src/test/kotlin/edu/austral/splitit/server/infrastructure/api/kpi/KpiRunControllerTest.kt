@@ -10,7 +10,6 @@ import edu.austral.splitit.server.domain.kpi.KpiValue
 import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
 import edu.austral.splitit.server.infrastructure.config.SecurityConfig
 import jakarta.servlet.http.Cookie
-import org.hamcrest.Matchers.nullValue
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.never
@@ -57,37 +56,8 @@ class KpiRunControllerTest(
     private lateinit var tokenProvider: TokenProvider
 
     @Test
-    fun `post without a day stores yesterday and returns the receipt`() {
+    fun `an authenticated post does not run a report`() {
         whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
-        whenever(runKpiReport.run(null)).thenReturn(receipt(LocalDate.parse("2026-10-11")))
-
-        mockMvc
-            .perform(post("/api/kpi-runs").cookie(Cookie("auth_token", "good-token")))
-            .andExpect(status().isCreated)
-            .andExpect(jsonPath("$.id").value(8))
-            .andExpect(jsonPath("$.destination").value("local"))
-            .andExpect(jsonPath("$.reportDay").value("2026-10-11"))
-            .andExpect(jsonPath("$.windowFrom").value("2026-10-11T00:00:00Z"))
-            .andExpect(jsonPath("$.windowTo").value("2026-10-11T23:59:59.999999999Z"))
-            .andExpect(jsonPath("$.calculatedAt").value("2026-10-12T03:15:00Z"))
-            .andExpect(jsonPath("$.results[0].id").value(KpiIds.EVENTS_CREATED_PER_DAY))
-            .andExpect(jsonPath("$.results[0].numericValue").value(NUMERIC))
-            .andExpect(jsonPath("$.results[0].textValue").value(nullValue()))
-            .andExpect(jsonPath("$.results[1].id").value(KpiIds.BACKEND_HEALTH))
-            .andExpect(jsonPath("$.results[1].numericValue").value(nullValue()))
-            .andExpect(jsonPath("$.results[1].textValue").value("OK"))
-            .andExpect(jsonPath("$.results[2].id").value(KpiIds.ERROR_RATE_5XX_24H))
-            .andExpect(jsonPath("$.results[2].numericValue").value(nullValue()))
-            .andExpect(jsonPath("$.results[2].textValue").value(nullValue()))
-
-        verify(runKpiReport).run(null)
-    }
-
-    @Test
-    fun `post with a report day forwards that day`() {
-        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
-        val day = LocalDate.of(2026, 10, 10)
-        whenever(runKpiReport.run(day)).thenReturn(receipt(day))
 
         mockMvc
             .perform(
@@ -95,10 +65,9 @@ class KpiRunControllerTest(
                     .cookie(Cookie("auth_token", "good-token"))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content("""{"reportDay":"2026-10-10"}"""),
-            ).andExpect(status().isCreated)
-            .andExpect(jsonPath("$.reportDay").value("2026-10-10"))
+            ).andExpect(status().isMethodNotAllowed)
 
-        verify(runKpiReport).run(day)
+        verify(runKpiReport, never()).run(any())
     }
 
     @Test
@@ -107,22 +76,6 @@ class KpiRunControllerTest(
             .perform(post("/api/kpi-runs"))
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.message").value("Unauthorized"))
-
-        verify(runKpiReport, never()).run(any())
-    }
-
-    @Test
-    fun `post with a bad report day returns 400`() {
-        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
-
-        mockMvc
-            .perform(
-                post("/api/kpi-runs")
-                    .cookie(Cookie("auth_token", "good-token"))
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content("""{"reportDay":"yesterday"}"""),
-            ).andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.message").value("Invalid request data"))
 
         verify(runKpiReport, never()).run(any())
     }

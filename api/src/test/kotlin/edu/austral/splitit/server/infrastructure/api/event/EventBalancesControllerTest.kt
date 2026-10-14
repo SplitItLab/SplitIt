@@ -27,7 +27,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.math.BigDecimal
 
 @WebMvcTest(
-    controllers = [EventController::class],
+    controllers = [EventBalanceController::class],
     excludeAutoConfiguration = [
         UserDetailsServiceAutoConfiguration::class,
     ],

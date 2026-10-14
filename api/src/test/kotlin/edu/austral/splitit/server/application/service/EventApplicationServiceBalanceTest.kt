@@ -2,7 +2,6 @@ package edu.austral.splitit.server.application.service
 
 import edu.austral.splitit.server.Helpers
 import edu.austral.splitit.server.application.exception.EventNotFoundException
-import edu.austral.splitit.server.application.port.ExchangeRateProvider
 import edu.austral.splitit.server.domain.model.event.Event
 import edu.austral.splitit.server.domain.model.event.EventMember
 import edu.austral.splitit.server.domain.model.event.Expense
@@ -29,7 +28,6 @@ class EventApplicationServiceBalanceTest {
     private val eventMemberService: EventMemberService = mock()
     private val inviteLinkService: InviteLinkService = mock()
     private val expenseService: ExpenseService = mock()
-    private val exchangeRateProvider: ExchangeRateProvider = mock()
 
     private val eventApplicationService =
         EventApplicationService(
@@ -38,7 +36,6 @@ class EventApplicationServiceBalanceTest {
             eventMemberService = eventMemberService,
             inviteLinkService = inviteLinkService,
             expenseService = expenseService,
-            exchangeQuoteService = ExchangeQuoteService(exchangeRateProvider),
         )
 
     private val user = Helpers.user(name = "Ana", email = "ana@example.com", passwordHash = "hash")

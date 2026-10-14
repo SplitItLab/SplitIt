@@ -29,10 +29,7 @@ Spring crea un solo `KpiSnapshotExporter` según `KPI_EXPORT_MODE`. Los dos modo
 
 El default es `local`. Production de Vercel tiene que setear `KPI_EXPORT_MODE=report`. Preview y local no. Los únicos valores son `local` y `report`. Otro valor hace que la aplicación no arranque.
 
-La corrida se dispara de dos maneras, las dos en código:
-
-- `POST /api/kpi-runs`, con sesión. Body opcional `{ "reportDay": "2026-10-10" }`. Sin día, usa ayer UTC.
-- `KpiReportJob`, cron `0 15 3 * * *` en `UTC` (03:15). Llama al mismo caso de uso. El cron no pasa por HTTP.
+La corrida la dispara `KpiReportJob`, cron `0 15 3 * * *` en `UTC` (03:15). Llama al caso de uso directo, sin HTTP. No hay POST: cualquier usuario con sesión podría disparar el envío.
 
 `GET /api/kpi-runs` lista solo el canal del exportador activo. Cada corrida agrega una fila. Dos días dejan dos filas. El mismo día, corrido dos veces, deja dos filas de ese día.
 
@@ -46,11 +43,9 @@ Descartado: el backend de prod es un contenedor en Vercel. El disco no conserva 
 
 ## Cómo verificar que los datos llegaron
 
-Quien dispara la corrida mira la respuesta o el log. No hace falta leer el código.
+La corrida se ve en el log del job. No hace falta leer el código.
 
-`POST /api/kpi-runs` responde 201 con `destination`, `reportDay`, `id` y un resultado por KPI. `numericValue` o `textValue` trae el número o el texto. Los dos vienen null si ese KPI no tuvo dato. `destination` es el canal donde quedó la corrida.
-
-`GET /api/kpi-runs` devuelve esas corridas, de la más vieja a la más nueva, solo del canal activo.
+`GET /api/kpi-runs` devuelve las corridas guardadas, de la más vieja a la más nueva, solo del canal activo. Hace falta sesión. No dispara una corrida.
 
 El cron loguea el resumen y, en una línea por KPI, el id y el valor (`null` si no hubo dato):
 
@@ -71,9 +66,9 @@ ORDER BY s.id, v.kpi_id;
 
 Las corridas de dev están en `channel = 'local'`.
 
-En prod, con `KPI_EXPORT_MODE=report`, la misma query muestra una fila de valores por KPI de cada corrida, y el POST dice `destination: "report"`.
+En prod, con `KPI_EXPORT_MODE=report`, la misma query muestra una fila de valores por KPI de cada corrida, y el log dice `destination=report`.
 
-El archivo `api/http/kpi-runs.http` recorre el camino local: login, dos días distintos, y el GET que los encuentra.
+El archivo `api/http/kpi-runs.http` inicia sesión y consulta el GET. La corrida la hace el job.
 
 ## Fuera de alcance
 

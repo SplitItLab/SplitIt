@@ -5,6 +5,7 @@ import edu.austral.splitit.server.application.exception.EmailAlreadyInUseExcepti
 import edu.austral.splitit.server.application.exception.EventDeletionConflictException
 import edu.austral.splitit.server.application.exception.EventNotFoundException
 import edu.austral.splitit.server.application.exception.ExchangeRateUnavailableException
+import edu.austral.splitit.server.application.exception.ExpenseNotFoundException
 import edu.austral.splitit.server.application.exception.InvalidCredentialsException
 import edu.austral.splitit.server.application.exception.InvalidRequestException
 import org.slf4j.LoggerFactory
@@ -13,6 +14,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.core.AuthenticationException
+import org.springframework.web.HttpRequestMethodNotSupportedException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.MissingServletRequestParameterException
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -51,9 +53,9 @@ class GlobalExceptionHandler {
     fun handleAuthenticatedUserMissing(exception: AuthenticatedUserMissingException): ResponseEntity<ErrorMessage> =
         error(HttpStatus.UNAUTHORIZED, exception.message ?: UNAUTHORIZED_MESSAGE)
 
-    @ExceptionHandler(EventNotFoundException::class)
-    fun handleEventNotFound(exception: EventNotFoundException): ResponseEntity<ErrorMessage> =
-        error(HttpStatus.NOT_FOUND, exception.message ?: EVENT_NOT_FOUND_MESSAGE)
+    @ExceptionHandler(EventNotFoundException::class, ExpenseNotFoundException::class)
+    fun handleNotFound(exception: RuntimeException): ResponseEntity<ErrorMessage> =
+        error(HttpStatus.NOT_FOUND, exception.message ?: NOT_FOUND_MESSAGE)
 
     @ExceptionHandler(EventDeletionConflictException::class)
     fun handleEventDeletionConflict(exception: EventDeletionConflictException): ResponseEntity<ErrorMessage> =
@@ -73,6 +75,9 @@ class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception::class)
     fun handleUnexpected(exception: Exception): ResponseEntity<ErrorMessage> {
+        if (exception is HttpRequestMethodNotSupportedException) {
+            return error(HttpStatus.METHOD_NOT_ALLOWED, exception.message ?: "Method not allowed")
+        }
         logger.error("Unhandled exception", exception)
         return error(HttpStatus.INTERNAL_SERVER_ERROR, INTERNAL_ERROR_MESSAGE)
     }
@@ -83,7 +88,7 @@ class GlobalExceptionHandler {
         private const val EMAIL_ALREADY_IN_USE_MESSAGE = "Email already in use"
         private const val INVALID_CREDENTIALS_MESSAGE = "Invalid credentials"
         private const val UNAUTHORIZED_MESSAGE = "Unauthorized"
-        private const val EVENT_NOT_FOUND_MESSAGE = "Event not found"
+        private const val NOT_FOUND_MESSAGE = "Not found"
         private const val EVENT_DELETION_CONFLICT_MESSAGE = "Event cannot be deleted"
         private const val EXCHANGE_RATE_UNAVAILABLE_MESSAGE = "Exchange rate unavailable"
         private const val INTERNAL_ERROR_MESSAGE = "Internal server error"
