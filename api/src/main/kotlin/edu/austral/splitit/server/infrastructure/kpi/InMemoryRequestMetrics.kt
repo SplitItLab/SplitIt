@@ -60,7 +60,7 @@ class InMemoryRequestMetrics(
     private companion object {
         const val PERCENTILE = 0.95
 
-        // The report runs at 03:15 UTC, so the first sample of the previous day is 27h 15m old.
+        // The report runs at 03:15 UTC (00:15 in Buenos Aires), so the first sample of the previous day is 24h 15m old.
         const val RETENTION_HOURS = 48L
         val RETENTION: Duration = Duration.ofHours(RETENTION_HOURS)
         const val SERVER_ERROR_MIN = 500
