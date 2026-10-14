@@ -9,9 +9,11 @@ import edu.austral.splitit.server.domain.kpi.KpiValue
 import edu.austral.splitit.server.infrastructure.persistence.JpaKpiSnapshotStore
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.boot.test.context.runner.ApplicationContextRunner
+import org.springframework.web.client.RestClient
 import java.time.Instant
 import java.time.LocalDate
 import kotlin.test.Test
@@ -54,9 +56,28 @@ class KpiExportConfigTest {
     @Test
     fun `an unknown mode fails startup`() {
         val store = mock<JpaKpiSnapshotStore>()
-        contextRunner(store, "kpi.export.mode=supabase").run { context ->
+        contextRunner(store, "kpi.export.mode=kafka").run { context ->
             val failure = assertNotNull(context.startupFailure)
             assertTrue(failure.stackTraceToString().contains(MODE_ERROR))
+        }
+    }
+
+    @Test
+    fun `supabase mode sends to the platform instead of the local store`() {
+        val store = mock<JpaKpiSnapshotStore>()
+        contextRunner(store, "kpi.export.mode=supabase").run { context ->
+            assertNull(context.startupFailure)
+            assertTrue(context.getBean(KpiExporter::class.java) is SupabaseKpiExporter)
+            verify(store, never()).append(any(), any())
+        }
+    }
+
+    @Test
+    fun `an unknown export env fails startup in supabase mode`() {
+        val store = mock<JpaKpiSnapshotStore>()
+        contextRunner(store, "kpi.export.mode=supabase", "kpi.export.env=staging").run { context ->
+            val failure = assertNotNull(context.startupFailure)
+            assertTrue(failure.stackTraceToString().contains("kpi.export.env must be dev, qa or prod"))
         }
     }
 
@@ -79,17 +100,13 @@ class KpiExportConfigTest {
 
     private fun contextRunner(
         store: JpaKpiSnapshotStore,
-        property: String?,
-    ): ApplicationContextRunner {
-        var runner =
-            ApplicationContextRunner()
-                .withBean(JpaKpiSnapshotStore::class.java, { store })
-                .withUserConfiguration(KpiExportConfig::class.java)
-        if (property != null) {
-            runner = runner.withPropertyValues(property)
-        }
-        return runner
-    }
+        vararg properties: String?,
+    ): ApplicationContextRunner =
+        ApplicationContextRunner()
+            .withBean(JpaKpiSnapshotStore::class.java, { store })
+            .withBean(RestClient::class.java, { RestClient.create() })
+            .withUserConfiguration(KpiExportConfig::class.java)
+            .withPropertyValues(*properties.filterNotNull().toTypedArray())
 
     private fun stored(channel: String): KpiRunReceipt =
         KpiRunReceipt(
@@ -103,6 +120,6 @@ class KpiExportConfigTest {
         )
 
     private companion object {
-        const val MODE_ERROR = "kpi.export.mode must be local or report"
+        const val MODE_ERROR = "kpi.export.mode must be local, report or supabase"
     }
 }
