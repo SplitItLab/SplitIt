@@ -7,6 +7,7 @@ import { currencyLabel, type EventDetail, type EventMember } from "@/lib/events"
 import { getInitials } from "@/lib/profile";
 import { EventExpenses } from "@/components/event-expenses";
 import { EventIcon } from "@/components/event-icon";
+import { EventSuggestedPayments } from "@/components/event-suggested-payments";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
@@ -118,6 +119,13 @@ export function EventDetailContent({
                 integrante.
               </p>
             </div>
+          </div>
+          <div className="mt-4">
+            <EventSuggestedPayments
+              event={event}
+              onUnauthorized={onUnauthorized}
+              onNotFound={onNotFound}
+            />
           </div>
         </section>
       )}

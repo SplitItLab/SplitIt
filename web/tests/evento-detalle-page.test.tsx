@@ -18,8 +18,14 @@ vi.mock("@/lib/expenses", async (importOriginal) => {
   return { ...actual, listExpenses: vi.fn() };
 });
 
+vi.mock("@/lib/settlements", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/settlements")>();
+  return { ...actual, listSuggestedPayments: vi.fn() };
+});
+
 import { EventError, getEventById, type EventDetail } from "@/lib/events";
 import { listExpenses } from "@/lib/expenses";
+import { listSuggestedPayments } from "@/lib/settlements";
 // import { getEventInviteToken } from "@/lib/events";
 import { EventDetailView } from "../components/event-detail-view";
 
@@ -43,6 +49,8 @@ describe("EventDetailView", () => {
     vi.mocked(getEventById).mockReset();
     vi.mocked(listExpenses).mockReset();
     vi.mocked(listExpenses).mockResolvedValue([]);
+    vi.mocked(listSuggestedPayments).mockReset();
+    vi.mocked(listSuggestedPayments).mockResolvedValue([]);
     // vi.mocked(getEventInviteToken).mockReset();
   });
 
