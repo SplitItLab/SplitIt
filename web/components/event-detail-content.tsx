@@ -5,6 +5,7 @@ import { UserRound } from "lucide-react";
 
 import { currencyLabel, type EventDetail, type EventMember } from "@/lib/events";
 import { getInitials } from "@/lib/profile";
+import { EventBalances } from "@/components/event-balances";
 import { EventExpenses } from "@/components/event-expenses";
 import { EventIcon } from "@/components/event-icon";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -109,16 +110,7 @@ export function EventDetailContent({
 
       {active === "saldos" && (
         <section role="tabpanel" id={panelId("saldos")} aria-labelledby={tabId("saldos")}>
-          <h2 className="text-text-primary text-2xl font-extrabold">Saldos</h2>
-          <div className="border-border mt-4 rounded-[24px] border p-6 sm:p-8">
-            <div className="mx-auto max-w-sm text-center">
-              <h3 className="text-text-primary text-2xl font-extrabold">Todavía no hay saldos</h3>
-              <p className="text-text-secondary mt-2 text-sm font-medium">
-                Cuando el evento tenga gastos cargados, acá vas a ver cuánto le corresponde a cada
-                integrante.
-              </p>
-            </div>
-          </div>
+          <EventBalances event={event} onUnauthorized={onUnauthorized} onNotFound={onNotFound} />
         </section>
       )}
 

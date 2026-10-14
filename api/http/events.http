@@ -1285,7 +1285,73 @@ client.test("rechaza un gasto cuyo importe convertido supera la precisión permi
 })
 %}
 
-### 68. Events — GET detalle para capturar un integrante invitado como nuevo pagador
+### 68. Events — GET saldos de un evento sin gastos (200)
+GET {{baseUrl}}/api/events/{{secondEventId}}/balances
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("sin gastos cada integrante tiene saldo cero", function () {
+    assertStatus(client, response, 200)
+    const list = jsonBody(response)
+    client.assert(Array.isArray(list), "Expected array of balances")
+    client.assert(list.length === 1, "Expected the owner as the only member")
+    client.assert(list[0].memberName === "Owner User", "Expected owner name")
+    client.assert(list[0].netBalance === 0, "Expected zero balance")
+})
+%}
+
+### 69. Events — GET saldos reparte el gasto entre los integrantes actuales (200)
+GET {{baseUrl}}/api/events/{{firstEventId}}/balances
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("el dueño que pagó queda a favor y el resto debe lo mismo", function () {
+    assertStatus(client, response, 200)
+    const list = jsonBody(response)
+    client.assert(list.length === 3, "Expected owner plus two participants")
+    const owner = list.find(b => b.memberName === "Owner User")
+    const ana = list.find(b => b.memberName === "Ana")
+    const juan = list.find(b => b.memberName === "Juan")
+    client.assert(owner !== undefined && ana !== undefined && juan !== undefined, "Expected every member")
+    client.assert(owner.netBalance > 0, "Expected the payer to receive money")
+    client.assert(ana.netBalance < 0 && juan.netBalance < 0, "Expected the others to owe money")
+    client.assert(ana.netBalance === juan.netBalance, "Expected the same share for members who paid nothing")
+})
+%}
+
+### 70. Events — GET saldos sin autenticación (401)
+# @no-cookie-jar
+GET {{baseUrl}}/api/events/{{firstEventId}}/balances
+Accept: application/json
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza consultar saldos sin sesión", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### 71. Events — GET saldos de un evento inexistente (404)
+GET {{baseUrl}}/api/events/999999/balances
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza consultar saldos de un evento inexistente", function () {
+    assertError(client, response, 404, "Event not found")
+})
+%}
+
+### 72. Events — GET detalle para capturar un integrante invitado como nuevo pagador
 GET {{baseUrl}}/api/events/{{firstEventId}}
 Accept: application/json
 Cookie: auth_token={{authToken}}
@@ -1301,7 +1367,7 @@ client.test("obtiene un integrante invitado para cambiar el pagador", function (
 })
 %}
 
-### 69. Events — PUT editar nombre, monto y pagador de un gasto en la moneda base (200)
+### 73. Events — PUT editar nombre, monto y pagador de un gasto en la moneda base (200)
 PUT {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
 Content-Type: application/json
 Accept: application/json
@@ -1330,7 +1396,7 @@ client.test("edita nombre, monto y pagador del gasto", function () {
 })
 %}
 
-### 70. Events — GET lista de gastos refleja la edición (200)
+### 74. Events — GET lista de gastos refleja la edición (200)
 GET {{baseUrl}}/api/events/{{firstEventId}}/expenses
 Accept: application/json
 Cookie: auth_token={{authToken}}
@@ -1353,7 +1419,7 @@ client.test("el listado devuelve el gasto con los datos editados", function () {
 })
 %}
 
-### 71. Events — GET lista de gastos para guardar la cotización original del gasto en USD
+### 75. Events — GET lista de gastos para guardar la cotización original del gasto en USD
 GET {{baseUrl}}/api/events/{{firstEventId}}/expenses
 Accept: application/json
 Cookie: auth_token={{authToken}}
@@ -1370,7 +1436,7 @@ client.test("guarda la tasa y el importe base con los que se registró el gasto 
 })
 %}
 
-### 72. Events — PUT editar solo nombre y pagador de un gasto en USD conserva la cotización (200)
+### 76. Events — PUT editar solo nombre y pagador de un gasto en USD conserva la cotización (200)
 PUT {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{usdExpenseId}}
 Content-Type: application/json
 Accept: application/json
@@ -1409,7 +1475,7 @@ client.test("mantiene la tasa y el importe base si la moneda no cambia", functio
 })
 %}
 
-### 73. Events — PUT cambiar la moneda de un gasto vuelve a cotizar contra la moneda base (200)
+### 77. Events — PUT cambiar la moneda de un gasto vuelve a cotizar contra la moneda base (200)
 PUT {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{usdExpenseId}}
 Content-Type: application/json
 Accept: application/json
@@ -1438,7 +1504,7 @@ client.test("al pasar a la moneda base el gasto queda con tasa 1", function () {
 })
 %}
 
-### 74. Events — PUT editar gasto con nombre en blanco (400)
+### 78. Events — PUT editar gasto con nombre en blanco (400)
 PUT {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
 Content-Type: application/json
 Accept: application/json
@@ -1459,7 +1525,7 @@ client.test("rechaza editar un gasto con nombre en blanco", function () {
 })
 %}
 
-### 75. Events — PUT editar gasto con monto cero (400)
+### 79. Events — PUT editar gasto con monto cero (400)
 PUT {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
 Content-Type: application/json
 Accept: application/json
@@ -1480,7 +1546,7 @@ client.test("rechaza editar un gasto con monto cero", function () {
 })
 %}
 
-### 76. Events — PUT editar gasto sin pagador (400)
+### 80. Events — PUT editar gasto sin pagador (400)
 PUT {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
 Content-Type: application/json
 Accept: application/json
@@ -1500,7 +1566,7 @@ client.test("rechaza editar un gasto sin pagador", function () {
 })
 %}
 
-### 77. Events — GET detalle del segundo evento para capturar su integrante
+### 81. Events — GET detalle del segundo evento para capturar su integrante
 GET {{baseUrl}}/api/events/{{secondEventId}}
 Accept: application/json
 Cookie: auth_token={{authToken}}
@@ -1516,7 +1582,7 @@ client.test("obtiene el integrante del segundo evento", function () {
 })
 %}
 
-### 78. Events — PUT editar gasto con pagador de otro evento (400)
+### 82. Events — PUT editar gasto con pagador de otro evento (400)
 PUT {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
 Content-Type: application/json
 Accept: application/json
@@ -1537,7 +1603,7 @@ client.test("rechaza un pagador que no pertenece al evento del gasto", function 
 })
 %}
 
-### 79. Events — PUT editar un gasto desde otro evento (404)
+### 83. Events — PUT editar un gasto desde otro evento (404)
 PUT {{baseUrl}}/api/events/{{secondEventId}}/expenses/{{firstExpenseId}}
 Content-Type: application/json
 Accept: application/json
@@ -1558,7 +1624,7 @@ client.test("no permite editar un gasto a través de un evento al que no pertene
 })
 %}
 
-### 80. Events — PUT editar un gasto inexistente (404)
+### 84. Events — PUT editar un gasto inexistente (404)
 PUT {{baseUrl}}/api/events/{{firstEventId}}/expenses/999999
 Content-Type: application/json
 Accept: application/json
@@ -1579,7 +1645,7 @@ client.test("devuelve 404 al editar un gasto inexistente", function () {
 })
 %}
 
-### 81. Events — PUT editar un gasto de un evento inexistente (404)
+### 85. Events — PUT editar un gasto de un evento inexistente (404)
 PUT {{baseUrl}}/api/events/999999/expenses/{{firstExpenseId}}
 Content-Type: application/json
 Accept: application/json
@@ -1600,7 +1666,7 @@ client.test("devuelve 404 al editar un gasto de un evento inexistente", function
 })
 %}
 
-### 82. Events — PUT editar gasto sin autenticación (401)
+### 86. Events — PUT editar gasto sin autenticación (401)
 # @no-cookie-jar
 PUT {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
 Content-Type: application/json
@@ -1621,7 +1687,7 @@ client.test("rechaza editar un gasto sin sesión", function () {
 })
 %}
 
-### 83. Login — Usuario ajeno para probar permisos de edición de gastos
+### 87. Login — Usuario ajeno para probar permisos de edición de gastos
 POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
 Accept: application/json
@@ -1640,7 +1706,20 @@ client.test("inicia sesión como usuario ajeno para probar la edición de gastos
 saveAuthToken(client, response, "auth_token")
 %}
 
-### 84. Events — PUT editar un gasto de un evento ajeno (403)
+### 88. Events — GET saldos de un evento ajeno (403)
+GET {{baseUrl}}/api/events/{{firstEventId}}/balances
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza consultar saldos de un evento ajeno", function () {
+    assertError(client, response, 403, "Forbidden")
+})
+%}
+
+### 89. Events — PUT editar un gasto de un evento ajeno (403)
 PUT {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
 Content-Type: application/json
 Accept: application/json
@@ -1661,7 +1740,7 @@ client.test("rechaza editar un gasto de un evento ajeno con 403 Forbidden", func
 })
 %}
 
-### 85. Events — DELETE eliminar un gasto de un evento ajeno (403)
+### 90. Events — DELETE eliminar un gasto de un evento ajeno (403)
 DELETE {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
 Accept: application/json
 Cookie: auth_token={{authToken}}
@@ -1674,7 +1753,7 @@ client.test("rechaza eliminar un gasto de un evento ajeno con 403 Forbidden", fu
 })
 %}
 
-### 86. Events — DELETE eliminar gasto sin autenticación (401)
+### 91. Events — DELETE eliminar gasto sin autenticación (401)
 # @no-cookie-jar
 DELETE {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
 Accept: application/json
@@ -1687,7 +1766,7 @@ client.test("rechaza eliminar un gasto sin sesión", function () {
 })
 %}
 
-### 87. Login — Dueño retoma sesión para eliminar gastos
+### 92. Login — Dueño retoma sesión para eliminar gastos
 POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
 Accept: application/json
@@ -1706,7 +1785,7 @@ client.test("retoma sesión del dueño para eliminar gastos", function () {
 saveAuthToken(client, response, "auth_token")
 %}
 
-### 88. Events — DELETE eliminar un gasto desde otro evento (404)
+### 93. Events — DELETE eliminar un gasto desde otro evento (404)
 DELETE {{baseUrl}}/api/events/{{secondEventId}}/expenses/{{firstExpenseId}}
 Accept: application/json
 Cookie: auth_token={{authToken}}
@@ -1719,7 +1798,7 @@ client.test("no permite eliminar un gasto a través de un evento al que no perte
 })
 %}
 
-### 89. Events — DELETE eliminar un gasto de un evento inexistente (404)
+### 94. Events — DELETE eliminar un gasto de un evento inexistente (404)
 DELETE {{baseUrl}}/api/events/999999/expenses/{{firstExpenseId}}
 Accept: application/json
 Cookie: auth_token={{authToken}}
@@ -1732,7 +1811,7 @@ client.test("devuelve 404 al eliminar un gasto de un evento inexistente", functi
 })
 %}
 
-### 90. Events — DELETE eliminar un gasto como dueño (204)
+### 95. Events — DELETE eliminar un gasto como dueño (204)
 DELETE {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
 Accept: application/json
 Cookie: auth_token={{authToken}}
@@ -1745,7 +1824,7 @@ client.test("el dueño elimina un gasto del evento", function () {
 })
 %}
 
-### 91. Events — GET lista de gastos ya no incluye el gasto eliminado (200)
+### 96. Events — GET lista de gastos ya no incluye el gasto eliminado (200)
 GET {{baseUrl}}/api/events/{{firstEventId}}/expenses
 Accept: application/json
 Cookie: auth_token={{authToken}}
@@ -1760,7 +1839,7 @@ client.test("el gasto eliminado deja de aparecer en la lista", function () {
 })
 %}
 
-### 92. Events — DELETE eliminar el mismo gasto otra vez (404)
+### 97. Events — DELETE eliminar el mismo gasto otra vez (404)
 DELETE {{baseUrl}}/api/events/{{firstEventId}}/expenses/{{firstExpenseId}}
 Accept: application/json
 Cookie: auth_token={{authToken}}
