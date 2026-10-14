@@ -25,15 +25,15 @@ class RunKpiReportTest {
     private val service = RunKpiReport(engine, exporter, clock)
 
     @Test
-    fun `run without a day uses yesterday UTC and returns the exporter receipt`() {
+    fun `run without a day uses yesterday in Buenos Aires and returns the exporter receipt`() {
         whenever(engine.calculate(any())).thenReturn(results())
 
         val receipt = service.run()
 
         val context = argumentCaptor<KpiCalculationContext>()
         verify(engine).calculate(context.capture())
-        assertEquals(Instant.parse("2026-10-11T00:00:00Z"), context.firstValue.from)
-        assertEquals(Instant.parse("2026-10-11T23:59:59.999999Z"), context.firstValue.to)
+        assertEquals(Instant.parse("2026-10-11T03:00:00Z"), context.firstValue.from)
+        assertEquals(Instant.parse("2026-10-12T02:59:59.999999Z"), context.firstValue.to)
 
         val exported = exporter.exported.single()
         assertEquals(LocalDate.parse("2026-10-11"), exported.reportDay)
@@ -70,8 +70,20 @@ class RunKpiReportTest {
         val receipt = service.run(LocalDate.parse("2026-10-12"))
 
         assertEquals(LocalDate.parse("2026-10-12"), receipt.reportDay)
-        assertEquals(Instant.parse("2026-10-12T00:00:00Z"), receipt.windowFrom)
-        assertEquals(Instant.parse("2026-10-12T23:59:59.999999Z"), receipt.windowTo)
+        assertEquals(Instant.parse("2026-10-12T03:00:00Z"), receipt.windowFrom)
+        assertEquals(Instant.parse("2026-10-13T02:59:59.999999Z"), receipt.windowTo)
+    }
+
+    @Test
+    fun `the last three hours of the UTC day still belong to the Buenos Aires day`() {
+        whenever(engine.calculate(any())).thenReturn(results())
+        val lateEvening = Clock.fixed(Instant.parse("2026-10-12T02:00:00Z"), ZoneOffset.UTC)
+
+        val receipt = RunKpiReport(engine, exporter, lateEvening).run()
+
+        assertEquals(LocalDate.parse("2026-10-10"), receipt.reportDay)
+        assertEquals(Instant.parse("2026-10-10T03:00:00Z"), receipt.windowFrom)
+        assertEquals(Instant.parse("2026-10-11T02:59:59.999999Z"), receipt.windowTo)
     }
 
     private fun results(): List<KpiResult> =

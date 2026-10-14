@@ -21,9 +21,11 @@ Un tercer exportador, `SupabaseKpiExporter`, se elige con `KPI_EXPORT_MODE=supab
 Por cada corrida:
 
 1. `GET /rest/v1/kpi_catalog?select=id` y `POST /rest/v1/kpi_catalog` solo con los KPIs que todavía no están (el catálogo da 409 si el id existe). Así el catálogo de cada ambiente se registra solo, la primera vez.
-2. `POST /rest/v1/measurement?on_conflict=project_id,kpi_id,date,env` con `Prefer: resolution=ignore-duplicates`. Un objeto por KPI: `kpi_id`, `date` (día reportado), `env`, `value`, `run_id` (UUID por corrida). Sin `project_id` ni `reported_at`.
+2. `POST /rest/v1/measurement?on_conflict=project_id,kpi_id,date,env` con `Prefer: resolution=ignore-duplicates`. Un objeto por KPI: `kpi_id`, `date` (día reportado, en hora de Buenos Aires), `env`, `value`, `run_id` (UUID por corrida). Sin `project_id` ni `reported_at`.
 
 Headers: `apikey` (publishable) y `X-Project-Key`. Nunca `Authorization`.
+
+El contrato mide `date` como día calendario de `America/Argentina/Buenos_Aires`, así que `RunKpiReport` define el día y la ventana en esa zona (de 03:00Z a 03:00Z del día siguiente). La corrida de las 03:15 UTC cae a las 00:15 de Buenos Aires, recién cerrado el día.
 
 La plataforma conserva el primer valor de cada `(kpi_id, date, env)`: reenviar el mismo día no duplica.
 
