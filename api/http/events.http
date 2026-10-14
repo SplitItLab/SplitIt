@@ -1772,3 +1772,173 @@ client.test("eliminar dos veces el mismo gasto devuelve 404", function () {
     assertError(client, response, 404, "Expense not found")
 })
 %}
+
+### 98. Events — GET lista de gastos para guardar el estado previo a los pagos sugeridos
+GET {{baseUrl}}/api/events/{{firstEventId}}/expenses
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("guarda cantidad y total de gastos antes de consultar pagos sugeridos", function () {
+    assertStatus(client, response, 200)
+    const list = jsonBody(response)
+    client.global.set("expenseCountBeforeSuggestions", String(list.length))
+    client.global.set("expenseTotalBeforeSuggestions", String(list.reduce((sum, e) => sum + e.baseAmount, 0)))
+})
+%}
+
+### 99. Events — GET pagos sugeridos de un evento con gastos (200)
+GET {{baseUrl}}/api/events/{{firstEventId}}/suggested-payments
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("sugiere quién le paga a quién y cuánto", function () {
+    assertStatus(client, response, 200)
+    const list = jsonBody(response)
+    client.assert(Array.isArray(list), "Expected array of suggested payments")
+    client.assert(list.length > 0, "Expected at least one suggested payment")
+    list.forEach(payment => {
+        client.assert(typeof payment.fromMember.id === "number", "Expected payer id")
+        client.assert(typeof payment.fromMember.name === "string" && payment.fromMember.name.length > 0, "Expected payer name")
+        client.assert(typeof payment.toMember.id === "number", "Expected receiver id")
+        client.assert(typeof payment.toMember.name === "string" && payment.toMember.name.length > 0, "Expected receiver name")
+        client.assert(payment.fromMember.id !== payment.toMember.id, "Expected payer and receiver to differ")
+        client.assert(payment.amount > 0, "Expected positive amount")
+    })
+})
+%}
+
+### 100. Seed — Crear un evento sin gastos para probar pagos sugeridos
+POST {{baseUrl}}/api/events
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Cumple sin gastos",
+  "baseCurrency": "ARS",
+  "participantNames": ["Ana"]
+}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("crea un evento sin gastos", function () {
+    assertStatus(client, response, 201)
+    client.global.set("noExpensesEventId", String(jsonBody(response).id))
+})
+%}
+
+### 101. Events — GET pagos sugeridos de un evento sin gastos (200)
+GET {{baseUrl}}/api/events/{{noExpensesEventId}}/suggested-payments
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("sin gastos no hay pagos sugeridos", function () {
+    assertStatus(client, response, 200)
+    const list = jsonBody(response)
+    client.assert(Array.isArray(list) && list.length === 0, "Expected no suggested payments")
+})
+%}
+
+### 102. Events — GET pagos sugeridos no registra pagos ni modifica gastos (200)
+GET {{baseUrl}}/api/events/{{firstEventId}}/expenses
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("consultar pagos sugeridos deja los gastos como estaban", function () {
+    assertStatus(client, response, 200)
+    const list = jsonBody(response)
+    const total = list.reduce((sum, e) => sum + e.baseAmount, 0)
+    client.assert(String(list.length) === client.global.get("expenseCountBeforeSuggestions"), "Expected same expense count")
+    client.assert(String(total) === client.global.get("expenseTotalBeforeSuggestions"), "Expected same expense total")
+})
+%}
+
+### 103. Events — GET pagos sugeridos sin autenticación (401)
+# @no-cookie-jar
+GET {{baseUrl}}/api/events/{{firstEventId}}/suggested-payments
+Accept: application/json
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza consultar pagos sugeridos sin sesión", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### 104. Events — GET pagos sugeridos de un evento inexistente (404)
+GET {{baseUrl}}/api/events/999999/suggested-payments
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza consultar pagos sugeridos de un evento inexistente", function () {
+    assertError(client, response, 404, "Event not found")
+})
+%}
+
+### 105. Login — Usuario ajeno para probar permisos de pagos sugeridos
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{otherUserEmail}}",
+  "password": "{{otherUserPassword}}"
+}
+
+> {%
+import { assertStatus, saveAuthToken } from './scripts/assert.js'
+
+client.test("inicia sesión como usuario ajeno para probar permisos de pagos sugeridos", function () {
+    assertStatus(client, response, 200)
+})
+saveAuthToken(client, response, "auth_token")
+%}
+
+### 106. Events — GET pagos sugeridos de un evento ajeno (403)
+GET {{baseUrl}}/api/events/{{firstEventId}}/suggested-payments
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza consultar pagos sugeridos de un evento ajeno", function () {
+    assertError(client, response, 403, "Forbidden")
+})
+%}
+
+### 107. Login — Dueño retoma sesión después de probar pagos sugeridos
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{eventOwnerEmail}}",
+  "password": "{{eventOwnerPassword}}"
+}
+
+> {%
+import { assertStatus, saveAuthToken } from './scripts/assert.js'
+
+client.test("retoma sesión del dueño", function () {
+    assertStatus(client, response, 200)
+})
+saveAuthToken(client, response, "auth_token")
+%}
