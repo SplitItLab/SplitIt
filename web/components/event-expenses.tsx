@@ -23,15 +23,13 @@ type LoadState =
   | { status: "ready"; expenses: Expense[] }
   | { status: "error"; message: string };
 
-export function EventExpenses({
-  event,
-  onUnauthorized,
-  onNotFound,
-}: {
+type EventExpensesProps = {
   event: EventDetail;
   onUnauthorized: () => void;
   onNotFound: () => void;
-}) {
+};
+
+export function useEventExpenses({ event, onUnauthorized, onNotFound }: EventExpensesProps) {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const requestId = useRef(0);
 
@@ -63,7 +61,11 @@ export function EventExpenses({
   }, [event.id, onNotFound, onUnauthorized]);
 
   useEffect(() => {
+    const requests = requestId;
     load();
+    return () => {
+      requests.current++;
+    };
   }, [load]);
 
   const retry = () => {
@@ -71,6 +73,23 @@ export function EventExpenses({
     load();
   };
 
+  return { state, setState, load, retry };
+}
+
+export function EventExpenses(props: EventExpensesProps) {
+  const expenses = useEventExpenses(props);
+  return <EventExpensesContent {...props} {...expenses} />;
+}
+
+export function EventExpensesContent({
+  event,
+  onUnauthorized,
+  onNotFound,
+  state,
+  setState,
+  load,
+  retry,
+}: EventExpensesProps & ReturnType<typeof useEventExpenses>) {
   return (
     <div className="space-y-4">
       <h2 className="text-text-primary text-2xl font-extrabold">Gastos</h2>

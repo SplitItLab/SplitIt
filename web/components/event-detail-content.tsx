@@ -6,8 +6,9 @@ import { UserRound } from "lucide-react";
 import { currencyLabel, type EventDetail, type EventMember } from "@/lib/events";
 import { getInitials } from "@/lib/profile";
 import { EventBalances } from "@/components/event-balances";
-import { EventExpenses } from "@/components/event-expenses";
+import { EventExpensesContent, useEventExpenses } from "@/components/event-expenses";
 import { EventIcon } from "@/components/event-icon";
+import { EventSuggestedPayments } from "@/components/event-suggested-payments";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 
@@ -29,6 +30,7 @@ export function EventDetailContent({
   onNotFound: () => void;
 }) {
   const [active, setActive] = useState<TabId>("gastos");
+  const expenses = useEventExpenses({ event, onUnauthorized, onNotFound });
   const baseId = useId();
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
@@ -104,13 +106,28 @@ export function EventDetailContent({
 
       {active === "gastos" && (
         <section role="tabpanel" id={panelId("gastos")} aria-labelledby={tabId("gastos")}>
-          <EventExpenses event={event} onUnauthorized={onUnauthorized} onNotFound={onNotFound} />
+          <EventExpensesContent
+            event={event}
+            onUnauthorized={onUnauthorized}
+            onNotFound={onNotFound}
+            {...expenses}
+          />
         </section>
       )}
 
       {active === "saldos" && (
         <section role="tabpanel" id={panelId("saldos")} aria-labelledby={tabId("saldos")}>
           <EventBalances event={event} onUnauthorized={onUnauthorized} onNotFound={onNotFound} />
+          <div className="mt-4">
+            <EventSuggestedPayments
+              event={event}
+              hasExpenses={
+                expenses.state.status === "ready" ? expenses.state.expenses.length > 0 : null
+              }
+              onUnauthorized={onUnauthorized}
+              onNotFound={onNotFound}
+            />
+          </div>
         </section>
       )}
 
