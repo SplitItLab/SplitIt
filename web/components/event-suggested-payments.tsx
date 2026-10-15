@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, Check } from "lucide-react";
 
 import { EventError, type EventDetail } from "@/lib/events";
-import { formatMoney, listExpenses } from "@/lib/expenses";
+import { formatMoney } from "@/lib/expenses";
 import { getInitials } from "@/lib/profile";
 import { listSuggestedPayments, type SuggestedPayment } from "@/lib/settlements";
 import { LoadingIndicator } from "@/components/loading-indicator";
@@ -14,15 +14,17 @@ import { Button } from "@/components/ui/button";
 
 type LoadState =
   | { status: "loading" }
-  | { status: "ready"; hasExpenses: boolean; payments: SuggestedPayment[] }
+  | { status: "ready"; payments: SuggestedPayment[] }
   | { status: "error"; message: string };
 
 export function EventSuggestedPayments({
   event,
+  hasExpenses,
   onUnauthorized,
   onNotFound,
 }: {
   event: EventDetail;
+  hasExpenses: boolean | null;
   onUnauthorized: () => void;
   onNotFound: () => void;
 }) {
@@ -31,10 +33,10 @@ export function EventSuggestedPayments({
 
   const load = useCallback(() => {
     const current = ++requestId.current;
-    Promise.all([listExpenses(event.id), listSuggestedPayments(event.id)])
-      .then(([expenses, payments]) => {
+    listSuggestedPayments(event.id)
+      .then((payments) => {
         if (current !== requestId.current) return;
-        setState({ status: "ready", hasExpenses: expenses.length > 0, payments });
+        setState({ status: "ready", payments });
       })
       .catch((err: unknown) => {
         if (current !== requestId.current) return;
@@ -57,7 +59,11 @@ export function EventSuggestedPayments({
   }, [event.id, onNotFound, onUnauthorized]);
 
   useEffect(() => {
+    const requests = requestId;
     load();
+    return () => {
+      requests.current++;
+    };
   }, [load]);
 
   const retry = () => {
@@ -93,7 +99,7 @@ export function EventSuggestedPayments({
   return (
     <section className="space-y-3">
       <h3 className="text-text-primary text-base font-extrabold">Pagos sugeridos</h3>
-      {!state.hasExpenses ? (
+      {hasExpenses === false && state.payments.length === 0 ? (
         <div className="border-border rounded-[24px] border p-6 text-center">
           <p className="text-text-primary font-extrabold">Todavía no hay pagos sugeridos</p>
           <p className="text-text-secondary text-sm font-medium">

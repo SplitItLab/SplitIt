@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("@/lib/expenses", async (importOriginal) => {
@@ -13,7 +13,7 @@ vi.mock("@/lib/settlements", async (importOriginal) => {
 });
 
 import { EventError, type EventDetail } from "@/lib/events";
-import { formatMoney, listExpenses, type Expense } from "@/lib/expenses";
+import { formatMoney, listExpenses } from "@/lib/expenses";
 import { listSuggestedPayments, type SuggestedPayment } from "@/lib/settlements";
 import { EventSuggestedPayments } from "../components/event-suggested-payments";
 
@@ -30,18 +30,6 @@ const event: EventDetail = {
     { id: 13, name: "Juan", isGuest: true },
     { id: 14, name: "Sofi", isGuest: true },
   ],
-};
-
-const cena: Expense = {
-  id: 1,
-  eventId: 7,
-  name: "Cena",
-  originalAmount: 7500,
-  originalCurrency: "ARS",
-  baseAmount: 7500,
-  baseCurrency: "ARS",
-  paidByMember: { id: 12, name: "Ana" },
-  expenseDate: "2024-03-16",
 };
 
 const juanPagaAAna: SuggestedPayment = {
@@ -64,13 +52,18 @@ function money(amount: number, currency: string) {
   return formatMoney(amount, currency).replaceAll(" ", " ");
 }
 
-function renderSuggestedPayments() {
+function renderSuggestedPayments(hasExpenses: boolean | null = true) {
   const onUnauthorized = vi.fn();
   const onNotFound = vi.fn();
-  render(
-    <EventSuggestedPayments event={event} onUnauthorized={onUnauthorized} onNotFound={onNotFound} />
+  const view = render(
+    <EventSuggestedPayments
+      event={event}
+      hasExpenses={hasExpenses}
+      onUnauthorized={onUnauthorized}
+      onNotFound={onNotFound}
+    />
   );
-  return { onUnauthorized, onNotFound };
+  return { ...view, onUnauthorized, onNotFound };
 }
 
 describe("EventSuggestedPayments", () => {
@@ -84,7 +77,6 @@ describe("EventSuggestedPayments", () => {
   });
 
   it("muestra quién paga, quién recibe y el monto de cada pago sugerido", async () => {
-    vi.mocked(listExpenses).mockResolvedValue([cena]);
     vi.mocked(listSuggestedPayments).mockResolvedValue([juanPagaAAna, sofiPagaAAna]);
 
     renderSuggestedPayments();
@@ -103,7 +95,6 @@ describe("EventSuggestedPayments", () => {
   });
 
   it("muestra que el split está saldado cuando hay gastos pero no deudas pendientes", async () => {
-    vi.mocked(listExpenses).mockResolvedValue([cena]);
     vi.mocked(listSuggestedPayments).mockResolvedValue([]);
 
     renderSuggestedPayments();
@@ -115,10 +106,9 @@ describe("EventSuggestedPayments", () => {
   });
 
   it("muestra un estado vacío cuando el evento no tiene gastos", async () => {
-    vi.mocked(listExpenses).mockResolvedValue([]);
     vi.mocked(listSuggestedPayments).mockResolvedValue([]);
 
-    renderSuggestedPayments();
+    renderSuggestedPayments(false);
 
     expect(await screen.findByText("Todavía no hay pagos sugeridos")).toBeInTheDocument();
     expect(
@@ -130,7 +120,6 @@ describe("EventSuggestedPayments", () => {
   });
 
   it("avisa la sesión vencida", async () => {
-    vi.mocked(listExpenses).mockResolvedValue([cena]);
     vi.mocked(listSuggestedPayments).mockRejectedValue(
       new EventError("unauthorized", "Tu sesión expiró.")
     );
@@ -142,7 +131,6 @@ describe("EventSuggestedPayments", () => {
   });
 
   it("trata un evento sin acceso como no encontrado", async () => {
-    vi.mocked(listExpenses).mockResolvedValue([cena]);
     vi.mocked(listSuggestedPayments).mockRejectedValue(
       new EventError("forbidden", "No tenés acceso a este evento.")
     );
@@ -154,7 +142,6 @@ describe("EventSuggestedPayments", () => {
   });
 
   it("muestra el error y permite reintentar", async () => {
-    vi.mocked(listExpenses).mockResolvedValue([cena]);
     vi.mocked(listSuggestedPayments)
       .mockRejectedValueOnce(
         new EventError("server-error", "No pudimos cargar los pagos sugeridos. Probá de nuevo.")
@@ -170,5 +157,59 @@ describe("EventSuggestedPayments", () => {
     await userEvent.click(screen.getByRole("button", { name: "Reintentar" }));
 
     expect(await screen.findByRole("article", { name: "Juan le paga a Ana" })).toBeInTheDocument();
+  });
+
+  it("muestra los pagos sugeridos aunque falle la consulta de gastos", async () => {
+    vi.mocked(listExpenses).mockRejectedValue(new EventError("network", "Error de gastos."));
+    vi.mocked(listSuggestedPayments).mockResolvedValue([juanPagaAAna]);
+
+    renderSuggestedPayments(null);
+
+    expect(await screen.findByRole("article", { name: "Juan le paga a Ana" })).toBeInTheDocument();
+    expect(listExpenses).not.toHaveBeenCalled();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it.each(["unauthorized", "forbidden", "not-found"] as const)(
+    "ignora un error %s después de desmontarse",
+    async (type) => {
+      const pending = Promise.withResolvers<SuggestedPayment[]>();
+      vi.mocked(listSuggestedPayments).mockReturnValue(pending.promise);
+
+      const { unmount, onUnauthorized, onNotFound } = renderSuggestedPayments();
+      unmount();
+
+      await act(async () => {
+        pending.reject(new EventError(type, "Respuesta tardía."));
+      });
+
+      expect(onUnauthorized).not.toHaveBeenCalled();
+      expect(onNotFound).not.toHaveBeenCalled();
+    }
+  );
+
+  it("ignora los pagos de una solicitud anterior cuando cambia el evento", async () => {
+    const pending = Promise.withResolvers<SuggestedPayment[]>();
+    vi.mocked(listSuggestedPayments)
+      .mockReturnValueOnce(pending.promise)
+      .mockResolvedValueOnce([sofiPagaAAna]);
+    const { rerender, onUnauthorized, onNotFound } = renderSuggestedPayments();
+
+    rerender(
+      <EventSuggestedPayments
+        event={{ ...event, id: 8 }}
+        hasExpenses
+        onUnauthorized={onUnauthorized}
+        onNotFound={onNotFound}
+      />
+    );
+    await screen.findByRole("article", { name: "Sofi le paga a Ana" });
+
+    await act(async () => {
+      pending.resolve([juanPagaAAna]);
+    });
+
+    expect(screen.getByRole("article", { name: "Sofi le paga a Ana" })).toBeInTheDocument();
+    expect(screen.queryByRole("article", { name: "Juan le paga a Ana" })).not.toBeInTheDocument();
   });
 });

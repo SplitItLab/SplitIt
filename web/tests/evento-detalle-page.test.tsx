@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { act, render, screen, waitFor, cleanup } from "@testing-library/react";
 // import { within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
@@ -29,7 +29,7 @@ vi.mock("@/lib/settlements", async (importOriginal) => {
 });
 
 import { EventError, getEventById, type EventDetail } from "@/lib/events";
-import { listExpenses } from "@/lib/expenses";
+import { listExpenses, type Expense } from "@/lib/expenses";
 import { listBalances } from "@/lib/balances";
 import { listSuggestedPayments } from "@/lib/settlements";
 // import { getEventInviteToken } from "@/lib/events";
@@ -172,6 +172,46 @@ describe("EventDetailView", () => {
 
     await userEvent.click(screen.getByRole("tab", { name: "Integrantes" }));
     expect(screen.getByRole("heading", { name: "Integrantes" })).toBeInTheDocument();
+  });
+
+  it("muestra pagos sugeridos aunque falle la consulta compartida de gastos", async () => {
+    vi.mocked(getEventById).mockResolvedValue(eventDetail);
+    vi.mocked(listExpenses).mockRejectedValue(new EventError("network", "Error de gastos."));
+    vi.mocked(listSuggestedPayments).mockResolvedValue([
+      {
+        fromMember: { id: 11, name: "Juan" },
+        toMember: { id: 10, name: "Ana" },
+        amount: 500,
+      },
+    ]);
+
+    render(<EventDetailView id="1" />);
+    await screen.findByText("Error de gastos.");
+    await userEvent.click(screen.getByRole("tab", { name: "Saldos" }));
+
+    expect(await screen.findByRole("article", { name: "Juan le paga a Ana" })).toBeInTheDocument();
+    expect(listExpenses).toHaveBeenCalledTimes(1);
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  it("comparte la consulta pendiente de gastos sin bloquear los pagos sugeridos", async () => {
+    vi.mocked(getEventById).mockResolvedValue(eventDetail);
+    const pending = Promise.withResolvers<Expense[]>();
+    vi.mocked(listExpenses).mockReturnValue(pending.promise);
+
+    render(<EventDetailView id="1" />);
+    await userEvent.click(await screen.findByRole("tab", { name: "Saldos" }));
+
+    expect(await screen.findByText("No hay pagos pendientes.")).toBeInTheDocument();
+
+    await act(async () => {
+      pending.resolve([]);
+    });
+
+    expect(await screen.findByText("Todavía no hay pagos sugeridos")).toBeInTheDocument();
+    expect(screen.queryByText("Está todo claro")).not.toBeInTheDocument();
+    expect(listExpenses).toHaveBeenCalledTimes(1);
+    expect(listSuggestedPayments).toHaveBeenCalledTimes(1);
   });
 
   it("muestra el email de los integrantes con cuenta y marca invitado a los que no", async () => {
