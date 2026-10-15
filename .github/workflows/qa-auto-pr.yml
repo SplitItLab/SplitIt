@@ -1,0 +1,32 @@
+name: PR del agente de QA
+
+# Las sesiones de Claude desde Slack suben a ramas `claude/...`. Este workflow
+# abre el PR por ellas
+
+on:
+  push:
+    branches: ['claude/**']
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  abrir-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Abrir el PR si la rama todavia no tiene uno
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          if [ -n "$(gh pr list --head "$BRANCH" --state all --json number -q '.[].number')" ]; then
+            echo "La rama ya tiene PR; no se abre otro."
+            exit 0
+          fi
+          # Titulo y cuerpo salen del primer commit de la rama: por eso el agente
+          # escribe ahi "Ybug #N: ..." con la historia, el criterio y el test.
+          gh pr create --base main --head "$BRANCH" --fill-first
