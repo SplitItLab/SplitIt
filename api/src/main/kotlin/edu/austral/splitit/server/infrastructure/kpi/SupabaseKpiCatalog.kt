@@ -24,7 +24,10 @@ data class SupabaseKpi(
         )
 }
 
-/** The 7 KPIs of the engine in the platform's vocabulary (snake_case ids, numeric values). */
+/**
+ * The 10 KPIs of the engine in the platform's vocabulary (snake_case ids, numeric values).
+ * The platform keeps at most 10 active KPIs per env.
+ */
 object SupabaseKpiCatalog {
     val entries: List<SupabaseKpi> =
         listOf(
@@ -83,6 +86,32 @@ object SupabaseKpiCatalog {
                 "s",
                 "last",
                 "Instante de la ultima corrida exitosa del motor, en segundos desde epoch.",
+            ),
+            SupabaseKpi(
+                KpiIds.EVENTS_WITH_EXPENSE_IN_2_MIN_PERCENT,
+                "eventos_con_gasto_en_2_min_pct",
+                "business",
+                "%",
+                "avg",
+                "Porcentaje de los eventos creados en el dia reportado cuyo primer gasto se cargo " +
+                    "dentro de los 2 minutos de crearlos, de 0 a 100.",
+            ),
+            SupabaseKpi(
+                KpiIds.SHARED_EVENTS_PERCENT,
+                "eventos_compartidos_pct",
+                "business",
+                "%",
+                "avg",
+                "Porcentaje de los eventos creados en el dia reportado que tienen link de acceso generado, " +
+                    "de 0 a 100.",
+            ),
+            SupabaseKpi(
+                KpiIds.GET_BALANCES_LATENCY_P95,
+                "latencia_p95_saldos",
+                "technical",
+                "ms",
+                "last",
+                "Latencia p95 de GET /api/events/{eventId}/balances.",
             ),
         )
 

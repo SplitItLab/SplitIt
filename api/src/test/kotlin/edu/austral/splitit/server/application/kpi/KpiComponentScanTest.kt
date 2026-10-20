@@ -16,7 +16,7 @@ class KpiComponentScanTest(
     @Autowired private val kpis: List<Kpi>,
 ) {
     @Test
-    fun `production scan exposes the seven kpis in order`() {
+    fun `production scan exposes the ten kpis in order`() {
         assertEquals(
             listOf(
                 KpiIds.EVENTS_CREATED_PER_DAY,
@@ -26,6 +26,9 @@ class KpiComponentScanTest(
                 KpiIds.ERROR_RATE_5XX_24H,
                 KpiIds.BACKEND_HEALTH,
                 KpiIds.LAST_SUCCESSFUL_RUN,
+                KpiIds.EVENTS_WITH_EXPENSE_IN_2_MIN_PERCENT,
+                KpiIds.SHARED_EVENTS_PERCENT,
+                KpiIds.GET_BALANCES_LATENCY_P95,
             ),
             kpis.map { it.id },
         )
