@@ -7,10 +7,12 @@ import edu.austral.splitit.server.domain.kpi.KpiValue
 import edu.austral.splitit.server.domain.model.event.Event
 import edu.austral.splitit.server.domain.model.event.EventMember
 import edu.austral.splitit.server.domain.model.event.Expense
+import edu.austral.splitit.server.domain.model.event.InviteLink
 import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.infrastructure.persistence.EventMemberRepository
 import edu.austral.splitit.server.infrastructure.persistence.EventRepository
 import edu.austral.splitit.server.infrastructure.persistence.ExpenseRepository
+import edu.austral.splitit.server.infrastructure.persistence.InviteLinkRepository
 import edu.austral.splitit.server.infrastructure.persistence.JpaKpiActivityQuery
 import edu.austral.splitit.server.infrastructure.persistence.UserRepository
 import org.junit.jupiter.api.BeforeEach
@@ -48,10 +50,15 @@ class BusinessKpiCalculationTest(
     @Autowired private val eventRepository: EventRepository,
     @Autowired private val eventMemberRepository: EventMemberRepository,
     @Autowired private val expenseRepository: ExpenseRepository,
+    @Autowired private val inviteLinkRepository: InviteLinkRepository,
 ) {
     private val from = Instant.parse("2026-10-10T00:00:00Z")
     private val to = Instant.parse("2026-10-10T23:59:59Z")
     private val context = KpiCalculationContext(from, to)
+
+    // A day away from the base seed, so its events do not count.
+    private val otherDay =
+        KpiCalculationContext(Instant.parse("2026-10-12T00:00:00Z"), Instant.parse("2026-10-12T23:59:59Z"))
 
     @BeforeEach
     fun seed() {
@@ -96,6 +103,49 @@ class BusinessKpiCalculationTest(
 
         assertEquals(KpiIds.EVENTS_WITH_EXPENSE_PERCENT, kpi.id)
         assertEquals(KpiValue.Numeric(50.0), value)
+    }
+
+    @Test
+    fun `events with an expense within two minutes counts only the events created in the window`() {
+        val owner = userRepository.findAll().single()
+        val quick = persistEvent(owner, "Primer gasto al minuto", at("10:00:00"))
+        persistExpense(quick, owner, at("10:01:00"))
+        persistExpense(quick, owner, at("18:00:00"))
+        val onTheLimit = persistEvent(owner, "Primer gasto a los 2 minutos", at("11:00:00"))
+        persistExpense(onTheLimit, owner, at("11:02:00"))
+        val late = persistEvent(owner, "Primer gasto tarde", at("12:00:00"))
+        persistExpense(late, owner, at("12:02:01"))
+        persistEvent(owner, "Sin gasto", at("13:00:00"))
+        val nextDay = persistEvent(owner, "Dia siguiente", Instant.parse("2026-10-13T00:00:00Z"))
+        persistExpense(nextDay, owner, Instant.parse("2026-10-13T00:00:30Z"))
+        val kpi = FirstExpenseWithinTwoMinutesPercentKpi(query)
+
+        val value = kpi.calculate(otherDay)
+
+        assertEquals(KpiIds.EVENTS_WITH_EXPENSE_IN_2_MIN_PERCENT, kpi.id)
+        assertEquals(KpiValue.Numeric(50.0), value)
+    }
+
+    @Test
+    fun `shared events counts the invite links of the events created in the window`() {
+        val owner = userRepository.findAll().single()
+        persistInviteLink(persistEvent(owner, "Compartido", at("10:00:00")))
+        persistEvent(owner, "Sin link 1", at("11:00:00"))
+        persistEvent(owner, "Sin link 2", at("12:00:00"))
+        persistEvent(owner, "Sin link 3", at("23:59:59"))
+        persistInviteLink(persistEvent(owner, "Dia siguiente", Instant.parse("2026-10-13T00:00:00Z")))
+        val kpi = SharedEventsPercentKpi(query, query)
+
+        val value = kpi.calculate(otherDay)
+
+        assertEquals(KpiIds.SHARED_EVENTS_PERCENT, kpi.id)
+        assertEquals(KpiValue.Numeric(25.0), value)
+    }
+
+    private fun at(time: String): Instant = Instant.parse("2026-10-12T${time}Z")
+
+    private fun persistInviteLink(event: Event) {
+        inviteLinkRepository.saveAndFlush(InviteLink.create(event, "token-${event.id}-abcdefghijklmnopqrstuvwxyz"))
     }
 
     private fun persistEvent(

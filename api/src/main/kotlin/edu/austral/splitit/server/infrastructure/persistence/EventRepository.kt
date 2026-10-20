@@ -39,4 +39,37 @@ interface EventRepository : JpaRepository<Event, Long> {
         """,
     )
     fun countWithAtLeastOneExpense(): Long
+
+    @Query(
+        """
+        SELECT e.createdAt AS createdAt, MIN(x.createdAt) AS firstExpenseAt
+        FROM Event e LEFT JOIN Expense x ON x.event = e
+        WHERE e.createdAt >= :from AND e.createdAt <= :to
+        GROUP BY e.id, e.createdAt
+        """,
+    )
+    fun findFirstExpenseOfEventsCreatedBetween(
+        @Param("from") from: Instant,
+        @Param("to") to: Instant,
+    ): List<EventFirstExpense>
+
+    @Query(
+        """
+        SELECT COUNT(e) FROM Event e
+        WHERE e.createdAt >= :from AND e.createdAt <= :to
+          AND EXISTS (
+            SELECT 1 FROM InviteLink l
+            WHERE l.event.id = e.id
+          )
+        """,
+    )
+    fun countCreatedBetweenWithInviteLink(
+        @Param("from") from: Instant,
+        @Param("to") to: Instant,
+    ): Long
+}
+
+interface EventFirstExpense {
+    val createdAt: Instant
+    val firstExpenseAt: Instant?
 }

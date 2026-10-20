@@ -37,7 +37,8 @@ class SupabaseKpiExporterTest {
     private val fullCatalog =
         """[{"id":"events_created_per_day"},{"id":"expenses_registered_per_day"},
         {"id":"events_with_expense_percent"},{"id":"post_expenses_latency_p95"},
-        {"id":"error_rate_5xx_24h"},{"id":"backend_health"},{"id":"last_successful_run"}]"""
+        {"id":"error_rate_5xx_24h"},{"id":"backend_health"},{"id":"last_successful_run"},
+        {"id":"eventos_con_gasto_en_2_min_pct"},{"id":"eventos_compartidos_pct"},{"id":"latencia_p95_saldos"}]"""
 
     private val builder = RestClient.builder()
     private val server = MockRestServiceServer.bindTo(builder).build()
@@ -62,6 +63,9 @@ class SupabaseKpiExporterTest {
                     numeric(KpiIds.ERROR_RATE_5XX_24H, 0.02),
                     KpiResult(KpiIds.BACKEND_HEALTH, KpiValue.Text("OK"), calculatedAt),
                     KpiResult(KpiIds.LAST_SUCCESSFUL_RUN, KpiValue.Text("2026-10-11T03:15:00Z"), calculatedAt),
+                    numeric(KpiIds.EVENTS_WITH_EXPENSE_IN_2_MIN_PERCENT, 75.0),
+                    numeric(KpiIds.SHARED_EVENTS_PERCENT, 0.0),
+                    numeric(KpiIds.GET_BALANCES_LATENCY_P95, 42.5),
                 ),
         )
 
@@ -78,10 +82,15 @@ class SupabaseKpiExporterTest {
             .expect(requestTo(catalogUrl))
             .andExpect(method(HttpMethod.POST))
             .andExpect(header("X-Project-Key", "project-secret"))
-            .andExpect(jsonPath("$.length()").value(7))
+            .andExpect(jsonPath("$.length()").value(10))
             .andExpect(jsonPath("$[0].id").value("events_created_per_day"))
             .andExpect(jsonPath("$[0].kind").value("business"))
             .andExpect(jsonPath("$[3].unit").value("ms"))
+            .andExpect(jsonPath("$[7].id").value("eventos_con_gasto_en_2_min_pct"))
+            .andExpect(jsonPath("$[7].aggregation").value("avg"))
+            .andExpect(jsonPath("$[8].id").value("eventos_compartidos_pct"))
+            .andExpect(jsonPath("$[9].id").value("latencia_p95_saldos"))
+            .andExpect(jsonPath("$[9].kind").value("technical"))
             .andRespond(withSuccess())
         server
             .expect(requestTo(measurementUrl))
@@ -90,7 +99,7 @@ class SupabaseKpiExporterTest {
             .andExpect(header("apikey", "publishable"))
             .andExpect(header("X-Project-Key", "project-secret"))
             .andExpect(headerDoesNotExist(HttpHeaders.AUTHORIZATION))
-            .andExpect(jsonPath("$.length()").value(6))
+            .andExpect(jsonPath("$.length()").value(9))
             .andExpect(jsonPath("$[0].kpi_id").value("events_created_per_day"))
             .andExpect(jsonPath("$[0].date").value("2026-10-11"))
             .andExpect(jsonPath("$[0].env").value("dev"))
@@ -103,6 +112,12 @@ class SupabaseKpiExporterTest {
             .andExpect(jsonPath("$[4].value").value(1.0))
             .andExpect(jsonPath("$[5].kpi_id").value("last_successful_run"))
             .andExpect(jsonPath("$[5].value").value(1_791_688_500.0))
+            .andExpect(jsonPath("$[6].kpi_id").value("eventos_con_gasto_en_2_min_pct"))
+            .andExpect(jsonPath("$[6].value").value(75.0))
+            .andExpect(jsonPath("$[7].kpi_id").value("eventos_compartidos_pct"))
+            .andExpect(jsonPath("$[7].value").value(0.0))
+            .andExpect(jsonPath("$[8].kpi_id").value("latencia_p95_saldos"))
+            .andExpect(jsonPath("$[8].value").value(42.5))
             .andRespond(withSuccess())
 
         val receipt = exporter().export(run)
@@ -199,7 +214,8 @@ class SupabaseKpiExporterTest {
         val pattern = Regex("^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$")
         val ids = SupabaseKpiCatalog.entries.map { it.platformId }
 
-        assertEquals(7, ids.toSet().size)
+        // The platform keeps at most 10 active KPIs per env.
+        assertEquals(10, ids.toSet().size)
         assertTrue(ids.all { pattern.matches(it) && it.length <= 64 })
         assertTrue(SupabaseKpiCatalog.entries.all { it.kind in setOf("business", "technical", "health") })
         assertTrue(SupabaseKpiCatalog.entries.all { it.description.length in 5..500 })
