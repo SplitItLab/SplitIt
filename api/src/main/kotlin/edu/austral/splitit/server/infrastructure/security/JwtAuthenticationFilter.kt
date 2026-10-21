@@ -14,6 +14,8 @@ import org.springframework.security.web.context.SecurityContextRepository
 import org.springframework.web.filter.OncePerRequestFilter
 
 const val BEARER_PREFIX = "Bearer "
+const val USER_ROLE = "USER"
+const val GUEST_ROLE = "GUEST"
 
 class JwtAuthenticationFilter(
     private val tokenProvider: TokenProvider,
@@ -25,15 +27,9 @@ class JwtAuthenticationFilter(
         response: HttpServletResponse,
         filterChain: FilterChain,
     ) {
-        val authenticatedUser =
-            extractTokens(request).firstNotNullOfOrNull { tokenProvider.parse(it) }
-        if (authenticatedUser != null) {
-            val authentication =
-                UsernamePasswordAuthenticationToken(
-                    authenticatedUser,
-                    null,
-                    authenticatedUser.roles.map { SimpleGrantedAuthority("ROLE_$it") },
-                )
+        // A user session wins over a guest credential sent alongside it.
+        val authentication = authenticateUser(request) ?: authenticateGuest(request)
+        if (authentication != null) {
             authentication.details = WebAuthenticationDetailsSource().buildDetails(request)
             val context = SecurityContextHolder.createEmptyContext()
             context.authentication = authentication
@@ -43,20 +39,39 @@ class JwtAuthenticationFilter(
         filterChain.doFilter(request, response)
     }
 
-    private fun extractTokens(request: HttpServletRequest): List<String> {
-        val cookieToken =
-            request.cookies
-                ?.firstOrNull { it.name == cookieName }
-                ?.value
-                ?.trim()
-                ?.takeIf { it.isNotEmpty() }
-        val headerToken =
-            request
-                .getHeader(HttpHeaders.AUTHORIZATION)
-                ?.takeIf { it.startsWith(BEARER_PREFIX) }
-                ?.substring(BEARER_PREFIX.length)
-                ?.trim()
-                ?.takeIf { it.isNotEmpty() }
-        return listOfNotNull(cookieToken, headerToken)
+    private fun authenticateUser(request: HttpServletRequest): UsernamePasswordAuthenticationToken? {
+        val user =
+            listOfNotNull(cookieToken(request, cookieName), bearerToken(request))
+                .firstNotNullOfOrNull { tokenProvider.parse(it) }
+                ?: return null
+        // Roles come from the token kind, not its claims: live user tokens carry no roles.
+        val roles = listOf(USER_ROLE) + user.roles
+        return UsernamePasswordAuthenticationToken(user, null, roles.map { SimpleGrantedAuthority("ROLE_$it") })
     }
+
+    private fun authenticateGuest(request: HttpServletRequest): UsernamePasswordAuthenticationToken? {
+        val guest =
+            listOfNotNull(cookieToken(request, GUEST_COOKIE_NAME), bearerToken(request))
+                .firstNotNullOfOrNull { tokenProvider.parseGuest(it) }
+                ?: return null
+        return UsernamePasswordAuthenticationToken(guest, null, listOf(SimpleGrantedAuthority("ROLE_$GUEST_ROLE")))
+    }
+
+    private fun cookieToken(
+        request: HttpServletRequest,
+        name: String,
+    ): String? =
+        request.cookies
+            ?.firstOrNull { it.name == name }
+            ?.value
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+
+    private fun bearerToken(request: HttpServletRequest): String? =
+        request
+            .getHeader(HttpHeaders.AUTHORIZATION)
+            ?.takeIf { it.startsWith(BEARER_PREFIX) }
+            ?.substring(BEARER_PREFIX.length)
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
 }

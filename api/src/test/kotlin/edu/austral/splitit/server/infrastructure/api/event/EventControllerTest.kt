@@ -2,6 +2,7 @@ package edu.austral.splitit.server.infrastructure.api.event
 
 import edu.austral.splitit.server.application.exception.EventDeletionConflictException
 import edu.austral.splitit.server.application.exception.EventNotFoundException
+import edu.austral.splitit.server.application.port.AuthGuest
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.CreateEventCommand
@@ -665,5 +666,35 @@ class EventControllerTest(
                     .cookie(Cookie("auth_token", "good-token")),
             ).andExpect(status().isNotFound)
             .andExpect(jsonPath("$.message").value("Event not found"))
+    }
+
+    @Test
+    fun `listing events is forbidden for a guest`() {
+        whenever(tokenProvider.parseGuest("guest-token"))
+            .thenReturn(AuthGuest(eventId = 10L, memberId = 30L, name = "Juan"))
+
+        mockMvc
+            .perform(get("/api/events").cookie(Cookie("guest_token", "guest-token")))
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.message").value("Forbidden"))
+
+        verify(eventApplicationService, never()).listUserEvents(any())
+    }
+
+    @Test
+    fun `creating an event is forbidden for a guest`() {
+        whenever(tokenProvider.parseGuest("guest-token"))
+            .thenReturn(AuthGuest(eventId = 10L, memberId = 30L, name = "Juan"))
+
+        mockMvc
+            .perform(
+                post("/api/events")
+                    .cookie(Cookie("guest_token", "guest-token"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"name":"Asado","baseCurrency":"ARS"}"""),
+            ).andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.message").value("Forbidden"))
+
+        verify(eventApplicationService, never()).createEvent(any())
     }
 }

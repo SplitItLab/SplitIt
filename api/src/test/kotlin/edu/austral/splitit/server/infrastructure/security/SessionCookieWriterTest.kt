@@ -2,6 +2,7 @@ package edu.austral.splitit.server.infrastructure.security
 
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.allOf
+import org.hamcrest.Matchers.contains
 import org.hamcrest.Matchers.containsString
 import org.hamcrest.Matchers.not
 import org.junit.jupiter.api.Test
@@ -84,6 +85,40 @@ class SessionCookieWriterTest {
                 containsString("Max-Age=0"),
                 containsString("Secure"),
                 not(containsString(TOKEN)),
+            ),
+        )
+    }
+
+    @Test
+    fun `writeGuest sets an HttpOnly guest cookie that lasts seven days`() {
+        val response = MockHttpServletResponse()
+
+        localWriter().writeGuest(response, TOKEN)
+
+        assertThat(
+            setCookie(response),
+            allOf(
+                containsString("guest_token=$TOKEN"),
+                containsString("HttpOnly"),
+                containsString("Path=/"),
+                containsString("SameSite=Lax"),
+                containsString("Max-Age=604800"),
+                not(containsString("Secure")),
+            ),
+        )
+    }
+
+    @Test
+    fun `clear expires both the session and the guest cookies`() {
+        val response = MockHttpServletResponse()
+
+        localWriter().clear(response)
+
+        assertThat(
+            response.getHeaders(HttpHeaders.SET_COOKIE),
+            contains(
+                allOf(containsString("auth_token=;"), containsString("Max-Age=0"), containsString("HttpOnly")),
+                allOf(containsString("guest_token=;"), containsString("Max-Age=0"), containsString("HttpOnly")),
             ),
         )
     }

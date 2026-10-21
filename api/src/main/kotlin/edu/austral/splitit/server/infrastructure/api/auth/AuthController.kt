@@ -1,6 +1,8 @@
 package edu.austral.splitit.server.infrastructure.api.auth
 
+import edu.austral.splitit.server.application.exception.AuthenticatedUserMissingException
 import edu.austral.splitit.server.application.exception.InvalidRequestException
+import edu.austral.splitit.server.application.port.AuthGuest
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.LoginService
@@ -72,8 +74,14 @@ class AuthController(
 
     @GetMapping("/session")
     fun session(
-        @AuthenticationPrincipal user: AuthUser,
-    ): UserResponse = UserResponse.of(user)
+        @AuthenticationPrincipal user: AuthUser?,
+        @AuthenticationPrincipal guest: AuthGuest?,
+    ): Any =
+        when {
+            user != null -> UserResponse.of(user)
+            guest != null -> GuestSessionResponse.of(guest)
+            else -> throw AuthenticatedUserMissingException()
+        }
 
     @PostMapping("/logout")
     @ResponseStatus(HttpStatus.NO_CONTENT)

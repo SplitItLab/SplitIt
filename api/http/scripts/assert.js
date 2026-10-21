@@ -90,6 +90,18 @@ export function assertSessionUser(client, response, expected) {
     client.assert(body.token === undefined, "token must not appear in the JSON body")
 }
 
+export function assertGuestSession(client, response, expected) {
+    assertStatus(client, response, 200)
+    const body = jsonBody(response)
+    client.assert(body != null && typeof body === "object", "Expected a JSON body")
+    client.assert(body.type === "guest", 'Expected type "guest" but got "' + body.type + '"')
+    client.assert(String(body.eventId) === String(expected.eventId), 'Expected eventId "' + expected.eventId + '" but got "' + body.eventId + '"')
+    client.assert(String(body.memberId) === String(expected.memberId), 'Expected memberId "' + expected.memberId + '" but got "' + body.memberId + '"')
+    client.assert(body.name === expected.name, 'Expected name "' + expected.name + '" but got "' + body.name + '"')
+    client.assert(body.email === undefined, "guest session must not include email")
+    client.assert(body.token === undefined, "token must not appear in the JSON body")
+}
+
 function collectHeaderValues(headers, name) {
     const collected = []
     if (headers == null) {

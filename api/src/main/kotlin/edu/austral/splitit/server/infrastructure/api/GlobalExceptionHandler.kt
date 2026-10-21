@@ -8,6 +8,9 @@ import edu.austral.splitit.server.application.exception.ExchangeRateUnavailableE
 import edu.austral.splitit.server.application.exception.ExpenseNotFoundException
 import edu.austral.splitit.server.application.exception.InvalidCredentialsException
 import edu.austral.splitit.server.application.exception.InvalidRequestException
+import edu.austral.splitit.server.application.exception.InviteLinkNotFoundException
+import edu.austral.splitit.server.application.exception.MemberHasAccountException
+import edu.austral.splitit.server.application.exception.MemberNotInEventException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -41,10 +44,6 @@ class GlobalExceptionHandler {
 
     // == Exception Handling ==
 
-    @ExceptionHandler(EmailAlreadyInUseException::class)
-    fun handleEmailAlreadyInUse(exception: EmailAlreadyInUseException): ResponseEntity<ErrorMessage> =
-        error(HttpStatus.CONFLICT, exception.message ?: EMAIL_ALREADY_IN_USE_MESSAGE)
-
     @ExceptionHandler(InvalidCredentialsException::class)
     fun handleInvalidCredentials(exception: InvalidCredentialsException): ResponseEntity<ErrorMessage> =
         error(HttpStatus.UNAUTHORIZED, exception.message ?: INVALID_CREDENTIALS_MESSAGE)
@@ -53,13 +52,25 @@ class GlobalExceptionHandler {
     fun handleAuthenticatedUserMissing(exception: AuthenticatedUserMissingException): ResponseEntity<ErrorMessage> =
         error(HttpStatus.UNAUTHORIZED, exception.message ?: UNAUTHORIZED_MESSAGE)
 
-    @ExceptionHandler(EventNotFoundException::class, ExpenseNotFoundException::class)
+    @ExceptionHandler(
+        EventNotFoundException::class,
+        ExpenseNotFoundException::class,
+        InviteLinkNotFoundException::class,
+    )
     fun handleNotFound(exception: RuntimeException): ResponseEntity<ErrorMessage> =
         error(HttpStatus.NOT_FOUND, exception.message ?: NOT_FOUND_MESSAGE)
 
-    @ExceptionHandler(EventDeletionConflictException::class)
-    fun handleEventDeletionConflict(exception: EventDeletionConflictException): ResponseEntity<ErrorMessage> =
-        error(HttpStatus.CONFLICT, exception.message ?: EVENT_DELETION_CONFLICT_MESSAGE)
+    @ExceptionHandler(MemberNotInEventException::class)
+    fun handleMemberNotInEvent(exception: MemberNotInEventException): ResponseEntity<ErrorMessage> =
+        error(HttpStatus.UNPROCESSABLE_CONTENT, exception.message ?: MEMBER_NOT_IN_EVENT_MESSAGE)
+
+    @ExceptionHandler(
+        EmailAlreadyInUseException::class,
+        EventDeletionConflictException::class,
+        MemberHasAccountException::class,
+    )
+    fun handleConflict(exception: RuntimeException): ResponseEntity<ErrorMessage> =
+        error(HttpStatus.CONFLICT, exception.message ?: CONFLICT_MESSAGE)
 
     @ExceptionHandler(ExchangeRateUnavailableException::class)
     fun handleExchangeRateUnavailable(exception: ExchangeRateUnavailableException): ResponseEntity<ErrorMessage> {
@@ -85,11 +96,11 @@ class GlobalExceptionHandler {
     // == Static Constants ==
     companion object {
         private const val INVALID_REQUEST_MESSAGE = "Invalid request data"
-        private const val EMAIL_ALREADY_IN_USE_MESSAGE = "Email already in use"
         private const val INVALID_CREDENTIALS_MESSAGE = "Invalid credentials"
         private const val UNAUTHORIZED_MESSAGE = "Unauthorized"
         private const val NOT_FOUND_MESSAGE = "Not found"
-        private const val EVENT_DELETION_CONFLICT_MESSAGE = "Event cannot be deleted"
+        private const val CONFLICT_MESSAGE = "Conflict"
+        private const val MEMBER_NOT_IN_EVENT_MESSAGE = "Member not in event"
         private const val EXCHANGE_RATE_UNAVAILABLE_MESSAGE = "Exchange rate unavailable"
         private const val INTERNAL_ERROR_MESSAGE = "Internal server error"
 
