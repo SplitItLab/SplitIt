@@ -1,5 +1,6 @@
 package edu.austral.splitit.server.infrastructure.api.auth
 
+import edu.austral.splitit.server.application.port.AuthGuest
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.LoginService
@@ -138,6 +139,37 @@ class AuthSessionControllerTest(
             ).andExpect(status().isOk)
             .andExpect(jsonPath("$.email").value("ada@example.com"))
     }
+
+    @Test
+    fun `session returns the guest when only the guest cookie is valid`() {
+        whenever(tokenProvider.parseGuest("guest-token")).thenReturn(juanGuest())
+
+        mockMvc
+            .perform(get("/api/auth/session").cookie(Cookie("guest_token", "guest-token")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.type").value("guest"))
+            .andExpect(jsonPath("$.eventId").value(10))
+            .andExpect(jsonPath("$.memberId").value(30))
+            .andExpect(jsonPath("$.name").value("Juan"))
+            .andExpect(jsonPath("$.email").doesNotExist())
+    }
+
+    @Test
+    fun `session answers as the user when both the session and the guest cookies are valid`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(adaAuthUser())
+        whenever(tokenProvider.parseGuest("guest-token")).thenReturn(juanGuest())
+
+        mockMvc
+            .perform(
+                get("/api/auth/session")
+                    .cookie(Cookie("auth_token", "good-token"), Cookie("guest_token", "guest-token")),
+            ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(1))
+            .andExpect(jsonPath("$.email").value("ada@example.com"))
+            .andExpect(jsonPath("$.type").doesNotExist())
+    }
+
+    private fun juanGuest(): AuthGuest = AuthGuest(eventId = 10L, memberId = 30L, name = "Juan")
 
     private fun adaAuthUser(): AuthUser =
         AuthUser(

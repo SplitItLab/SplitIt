@@ -1,5 +1,6 @@
 package edu.austral.splitit.server.infrastructure.api.kpi
 
+import edu.austral.splitit.server.application.port.AuthGuest
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.KpiRunReceipt
@@ -106,6 +107,19 @@ class KpiRunControllerTest(
             .perform(get("/api/kpi-runs"))
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.message").value("Unauthorized"))
+
+        verify(runKpiReport, never()).list()
+    }
+
+    @Test
+    fun `get is forbidden for a guest`() {
+        whenever(tokenProvider.parseGuest("guest-token"))
+            .thenReturn(AuthGuest(eventId = 10L, memberId = 30L, name = "Juan"))
+
+        mockMvc
+            .perform(get("/api/kpi-runs").cookie(Cookie("guest_token", "guest-token")))
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.message").value("Forbidden"))
 
         verify(runKpiReport, never()).list()
     }

@@ -3,6 +3,7 @@ package edu.austral.splitit.server.infrastructure.api.me
 import edu.austral.splitit.server.Helpers
 import edu.austral.splitit.server.application.exception.AuthenticatedUserMissingException
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
+import edu.austral.splitit.server.application.port.AuthGuest
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.AccountService
@@ -264,6 +265,19 @@ class MeControllerTest(
             .andExpect(jsonPath("$.message").value("Unauthorized"))
 
         verify(accountService, never()).update(any(), any(), any())
+    }
+
+    @Test
+    fun `get is forbidden for a guest`() {
+        whenever(tokenProvider.parseGuest("guest-token"))
+            .thenReturn(AuthGuest(eventId = 10L, memberId = 30L, name = "Juan"))
+
+        mockMvc
+            .perform(get("/api/me").cookie(Cookie("guest_token", "guest-token")))
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.message").value("Forbidden"))
+
+        verify(accountService, never()).get(any())
     }
 
     private fun staleAuthUser(): AuthUser =

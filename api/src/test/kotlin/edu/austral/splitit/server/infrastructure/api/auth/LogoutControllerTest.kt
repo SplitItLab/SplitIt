@@ -7,6 +7,7 @@ import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
 import edu.austral.splitit.server.infrastructure.security.SessionCookieWriter
 import jakarta.servlet.http.Cookie
 import org.hamcrest.Matchers.allOf
+import org.hamcrest.Matchers.contains
 import org.hamcrest.Matchers.containsString
 import org.hamcrest.Matchers.not
 import org.junit.jupiter.api.Test
@@ -89,6 +90,32 @@ class LogoutControllerTest(
             .andExpect(status().isNoContent)
             .andExpect(content().string(""))
             .andExpect(header().string(HttpHeaders.SET_COOKIE, expiredCookie()))
+
+        verifyNoAccountChanges()
+    }
+
+    @Test
+    fun `logout expires both the session and the guest cookies`() {
+        mockMvc
+            .perform(
+                post("/api/auth/logout")
+                    .cookie(Cookie("auth_token", "signed.jwt.token"), Cookie("guest_token", "guest.jwt.token")),
+            ).andExpect(status().isNoContent)
+            .andExpect(
+                header().stringValues(
+                    HttpHeaders.SET_COOKIE,
+                    contains(
+                        expiredCookie(),
+                        allOf(
+                            containsString("guest_token=;"),
+                            containsString("HttpOnly"),
+                            containsString("Path=/"),
+                            containsString("SameSite=Lax"),
+                            containsString("Max-Age=0"),
+                        ),
+                    ),
+                ),
+            )
 
         verifyNoAccountChanges()
     }

@@ -17,6 +17,8 @@ class InviteLinkService(
         inviteLinkRepository.findByEventId(requireNotNull(event.id))
             ?: inviteLinkRepository.save(InviteLink.create(event, generateToken()))
 
+    fun findByToken(token: String): InviteLink? = inviteLinkRepository.findByToken(token)
+
     private fun generateToken(): String {
         val bytes = ByteArray(TOKEN_BYTES)
         random.nextBytes(bytes)

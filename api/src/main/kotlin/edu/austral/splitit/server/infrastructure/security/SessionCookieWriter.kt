@@ -7,6 +7,8 @@ import org.springframework.http.ResponseCookie
 import org.springframework.stereotype.Component
 import java.time.Duration
 
+const val GUEST_COOKIE_NAME = "guest_token"
+
 @Component
 class SessionCookieWriter(
     @Value("\${auth.cookie.name}") private val cookieName: String,
@@ -18,21 +20,30 @@ class SessionCookieWriter(
         response: HttpServletResponse,
         token: String,
     ) {
-        addCookie(response, token, Duration.ofHours(expirationHours))
+        addCookie(response, cookieName, token, Duration.ofHours(expirationHours))
+    }
+
+    fun writeGuest(
+        response: HttpServletResponse,
+        token: String,
+    ) {
+        addCookie(response, GUEST_COOKIE_NAME, token, GUEST_SESSION_TTL)
     }
 
     fun clear(response: HttpServletResponse) {
-        addCookie(response, "", Duration.ZERO)
+        addCookie(response, cookieName, "", Duration.ZERO)
+        addCookie(response, GUEST_COOKIE_NAME, "", Duration.ZERO)
     }
 
     private fun addCookie(
         response: HttpServletResponse,
+        name: String,
         value: String,
         maxAge: Duration,
     ) {
         val cookie =
             ResponseCookie
-                .from(cookieName, value)
+                .from(name, value)
                 .httpOnly(true)
                 .secure(secure)
                 .sameSite(sameSite)
