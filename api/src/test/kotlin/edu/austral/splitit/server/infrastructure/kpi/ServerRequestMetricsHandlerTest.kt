@@ -1,11 +1,19 @@
 package edu.austral.splitit.server.infrastructure.kpi
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import edu.austral.splitit.server.infrastructure.persistence.JpaRequestMetrics
 import edu.austral.splitit.server.infrastructure.persistence.RequestSample
 import io.micrometer.observation.Observation
+import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+import org.slf4j.LoggerFactory
+import org.springframework.dao.DataAccessResourceFailureException
 import org.springframework.http.server.observation.ServerRequestObservationContext
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
@@ -15,6 +23,7 @@ import java.time.Instant
 import java.time.ZoneOffset
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ServerRequestMetricsHandlerTest {
@@ -53,6 +62,32 @@ class ServerRequestMetricsHandlerTest {
     fun `supports only server request observations`() {
         assertTrue(handler.supportsContext(context("GET", "/api/status", 200, "/api/status")))
         assertTrue(!handler.supportsContext(Observation.Context()))
+    }
+
+    @Test
+    fun `a failed insert does not log the client request URI`() {
+        doThrow(DataAccessResourceFailureException("database down")).whenever(metrics).record(any())
+        val context = context("GET", "/api/invite/secret-token", 404, null)
+
+        handler.onStart(context)
+        val messages = captureLogs { handler.onStop(context) }
+
+        assertEquals(1, messages.size)
+        assertFalse(messages.single().contains("secret-token"))
+    }
+
+    private fun captureLogs(block: () -> Unit): List<String> {
+        val logger = LoggerFactory.getLogger(ServerRequestMetricsHandler::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>()
+        appender.start()
+        logger.addAppender(appender)
+        try {
+            block()
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+        return appender.list.map { it.formattedMessage }
     }
 
     private fun recorded(): RequestSample {

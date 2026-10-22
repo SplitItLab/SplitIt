@@ -46,7 +46,8 @@ class ServerRequestMetricsHandler(
         try {
             metrics.record(sample)
         } catch (exception: Exception) {
-            logger.warn("Request sample not stored. endpoint={} reason={}", sample.endpoint, exception.message)
+            // Without a route pattern the endpoint is the client URI, and the message may echo it.
+            logger.warn("Request sample not stored. reason={}", exception.javaClass.name)
         }
     }
 
