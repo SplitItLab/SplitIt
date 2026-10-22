@@ -44,6 +44,15 @@ export class LoginError extends Error {
   }
 }
 
+export const DEFAULT_POST_LOGIN_PATH = "/eventos";
+
+export function postLoginPath(redirect: string | null): string {
+  if (!redirect || !redirect.startsWith("/") || redirect.startsWith("//")) {
+    return DEFAULT_POST_LOGIN_PATH;
+  }
+  return redirect;
+}
+
 export type SessionUser = {
   id: number;
   name: string;

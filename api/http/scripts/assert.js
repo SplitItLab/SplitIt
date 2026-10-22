@@ -291,3 +291,36 @@ export function assertConversion(client, value, expected) {
     const expectedBase = Math.round(Number(expected.originalAmount) * rate * 10000) / 10000
     client.assert(Math.abs(Number(value.baseAmount) - expectedBase) < 0.0002, "Expected baseAmount " + expectedBase + " but got " + value.baseAmount)
 }
+
+export function assertInvitation(client, invitation, expected) {
+    client.assert(invitation != null && typeof invitation === "object", "Expected invitation object")
+    client.assert(invitation.name === expected.name, 'Expected name "' + expected.name + '" but got "' + invitation.name + '"')
+    client.assert(invitation.description === expected.description, 'Expected description "' + expected.description + '" but got "' + invitation.description + '"')
+    client.assert(invitation.iconKey === expected.iconKey, 'Expected iconKey "' + expected.iconKey + '" but got "' + invitation.iconKey + '"')
+    client.assert(invitation.memberCount === expected.memberCount, "Expected memberCount " + expected.memberCount + " but got " + invitation.memberCount)
+    client.assert(invitation.id === undefined, "invitation must not include the event id")
+    client.assert(invitation.members === undefined, "invitation must not include members")
+    client.assert(invitation.owner === undefined, "invitation must not include owner")
+}
+
+export function assertInvitationMembers(client, members, expected) {
+    client.assert(Array.isArray(members), "Expected members array")
+    const summary = members.map(function (member) { return member.name + ":" + member.isLinked }).join(",")
+    const expectedSummary = expected.map(function (member) { return member.name + ":" + member.isLinked }).join(",")
+    client.assert(summary === expectedSummary, 'Expected members "' + expectedSummary + '" but got "' + summary + '"')
+    members.forEach(function (member) {
+        client.assert(member.id !== undefined && member.id !== null, "Expected member id")
+        client.assert(member.email === undefined, "member must not include email")
+    })
+}
+
+export function assertInvitationAccess(client, access, expected) {
+    client.assert(access != null && typeof access === "object", "Expected access object")
+    client.assert(String(access.eventId) === String(expected.eventId), 'Expected eventId "' + expected.eventId + '" but got "' + access.eventId + '"')
+    if (expected.memberName === null) {
+        client.assert(access.linkedMember === null, "Expected no linked member")
+    } else {
+        client.assert(access.linkedMember != null, "Expected linked member")
+        client.assert(access.linkedMember.name === expected.memberName, 'Expected linked member "' + expected.memberName + '" but got "' + access.linkedMember.name + '"')
+    }
+}

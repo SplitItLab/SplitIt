@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LoadingIndicator } from "@/components/loading-indicator";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { login, LoginError, LoginInput, loginSchema } from "@/lib/auth";
+import { login, LoginError, LoginInput, loginSchema, postLoginPath } from "@/lib/auth";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
@@ -29,7 +29,7 @@ export default function LoginPage() {
     setGeneralError(null);
     try {
       await login(data);
-      router.push("/eventos");
+      router.push(postLoginPath(new URLSearchParams(window.location.search).get("redirect")));
     } catch (err) {
       if (err instanceof LoginError) {
         setGeneralError(err.message);
