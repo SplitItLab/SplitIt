@@ -12,6 +12,7 @@ import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.springframework.transaction.support.TransactionOperations
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -25,7 +26,8 @@ class RunKpiReportTest {
     private val engine = mock<KpiEngine>()
     private val exporter = RecordingExporter()
     private val lastRun = mock<LastRunPort>()
-    private val service = RunKpiReport(engine, exporter, lastRun, clock)
+    private val transactions = TransactionOperations.withoutTransaction()
+    private val service = RunKpiReport(engine, exporter, lastRun, clock, transactions)
 
     @Test
     fun `run without a day uses yesterday in Buenos Aires and returns the exporter receipt`() {
@@ -96,7 +98,7 @@ class RunKpiReportTest {
         whenever(engine.calculate(any())).thenReturn(results())
         val lateEvening = Clock.fixed(Instant.parse("2026-10-12T02:00:00Z"), ZoneOffset.UTC)
 
-        val receipt = RunKpiReport(engine, exporter, lastRun, lateEvening).run()
+        val receipt = RunKpiReport(engine, exporter, lastRun, lateEvening, transactions).run()
 
         assertEquals(LocalDate.parse("2026-10-10"), receipt.reportDay)
         assertEquals(Instant.parse("2026-10-10T03:00:00Z"), receipt.windowFrom)
