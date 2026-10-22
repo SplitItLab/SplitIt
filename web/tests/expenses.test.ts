@@ -36,7 +36,7 @@ describe("formatMoney, formatExpenseDate y expenseTotal", () => {
   it("formatea el importe en pesos argentinos con decimales", () => {
     expect(formatMoney(69900, "ARS")).toBe("$\u00a069.900,00");
     expect(formatMoney(2.5, "ARS")).toBe("$\u00a02,50");
-    expect(formatMoney(10.125, "ARS")).toBe("$\u00a010,125");
+    expect(formatMoney(15145.655, "ARS")).toBe("$\u00a015.145,66");
   });
 
   it("lee un monto con punto o con coma y rechaza el resto", () => {

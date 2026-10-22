@@ -130,7 +130,8 @@ function balanceAmount(amount: number, currency: string) {
 }
 
 function BalanceCard({ balance, currency }: { balance: MemberBalance; currency: string }) {
-  const tone = balanceTone(balance.netBalance);
+  const displayAmount = Math.abs(balance.netBalance) < 0.005 ? 0 : balance.netBalance;
+  const tone = balanceTone(displayAmount);
 
   return (
     <li>
@@ -161,7 +162,7 @@ function BalanceCard({ balance, currency }: { balance: MemberBalance; currency: 
                 : "text-text-primary"
           }`}
         >
-          {balanceAmount(balance.netBalance, currency)}
+          {balanceAmount(displayAmount, currency)}
         </p>
       </article>
     </li>

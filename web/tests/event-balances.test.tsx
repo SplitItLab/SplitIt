@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("@/lib/balances", async (importOriginal) => {
@@ -104,6 +104,38 @@ describe("EventBalances", () => {
     expect(visibleText(even)).toContain("en cero");
     expect(visibleText(even)).toContain(money(0, "ARS"));
     expect(visibleText(even)).not.toContain("+");
+  });
+
+  it.each([-0.0033, 0.0033, 0, -0, -0.0049, 0.0049])(
+    "muestra el saldo %s como cero sin signos y con estilo neutro",
+    async (netBalance) => {
+      const balance = Object.freeze({ ...ana, netBalance });
+      vi.mocked(listBalances).mockResolvedValue([balance]);
+
+      renderBalances();
+
+      const card = (await screen.findByText("Ana")).closest("article")!;
+      expect(within(card).getByText("en cero")).toHaveClass("bg-muted", "text-text-secondary");
+      const amount = within(card).getByText("$ 0,00");
+      expect(visibleText(amount)).toBe("$ 0,00");
+      expect(amount).toHaveClass("text-text-primary");
+      expect(balance.netBalance).toBe(netBalance);
+    }
+  );
+
+  it.each([
+    { netBalance: -0.005, tone: "debe", amount: "-$ 0,01", color: "text-destructive" },
+    { netBalance: 0.005, tone: "recibe", amount: "+$ 0,01", color: "text-primary" },
+  ])("conserva el signo y la etiqueta para el saldo $netBalance", async (testCase) => {
+    vi.mocked(listBalances).mockResolvedValue([{ ...ana, netBalance: testCase.netBalance }]);
+
+    renderBalances();
+
+    const card = (await screen.findByText("Ana")).closest("article")!;
+    expect(within(card).getByText(testCase.tone)).toHaveClass(testCase.color);
+    const amount = within(card).getByText(testCase.amount);
+    expect(visibleText(amount)).toBe(testCase.amount);
+    expect(amount).toHaveClass(testCase.color);
   });
 
   it("vuelve a pedir los saldos al reintentar", async () => {

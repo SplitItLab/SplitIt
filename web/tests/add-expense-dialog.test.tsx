@@ -154,13 +154,14 @@ describe("AddExpenseDialog", () => {
       originalAmount: 10,
       originalCurrency: "USD",
       baseCurrency: "ARS",
-      exchangeRate: 1450.5,
-      baseAmount: 14505,
+      exchangeRate: 1514.5655,
+      baseAmount: 15145.655,
     });
 
-    const rate = (1450.5).toLocaleString("es-AR", { maximumFractionDigits: 4 });
+    const rate = (1514.5655).toLocaleString("es-AR", { maximumFractionDigits: 4 });
     expect(await screen.findByText(`1 USD = ${rate} ARS`)).toBeInTheDocument();
-    expect(screen.getByText(/Se guardará como/)).toHaveTextContent(/Se guardará como/);
+    // SPT-99: el monto convertido se muestra con 2 decimales, no con los 4 que guarda la API
+    expect(visibleText(screen.getByText(/Se guardará como/))).toBe("Se guardará como $ 15.145,66");
     expect(screen.getByRole("button", { name: "Guardar gasto" })).toBeEnabled();
   });
 
