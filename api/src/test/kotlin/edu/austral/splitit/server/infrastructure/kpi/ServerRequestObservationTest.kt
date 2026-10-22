@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doThrow
+import org.mockito.kotlin.timeout
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
@@ -100,8 +101,12 @@ class ServerRequestObservationTest(
 
     private fun recorded(): RequestSample {
         val sample = argumentCaptor<RequestSample>()
-        verify(metrics).record(sample.capture())
+        verify(metrics, timeout(TIMEOUT_MILLIS)).record(sample.capture())
         return sample.firstValue
+    }
+
+    private companion object {
+        const val TIMEOUT_MILLIS = 1_000L
     }
 
     @TestConfiguration

@@ -8,8 +8,10 @@ import edu.austral.splitit.server.infrastructure.persistence.RequestSample
 import io.micrometer.observation.Observation
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.slf4j.LoggerFactory
@@ -21,9 +23,13 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class ServerRequestMetricsHandlerTest {
@@ -70,10 +76,48 @@ class ServerRequestMetricsHandlerTest {
         val context = context("GET", "/api/invite/secret-token", 404, null)
 
         handler.onStart(context)
-        val messages = captureLogs { handler.onStop(context) }
+        val messages =
+            captureLogs {
+                handler.onStop(context)
+                handler.close()
+            }
 
         assertEquals(1, messages.size)
         assertFalse(messages.single().contains("secret-token"))
+    }
+
+    @Test
+    fun `the sample insert runs off the request thread`() {
+        var recordingThread: Thread? = null
+        doAnswer { recordingThread = Thread.currentThread() }.whenever(metrics).record(any())
+        val context = context("GET", "/api/status", 200, "/api/status")
+
+        handler.onStart(context)
+        handler.onStop(context)
+        handler.close()
+
+        assertNotEquals(Thread.currentThread(), recordingThread)
+        assertNotNull(recordingThread)
+    }
+
+    @Test
+    fun `a full queue drops samples instead of blocking the request`() {
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        doAnswer {
+            started.countDown()
+            release.await()
+        }.whenever(metrics).record(any())
+        val context = context("GET", "/api/status", 200, "/api/status")
+        handler.onStart(context)
+        handler.onStop(context)
+        started.await(1, TimeUnit.SECONDS)
+
+        repeat(ServerRequestMetricsHandler.QUEUE_CAPACITY + 1) { handler.onStop(context) }
+
+        release.countDown()
+        handler.close()
+        verify(metrics, times(ServerRequestMetricsHandler.QUEUE_CAPACITY + 1)).record(any())
     }
 
     private fun captureLogs(block: () -> Unit): List<String> {
@@ -91,6 +135,7 @@ class ServerRequestMetricsHandlerTest {
     }
 
     private fun recorded(): RequestSample {
+        handler.close()
         val sample = argumentCaptor<RequestSample>()
         verify(metrics).record(sample.capture())
         return sample.firstValue

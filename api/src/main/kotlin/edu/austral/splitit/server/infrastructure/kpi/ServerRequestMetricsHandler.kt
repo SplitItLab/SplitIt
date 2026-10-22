@@ -10,20 +10,39 @@ import org.springframework.http.server.observation.ServerRequestObservationConte
 import org.springframework.stereotype.Component
 import java.time.Clock
 import java.time.Duration
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 /** Stores each finished incoming HTTP observation as a request sample for the KPI ports. */
 @Component
 class ServerRequestMetricsHandler(
     private val metrics: JpaRequestMetrics,
     private val clock: Clock,
-) : ObservationHandler<ServerRequestObservationContext> {
+) : ObservationHandler<ServerRequestObservationContext>,
+    AutoCloseable {
+    // One writer with a bounded queue: a slow database drops samples instead of holding request threads.
+    private val recorder =
+        ThreadPoolExecutor(
+            1,
+            1,
+            0L,
+            TimeUnit.MILLISECONDS,
+            ArrayBlockingQueue(QUEUE_CAPACITY),
+            Thread
+                .ofPlatform()
+                .name("request-sample-recorder")
+                .daemon()
+                .factory(),
+            ThreadPoolExecutor.DiscardPolicy(),
+        )
+
     override fun supportsContext(context: Observation.Context): Boolean = context is ServerRequestObservationContext
 
     override fun onStart(context: ServerRequestObservationContext) {
         context.put(START_NANOS, System.nanoTime())
     }
 
-    @Suppress("TooGenericExceptionCaught") // una muestra perdida no puede romper la request (SPT-87)
     override fun onStop(context: ServerRequestObservationContext) {
         val started = context.get<Long>(START_NANOS)
         val response = context.response
@@ -43,6 +62,17 @@ class ServerRequestMetricsHandler(
                 duration = Duration.ofNanos(elapsed),
                 at = clock.instant(),
             )
+        recorder.execute { record(sample) }
+    }
+
+    // Flushes the queued samples before the datasource closes.
+    override fun close() {
+        recorder.shutdown()
+        recorder.awaitTermination(SHUTDOWN_SECONDS, TimeUnit.SECONDS)
+    }
+
+    @Suppress("TooGenericExceptionCaught") // una muestra perdida no puede romper la request (SPT-87)
+    private fun record(sample: RequestSample) {
         try {
             metrics.record(sample)
         } catch (exception: Exception) {
@@ -51,9 +81,11 @@ class ServerRequestMetricsHandler(
         }
     }
 
-    private companion object {
-        const val START_NANOS = "splitit.request.startNanos"
-        const val MIN_STATUS = 100
-        val logger: Logger = LoggerFactory.getLogger(ServerRequestMetricsHandler::class.java)
+    internal companion object {
+        const val QUEUE_CAPACITY = 1_000
+        private const val SHUTDOWN_SECONDS = 5L
+        private const val START_NANOS = "splitit.request.startNanos"
+        private const val MIN_STATUS = 100
+        private val logger: Logger = LoggerFactory.getLogger(ServerRequestMetricsHandler::class.java)
     }
 }
