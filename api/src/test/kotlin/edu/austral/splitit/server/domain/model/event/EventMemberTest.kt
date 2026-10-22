@@ -41,6 +41,20 @@ class EventMemberTest {
     }
 
     @Test
+    fun `link user fails when member is already linked to another user`() {
+        val member = EventMember.create(event = event, displayName = "Dueño", user = owner)
+        val other = Helpers.user(id = 2L, name = "Ana", email = "ana@example.com", passwordHash = "hash")
+
+        val exception =
+            assertFailsWith<MemberAlreadyLinkedException> {
+                member.linkUser(other)
+            }
+
+        assertEquals("Member is already linked to an account", exception.message)
+        assertEquals(owner, member.user)
+    }
+
+    @Test
     fun `create member fails with empty display name`() {
         assertFailsWith<IllegalArgumentException> {
             EventMember.create(event = event, displayName = "   ")

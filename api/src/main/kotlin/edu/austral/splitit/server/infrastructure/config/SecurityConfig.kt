@@ -47,6 +47,8 @@ class SecurityConfig(
                     ).permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/status")
                     .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/invitations/*", "/api/invitations/*/members")
+                    .permitAll()
 
                 it.anyRequest().authenticated()
             }.httpBasic { it.disable() }

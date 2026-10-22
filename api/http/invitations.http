@@ -1,0 +1,382 @@
+# Invitations — SplitIt API
+#
+# Cómo usar
+#   IntelliJ: Run All en este archivo (env "local"). Los asserts salen en la pestaña Tests.
+#   VS Code: REST Client; ejecutá cada bloque `###`.
+#   La API tiene que estar en {{baseUrl}} (por defecto localhost:8080).
+#
+# Correr de arriba a abajo. Cada Run All crea cuentas nuevas (emails con timestamp)
+# para no depender de datos de una corrida anterior.
+#
+@baseUrl = http://localhost:8080
+@ownerEmail = invitation.owner-{{$timestamp}}@example.com
+@guestEmail = invitation.guest-{{$timestamp}}@example.com
+@password = una-clave-segura
+
+### 1. Seed — Crear cuenta del dueño
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Nicolas",
+  "email": "{{ownerEmail}}",
+  "password": "{{password}}"
+}
+
+> {%
+import { assertStatus } from './scripts/assert.js'
+
+client.test("crea al dueño del evento", function () {
+    assertStatus(client, response, 201)
+})
+%}
+
+### 2. Login — Dueño
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{ownerEmail}}",
+  "password": "{{password}}"
+}
+
+> {%
+import { assertStatus, saveAuthToken } from './scripts/assert.js'
+
+client.test("el dueño inicia sesión", function () {
+    assertStatus(client, response, 200)
+})
+saveAuthToken(client, response, "auth_token")
+%}
+
+### 3. Seed — Crear evento con integrantes sin cuenta
+POST {{baseUrl}}/api/events
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "name": "Juntada Asado",
+  "description": "Asado del sábado",
+  "iconKey": "food",
+  "baseCurrency": "ARS",
+  "participantNames": ["Francisco", "Lucas"]
+}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("crea el evento", function () {
+    assertStatus(client, response, 201)
+})
+client.global.set("invitationEventId", String(jsonBody(response).id))
+%}
+
+### 4. Seed — Obtener el enlace de acceso
+POST {{baseUrl}}/api/events/{{invitationEventId}}/invite-link
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("el dueño obtiene el token", function () {
+    assertStatus(client, response, 200)
+})
+client.global.set("invitationToken", jsonBody(response).token)
+%}
+
+### 5. Invitations — GET datos básicos sin sesión (200)
+# @no-cookie-jar
+GET {{baseUrl}}/api/invitations/{{invitationToken}}
+Accept: application/json
+
+> {%
+import { assertStatus, jsonBody, assertInvitation } from './scripts/assert.js'
+
+client.test("muestra los datos básicos del evento sin sesión", function () {
+    assertStatus(client, response, 200)
+    assertInvitation(client, jsonBody(response), {
+        name: "Juntada Asado",
+        description: "Asado del sábado",
+        iconKey: "food",
+        memberCount: 3,
+    })
+})
+%}
+
+### 6. Invitations — GET con token inválido (404 genérico)
+# @no-cookie-jar
+GET {{baseUrl}}/api/invitations/token-que-no-existe-en-la-base
+Accept: application/json
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("un token inválido devuelve el mismo mensaje que un evento inexistente", function () {
+    assertError(client, response, 404, "Event not found")
+})
+%}
+
+### 7. Invitations — GET integrantes sin sesión (200)
+# @no-cookie-jar
+GET {{baseUrl}}/api/invitations/{{invitationToken}}/members
+Accept: application/json
+
+> {%
+import { assertStatus, jsonBody, assertInvitationMembers } from './scripts/assert.js'
+
+client.test("lista los integrantes marcando los ya vinculados", function () {
+    assertStatus(client, response, 200)
+    const members = jsonBody(response)
+    assertInvitationMembers(client, members, [
+        { name: "Nicolas", isLinked: true },
+        { name: "Francisco", isLinked: false },
+        { name: "Lucas", isLinked: false },
+    ])
+    client.global.set("ownerMemberId", String(members[0].id))
+    client.global.set("franciscoMemberId", String(members[1].id))
+    client.global.set("lucasMemberId", String(members[2].id))
+})
+%}
+
+### 8. Invitations — GET integrantes con token inválido (404)
+# @no-cookie-jar
+GET {{baseUrl}}/api/invitations/token-que-no-existe-en-la-base/members
+Accept: application/json
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("no lista integrantes con un token inválido", function () {
+    assertError(client, response, 404, "Event not found")
+})
+%}
+
+### 9. Invitations — GET estado de acceso sin sesión (401)
+# @no-cookie-jar
+GET {{baseUrl}}/api/invitations/{{invitationToken}}/access
+Accept: application/json
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("el estado de acceso requiere sesión", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### 10. Invitations — POST vincular sin sesión (401)
+# @no-cookie-jar
+POST {{baseUrl}}/api/invitations/{{invitationToken}}/link
+Content-Type: application/json
+Accept: application/json
+
+{
+  "memberId": {{franciscoMemberId}}
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("vincularse requiere sesión", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### 11. Seed — Crear cuenta del invitado
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Francisco",
+  "email": "{{guestEmail}}",
+  "password": "{{password}}"
+}
+
+> {%
+import { assertStatus } from './scripts/assert.js'
+
+client.test("crea la cuenta del invitado", function () {
+    assertStatus(client, response, 201)
+})
+%}
+
+### 12. Login — Invitado
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{guestEmail}}",
+  "password": "{{password}}"
+}
+
+> {%
+import { assertStatus, saveAuthToken } from './scripts/assert.js'
+
+client.test("el invitado inicia sesión", function () {
+    assertStatus(client, response, 200)
+})
+saveAuthToken(client, response, "auth_token")
+%}
+
+### 13. Invitations — GET estado de acceso sin vincular (200)
+GET {{baseUrl}}/api/invitations/{{invitationToken}}/access
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody, assertInvitationAccess } from './scripts/assert.js'
+
+client.test("la cuenta todavía no está vinculada al evento", function () {
+    assertStatus(client, response, 200)
+    assertInvitationAccess(client, jsonBody(response), {
+        eventId: client.global.get("invitationEventId"),
+        memberName: null,
+    })
+})
+%}
+
+### 14. Invitations — POST vincular un integrante ya tomado (409)
+POST {{baseUrl}}/api/invitations/{{invitationToken}}/link
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "memberId": {{ownerMemberId}}
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("no deja tomar un integrante vinculado a otra cuenta", function () {
+    assertError(client, response, 409, "Member is already linked to an account")
+})
+%}
+
+### 15. Invitations — POST vincular sin memberId (400)
+POST {{baseUrl}}/api/invitations/{{invitationToken}}/link
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rechaza un pedido sin integrante", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### 16. Invitations — POST vincular con token inválido (404)
+POST {{baseUrl}}/api/invitations/token-que-no-existe-en-la-base/link
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "memberId": {{franciscoMemberId}}
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("no vincula con un token inválido", function () {
+    assertError(client, response, 404, "Event not found")
+})
+%}
+
+### 17. Invitations — POST vincular un integrante libre (200)
+POST {{baseUrl}}/api/invitations/{{invitationToken}}/link
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "memberId": {{franciscoMemberId}}
+}
+
+> {%
+import { assertStatus, jsonBody, assertInvitationAccess } from './scripts/assert.js'
+
+client.test("vincula la cuenta al integrante elegido", function () {
+    assertStatus(client, response, 200)
+    assertInvitationAccess(client, jsonBody(response), {
+        eventId: client.global.get("invitationEventId"),
+        memberName: "Francisco",
+    })
+})
+%}
+
+### 18. Invitations — GET estado de acceso ya vinculado (200)
+GET {{baseUrl}}/api/invitations/{{invitationToken}}/access
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody, assertInvitationAccess } from './scripts/assert.js'
+
+client.test("informa el integrante al que ya está vinculada la cuenta", function () {
+    assertStatus(client, response, 200)
+    assertInvitationAccess(client, jsonBody(response), {
+        eventId: client.global.get("invitationEventId"),
+        memberName: "Francisco",
+    })
+})
+%}
+
+### 19. Events — GET el evento queda accesible para el invitado (200)
+GET {{baseUrl}}/api/events/{{invitationEventId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus } from './scripts/assert.js'
+
+client.test("el invitado vinculado puede ver el evento", function () {
+    assertStatus(client, response, 200)
+})
+%}
+
+### 20. Invitations — POST vincular otra vez la misma cuenta (409)
+POST {{baseUrl}}/api/invitations/{{invitationToken}}/link
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+{
+  "memberId": {{lucasMemberId}}
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("una cuenta ya vinculada no puede tomar otro integrante", function () {
+    assertError(client, response, 409, "Account is already linked to this event")
+})
+%}
+
+### 21. Invitations — GET integrantes después de vincular (200)
+# @no-cookie-jar
+GET {{baseUrl}}/api/invitations/{{invitationToken}}/members
+Accept: application/json
+
+> {%
+import { assertStatus, jsonBody, assertInvitationMembers } from './scripts/assert.js'
+
+client.test("el integrante tomado aparece como no disponible", function () {
+    assertStatus(client, response, 200)
+    assertInvitationMembers(client, jsonBody(response), [
+        { name: "Nicolas", isLinked: true },
+        { name: "Francisco", isLinked: true },
+        { name: "Lucas", isLinked: false },
+    ])
+})
+%}

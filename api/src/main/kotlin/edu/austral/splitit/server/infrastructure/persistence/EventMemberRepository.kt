@@ -20,6 +20,11 @@ interface EventMemberRepository : JpaRepository<EventMember, Long> {
         @Param("eventId") eventId: Long,
     ): List<EventMember>
 
+    fun findByEventIdAndUserId(
+        eventId: Long,
+        userId: Long,
+    ): EventMember?
+
     fun existsByEventIdAndUserId(
         eventId: Long,
         userId: Long,

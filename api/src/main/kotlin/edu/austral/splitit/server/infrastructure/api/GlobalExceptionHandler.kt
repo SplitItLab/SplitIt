@@ -1,5 +1,6 @@
 package edu.austral.splitit.server.infrastructure.api
 
+import edu.austral.splitit.server.application.exception.AccountAlreadyLinkedException
 import edu.austral.splitit.server.application.exception.AuthenticatedUserMissingException
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
 import edu.austral.splitit.server.application.exception.EventDeletionConflictException
@@ -8,6 +9,7 @@ import edu.austral.splitit.server.application.exception.ExchangeRateUnavailableE
 import edu.austral.splitit.server.application.exception.ExpenseNotFoundException
 import edu.austral.splitit.server.application.exception.InvalidCredentialsException
 import edu.austral.splitit.server.application.exception.InvalidRequestException
+import edu.austral.splitit.server.domain.model.event.MemberAlreadyLinkedException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -57,9 +59,13 @@ class GlobalExceptionHandler {
     fun handleNotFound(exception: RuntimeException): ResponseEntity<ErrorMessage> =
         error(HttpStatus.NOT_FOUND, exception.message ?: NOT_FOUND_MESSAGE)
 
-    @ExceptionHandler(EventDeletionConflictException::class)
-    fun handleEventDeletionConflict(exception: EventDeletionConflictException): ResponseEntity<ErrorMessage> =
-        error(HttpStatus.CONFLICT, exception.message ?: EVENT_DELETION_CONFLICT_MESSAGE)
+    @ExceptionHandler(
+        EventDeletionConflictException::class,
+        MemberAlreadyLinkedException::class,
+        AccountAlreadyLinkedException::class,
+    )
+    fun handleConflict(exception: RuntimeException): ResponseEntity<ErrorMessage> =
+        error(HttpStatus.CONFLICT, exception.message ?: CONFLICT_MESSAGE)
 
     @ExceptionHandler(ExchangeRateUnavailableException::class)
     fun handleExchangeRateUnavailable(exception: ExchangeRateUnavailableException): ResponseEntity<ErrorMessage> {
@@ -89,7 +95,7 @@ class GlobalExceptionHandler {
         private const val INVALID_CREDENTIALS_MESSAGE = "Invalid credentials"
         private const val UNAUTHORIZED_MESSAGE = "Unauthorized"
         private const val NOT_FOUND_MESSAGE = "Not found"
-        private const val EVENT_DELETION_CONFLICT_MESSAGE = "Event cannot be deleted"
+        private const val CONFLICT_MESSAGE = "Conflict"
         private const val EXCHANGE_RATE_UNAVAILABLE_MESSAGE = "Exchange rate unavailable"
         private const val INTERNAL_ERROR_MESSAGE = "Internal server error"
 
