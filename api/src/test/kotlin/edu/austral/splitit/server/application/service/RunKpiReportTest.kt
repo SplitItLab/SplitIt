@@ -1,12 +1,14 @@
 package edu.austral.splitit.server.application.service
 
 import edu.austral.splitit.server.application.port.KpiExporter
+import edu.austral.splitit.server.application.port.LastRunPort
 import edu.austral.splitit.server.domain.kpi.KpiCalculationContext
 import edu.austral.splitit.server.domain.kpi.KpiIds
 import edu.austral.splitit.server.domain.kpi.KpiResult
 import edu.austral.splitit.server.domain.kpi.KpiValue
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -22,7 +24,8 @@ class RunKpiReportTest {
     private val clock = Clock.fixed(calculatedAt, ZoneOffset.UTC)
     private val engine = mock<KpiEngine>()
     private val exporter = RecordingExporter()
-    private val service = RunKpiReport(engine, exporter, clock)
+    private val lastRun = mock<LastRunPort>()
+    private val service = RunKpiReport(engine, exporter, lastRun, clock)
 
     @Test
     fun `run without a day uses yesterday in Buenos Aires and returns the exporter receipt`() {
@@ -48,6 +51,20 @@ class RunKpiReportTest {
         assertEquals(exported.windowTo, receipt.windowTo)
         assertEquals(calculatedAt, receipt.calculatedAt)
         assertEquals(results(), receipt.results)
+        verify(lastRun).recordRun(LocalDate.parse("2026-10-11"), calculatedAt, KpiRunStatus.SENT)
+    }
+
+    @Test
+    fun `the run is recorded after the calculation with the export status`() {
+        whenever(engine.calculate(any())).thenReturn(results())
+        exporter.status = KpiRunStatus.FAILED
+
+        service.run(LocalDate.parse("2026-10-10"))
+
+        inOrder(engine, lastRun) {
+            verify(engine).calculate(any())
+            verify(lastRun).recordRun(LocalDate.parse("2026-10-10"), calculatedAt, KpiRunStatus.FAILED)
+        }
     }
 
     @Test
@@ -79,7 +96,7 @@ class RunKpiReportTest {
         whenever(engine.calculate(any())).thenReturn(results())
         val lateEvening = Clock.fixed(Instant.parse("2026-10-12T02:00:00Z"), ZoneOffset.UTC)
 
-        val receipt = RunKpiReport(engine, exporter, lateEvening).run()
+        val receipt = RunKpiReport(engine, exporter, lastRun, lateEvening).run()
 
         assertEquals(LocalDate.parse("2026-10-10"), receipt.reportDay)
         assertEquals(Instant.parse("2026-10-10T03:00:00Z"), receipt.windowFrom)
@@ -97,6 +114,7 @@ class RunKpiReportTest {
 
     private class RecordingExporter : KpiExporter {
         val exported = mutableListOf<KpiRun>()
+        var status = KpiRunStatus.SENT
 
         override fun export(run: KpiRun): KpiRunReceipt {
             exported += run
@@ -115,6 +133,7 @@ class RunKpiReportTest {
             KpiRunReceipt(
                 id = id,
                 destination = "local",
+                status = status,
                 reportDay = run.reportDay,
                 windowFrom = run.windowFrom,
                 windowTo = run.windowTo,

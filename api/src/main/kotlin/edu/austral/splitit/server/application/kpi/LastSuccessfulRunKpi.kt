@@ -8,7 +8,7 @@ import edu.austral.splitit.server.domain.kpi.KpiValue
 import org.springframework.core.annotation.Order
 import org.springframework.stereotype.Component
 
-/** ISO-8601 instant of the previous successful engine run. Null when the engine has never finished a run. */
+/** ISO-8601 instant of the last run whose export was sent. Null until a run is sent. */
 @Component
 @Order(LastSuccessfulRunKpi.ORDER)
 class LastSuccessfulRunKpi(

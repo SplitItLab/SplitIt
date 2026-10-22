@@ -1,6 +1,7 @@
 package edu.austral.splitit.server.infrastructure.kpi
 
 import edu.austral.splitit.server.application.service.KpiRun
+import edu.austral.splitit.server.application.service.KpiRunStatus
 import edu.austral.splitit.server.domain.kpi.KpiIds
 import edu.austral.splitit.server.domain.kpi.KpiResult
 import edu.austral.splitit.server.domain.kpi.KpiValue
@@ -124,6 +125,7 @@ class SupabaseKpiExporterTest {
 
         server.verify()
         assertEquals("supabase", receipt.destination)
+        assertEquals(KpiRunStatus.SENT, receipt.status)
         assertEquals(run.reportDay, receipt.reportDay)
     }
 
@@ -139,9 +141,10 @@ class SupabaseKpiExporterTest {
             .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
             .andRespond(withSuccess())
 
-        exporter().export(run)
+        val receipt = exporter().export(run)
 
         server.verify()
+        assertEquals(KpiRunStatus.SENT, receipt.status)
     }
 
     @Test
@@ -156,9 +159,10 @@ class SupabaseKpiExporterTest {
             .andRespond(withSuccess(fullCatalog, MediaType.APPLICATION_JSON))
         server.expect(requestTo(measurementUrl)).andRespond(withSuccess())
 
-        exporter().export(run)
+        val receipt = exporter().export(run)
 
         server.verify()
+        assertEquals(KpiRunStatus.SENT, receipt.status)
     }
 
     @Test
@@ -177,6 +181,7 @@ class SupabaseKpiExporterTest {
 
         server.verify()
         assertEquals("supabase", receipt.destination)
+        assertEquals(KpiRunStatus.FAILED, receipt.status)
     }
 
     @Test
@@ -186,6 +191,7 @@ class SupabaseKpiExporterTest {
         val receipt = exporter(projectKey = "").export(run)
 
         server.verify()
+        assertEquals(KpiRunStatus.SKIPPED, receipt.status)
         assertEquals(run.results, receipt.results)
     }
 
@@ -197,6 +203,7 @@ class SupabaseKpiExporterTest {
 
         server.verify()
         assertEquals("supabase", receipt.destination)
+        assertEquals(KpiRunStatus.FAILED, receipt.status)
     }
 
     @Test
@@ -204,9 +211,10 @@ class SupabaseKpiExporterTest {
         server.expect(never(), requestTo(measurementUrl)).andRespond(withSuccess())
         val empty = run.copy(results = listOf(KpiResult(KpiIds.POST_EXPENSES_LATENCY_P95, null, calculatedAt)))
 
-        exporter().export(empty)
+        val receipt = exporter().export(empty)
 
         server.verify()
+        assertEquals(KpiRunStatus.SKIPPED, receipt.status)
     }
 
     @Test

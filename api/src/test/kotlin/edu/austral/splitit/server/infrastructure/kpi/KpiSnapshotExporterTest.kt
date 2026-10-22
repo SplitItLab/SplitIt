@@ -2,6 +2,7 @@ package edu.austral.splitit.server.infrastructure.kpi
 
 import edu.austral.splitit.server.application.service.KpiRun
 import edu.austral.splitit.server.application.service.KpiRunReceipt
+import edu.austral.splitit.server.application.service.KpiRunStatus
 import edu.austral.splitit.server.domain.kpi.KpiIds
 import edu.austral.splitit.server.domain.kpi.KpiResult
 import edu.austral.splitit.server.domain.kpi.KpiValue
@@ -56,6 +57,7 @@ class KpiSnapshotExporterTest {
         KpiRunReceipt(
             id = 1,
             destination = channel,
+            status = KpiRunStatus.SENT,
             reportDay = run.reportDay,
             windowFrom = run.windowFrom,
             windowTo = run.windowTo,

@@ -1,16 +1,20 @@
 package edu.austral.splitit.server.infrastructure.kpi
 
+import edu.austral.splitit.server.infrastructure.persistence.JpaRequestMetrics
+import edu.austral.splitit.server.infrastructure.persistence.RequestSample
 import io.micrometer.observation.Observation
 import io.micrometer.observation.ObservationHandler
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.http.server.observation.ServerRequestObservationContext
 import org.springframework.stereotype.Component
 import java.time.Clock
 import java.time.Duration
 
-/** Copies each finished incoming HTTP observation into the windowed KPI store. */
+/** Stores each finished incoming HTTP observation as a request sample for the KPI ports. */
 @Component
 class ServerRequestMetricsHandler(
-    private val metrics: InMemoryRequestMetrics,
+    private val metrics: JpaRequestMetrics,
     private val clock: Clock,
 ) : ObservationHandler<ServerRequestObservationContext> {
     override fun supportsContext(context: Observation.Context): Boolean = context is ServerRequestObservationContext
@@ -19,6 +23,7 @@ class ServerRequestMetricsHandler(
         context.put(START_NANOS, System.nanoTime())
     }
 
+    @Suppress("TooGenericExceptionCaught") // una muestra perdida no puede romper la request (SPT-87)
     override fun onStop(context: ServerRequestObservationContext) {
         val started = context.get<Long>(START_NANOS)
         val response = context.response
@@ -31,18 +36,23 @@ class ServerRequestMetricsHandler(
         }
         val route = context.pathPattern ?: request.requestURI
         val elapsed = (System.nanoTime() - started).coerceAtLeast(0)
-        metrics.record(
+        val sample =
             RequestSample(
                 endpoint = "${request.method} $route",
                 statusCode = response.status,
                 duration = Duration.ofNanos(elapsed),
                 at = clock.instant(),
-            ),
-        )
+            )
+        try {
+            metrics.record(sample)
+        } catch (exception: Exception) {
+            logger.warn("Request sample not stored. endpoint={} reason={}", sample.endpoint, exception.message)
+        }
     }
 
     private companion object {
         const val START_NANOS = "splitit.request.startNanos"
         const val MIN_STATUS = 100
+        val logger: Logger = LoggerFactory.getLogger(ServerRequestMetricsHandler::class.java)
     }
 }

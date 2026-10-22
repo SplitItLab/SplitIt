@@ -1,6 +1,5 @@
 package edu.austral.splitit.server.application.service
 
-import edu.austral.splitit.server.application.port.LastRunPort
 import edu.austral.splitit.server.domain.kpi.Kpi
 import edu.austral.splitit.server.domain.kpi.KpiCalculationContext
 import edu.austral.splitit.server.domain.kpi.KpiResult
@@ -13,7 +12,6 @@ import java.time.Instant
 @Service
 class KpiEngine(
     private val kpis: List<Kpi>,
-    private val lastRunPort: LastRunPort,
     private val clock: Clock,
 ) {
     fun calculate(context: KpiCalculationContext): List<KpiResult> {
@@ -23,9 +21,7 @@ class KpiEngine(
         }
 
         val calculatedAt = clock.instant()
-        val results = kpis.map { kpi -> calculateOne(kpi, context, calculatedAt) }
-        lastRunPort.recordSuccessfulRun(calculatedAt)
-        return results
+        return kpis.map { kpi -> calculateOne(kpi, context, calculatedAt) }
     }
 
     @Suppress("TooGenericExceptionCaught") // un KPI no puede abortar la corrida (ADR SPT-77)

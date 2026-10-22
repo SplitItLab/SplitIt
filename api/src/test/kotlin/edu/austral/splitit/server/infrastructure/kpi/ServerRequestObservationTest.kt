@@ -6,7 +6,14 @@ import edu.austral.splitit.server.application.service.ExpenseApplicationService
 import edu.austral.splitit.server.infrastructure.api.StatusController
 import edu.austral.splitit.server.infrastructure.api.event.EventController
 import edu.austral.splitit.server.infrastructure.config.SecurityConfig
+import edu.austral.splitit.server.infrastructure.persistence.JpaRequestMetrics
+import edu.austral.splitit.server.infrastructure.persistence.RequestSample
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.doThrow
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.micrometer.metrics.autoconfigure.MetricsAutoConfiguration
 import org.springframework.boot.micrometer.observation.autoconfigure.ObservationAutoConfiguration
@@ -17,6 +24,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
+import org.springframework.dao.DataAccessResourceFailureException
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
@@ -24,9 +32,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.Clock
 import java.time.Duration
-import java.time.Instant
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 @WebMvcTest(
@@ -36,7 +42,6 @@ import kotlin.test.assertTrue
 @AutoConfigureMockMvc
 @Import(
     SecurityConfig::class,
-    InMemoryRequestMetrics::class,
     ServerRequestMetricsHandler::class,
     ServerRequestObservationTest.ClockConfig::class,
     ObservationAutoConfiguration::class,
@@ -54,8 +59,10 @@ import kotlin.test.assertTrue
 )
 class ServerRequestObservationTest(
     @Autowired private val mockMvc: MockMvc,
-    @Autowired private val metrics: InMemoryRequestMetrics,
 ) {
+    @MockitoBean
+    private lateinit var metrics: JpaRequestMetrics
+
     @MockitoBean
     private lateinit var eventApplicationService: EventApplicationService
 
@@ -69,23 +76,32 @@ class ServerRequestObservationTest(
     fun `a real status request records status duration and endpoint`() {
         mockMvc.perform(get("/api/status")).andExpect(status().isOk())
 
-        val duration = metrics.p95("GET /api/status", window())
-        assertNotNull(duration)
-        assertTrue(duration >= Duration.ZERO)
-        assertEquals(0.0, metrics.rate5xx(window()))
+        val sample = recorded()
+        assertEquals("GET /api/status", sample.endpoint)
+        assertEquals(200, sample.statusCode)
+        assertTrue(sample.duration >= Duration.ZERO)
     }
 
     @Test
-    fun `a real unauthorized request is recorded and is not a 5xx`() {
+    fun `a real unauthorized request is recorded with its status`() {
         mockMvc.perform(get("/api/events")).andExpect(status().isUnauthorized())
 
-        assertNotNull(metrics.p95("GET /api/events", window()))
-        assertEquals(0.0, metrics.rate5xx(window()))
+        val sample = recorded()
+        assertEquals("GET /api/events", sample.endpoint)
+        assertEquals(401, sample.statusCode)
     }
 
-    private fun window(): ClosedRange<Instant> {
-        val now = Instant.now()
-        return now.minusSeconds(60)..now.plusSeconds(5)
+    @Test
+    fun `a failed sample insert does not fail the request`() {
+        doThrow(DataAccessResourceFailureException("database down")).whenever(metrics).record(any())
+
+        mockMvc.perform(get("/api/status")).andExpect(status().isOk())
+    }
+
+    private fun recorded(): RequestSample {
+        val sample = argumentCaptor<RequestSample>()
+        verify(metrics).record(sample.capture())
+        return sample.firstValue
     }
 
     @TestConfiguration

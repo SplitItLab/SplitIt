@@ -5,23 +5,29 @@ import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
 import edu.austral.splitit.server.application.service.KpiRunReceipt
+import edu.austral.splitit.server.application.service.KpiRunStatus
 import edu.austral.splitit.server.application.service.RunKpiReport
 import edu.austral.splitit.server.domain.kpi.KpiIds
 import edu.austral.splitit.server.domain.kpi.KpiResult
 import edu.austral.splitit.server.domain.kpi.KpiValue
+import edu.austral.splitit.server.infrastructure.persistence.JpaRequestMetrics
+import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.slf4j.LoggerFactory
+import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneOffset
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class KpiReportJobTest {
     private val runKpiReport = mock<RunKpiReport>()
-    private val job = KpiReportJob(runKpiReport)
+    private val requestMetrics = mock<JpaRequestMetrics>()
+    private val job = KpiReportJob(runKpiReport, requestMetrics, Clock.fixed(CALCULATED_AT, ZoneOffset.UTC))
 
     @Test
     fun `daily run asks for yesterday and does not swallow a failure`() {
@@ -59,6 +65,18 @@ class KpiReportJobTest {
     }
 
     @Test
+    fun `daily run deletes the request samples older than seven days after the run`() {
+        whenever(runKpiReport.run(null)).thenReturn(receipt())
+
+        job.runDaily()
+
+        inOrder(runKpiReport, requestMetrics) {
+            verify(runKpiReport).run(null)
+            verify(requestMetrics).deleteRecordedBefore(Instant.parse("2026-10-05T03:15:00Z"))
+        }
+    }
+
+    @Test
     fun `daily run propagates an exporter failure`() {
         whenever(runKpiReport.run(null)).thenThrow(IllegalStateException("store down"))
 
@@ -71,6 +89,7 @@ class KpiReportJobTest {
         KpiRunReceipt(
             id = 3,
             destination = "report",
+            status = KpiRunStatus.SENT,
             reportDay = LocalDate.parse("2026-10-11"),
             windowFrom = Instant.parse("2026-10-11T00:00:00Z"),
             windowTo = Instant.parse("2026-10-11T23:59:59.999999999Z"),

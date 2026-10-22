@@ -1,6 +1,11 @@
 package edu.austral.splitit.server.infrastructure.kpi
 
+import edu.austral.splitit.server.infrastructure.persistence.JpaRequestMetrics
+import edu.austral.splitit.server.infrastructure.persistence.RequestSample
 import io.micrometer.observation.Observation
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.springframework.http.server.observation.ServerRequestObservationContext
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
@@ -10,15 +15,13 @@ import java.time.Instant
 import java.time.ZoneOffset
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ServerRequestMetricsHandlerTest {
     private val at = Instant.parse("2026-10-10T15:00:00Z")
     private val clock = Clock.fixed(at, ZoneOffset.UTC)
-    private val metrics = InMemoryRequestMetrics(clock)
+    private val metrics = mock<JpaRequestMetrics>()
     private val handler = ServerRequestMetricsHandler(metrics, clock)
-    private val window = at.minusSeconds(1)..at.plusSeconds(1)
 
     @Test
     fun `a completed request records status duration and route pattern`() {
@@ -27,27 +30,35 @@ class ServerRequestMetricsHandlerTest {
         handler.onStart(context)
         handler.onStop(context)
 
-        val duration = metrics.p95("GET /api/status", window)
-        assertTrue(duration != null && duration >= Duration.ZERO)
-        assertEquals(0.0, metrics.rate5xx(window))
+        val sample = recorded()
+        assertEquals("GET /api/status", sample.endpoint)
+        assertEquals(200, sample.statusCode)
+        assertTrue(sample.duration >= Duration.ZERO)
+        assertEquals(at, sample.at)
     }
 
     @Test
-    fun `a rejection without a route pattern records the request URI and is not a 5xx`() {
+    fun `a rejection without a route pattern records the request URI`() {
         val context = context("GET", "/api/events", 401, null)
 
         handler.onStart(context)
         handler.onStop(context)
 
-        assertTrue(metrics.p95("GET /api/events", window) != null)
-        assertEquals(0.0, metrics.rate5xx(window))
-        assertNull(metrics.p95("POST /api/events/{eventId}/expenses", window))
+        val sample = recorded()
+        assertEquals("GET /api/events", sample.endpoint)
+        assertEquals(401, sample.statusCode)
     }
 
     @Test
     fun `supports only server request observations`() {
         assertTrue(handler.supportsContext(context("GET", "/api/status", 200, "/api/status")))
         assertTrue(!handler.supportsContext(Observation.Context()))
+    }
+
+    private fun recorded(): RequestSample {
+        val sample = argumentCaptor<RequestSample>()
+        verify(metrics).record(sample.capture())
+        return sample.firstValue
     }
 
     private fun context(
