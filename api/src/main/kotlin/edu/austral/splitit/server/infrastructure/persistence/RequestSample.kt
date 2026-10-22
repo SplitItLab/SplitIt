@@ -1,4 +1,4 @@
-package edu.austral.splitit.server.infrastructure.kpi
+package edu.austral.splitit.server.infrastructure.persistence
 
 import java.time.Duration
 import java.time.Instant

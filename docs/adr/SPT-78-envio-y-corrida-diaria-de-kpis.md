@@ -72,4 +72,23 @@ El archivo `api/http/kpi-runs.http` inicia sesión y consulta el GET. La corrida
 
 ## Fuera de alcance
 
-Integrar Dataverse u otra plataforma central. Persistir `LastRunPort`: sigue en memoria, como en SPT-77.
+Integrar Dataverse u otra plataforma central. Persistir `LastRunPort`: siguió en memoria, como en SPT-77, hasta SPT-87.
+
+## Actualización (SPT-87)
+
+Cada exportador devuelve en el receipt qué pasó con el envío, y `RunKpiReport` deja una fila por corrida en `kpi_run`:
+
+| Modo | `status` |
+| --- | --- |
+| `local`, `report` | `sent` cuando la corrida queda guardada en `kpi_snapshot` |
+| `supabase` | `sent` si la plataforma aceptó el lote; `failed` si respondió error o no se alcanzó; `skipped` sin claves o sin valores numéricos |
+
+Si el exportador lanza una excepción (por ejemplo, se cae la base en `local` o `report`), la corrida se corta sin dejar fila y el error queda en el log del job.
+
+`last_successful_run` es el `ran_at` más reciente con `status = 'sent'`, y sobrevive a los reinicios. Cada corrida lee ese valor antes de grabar su propia fila, así que reporta la corrida enviada anterior.
+
+Para ver las corridas:
+
+```sql
+SELECT report_day, ran_at, status FROM kpi_run ORDER BY id;
+```

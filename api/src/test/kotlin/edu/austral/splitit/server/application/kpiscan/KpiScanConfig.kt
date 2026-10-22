@@ -10,7 +10,6 @@ import edu.austral.splitit.server.application.port.FirstExpenseDelay
 import edu.austral.splitit.server.application.port.LastRunPort
 import edu.austral.splitit.server.application.port.LatencyMetricsPort
 import edu.austral.splitit.server.application.port.SharedEventCount
-import edu.austral.splitit.server.infrastructure.kpi.InMemoryLastRun
 import org.mockito.kotlin.mock
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.ComponentScan
@@ -44,5 +43,5 @@ class KpiScanConfig {
     fun backendHealthPort(): BackendHealthPort = BackendHealthPort { "OK" }
 
     @Bean
-    fun lastRunPort(): LastRunPort = InMemoryLastRun()
+    fun lastRunPort(): LastRunPort = mock()
 }

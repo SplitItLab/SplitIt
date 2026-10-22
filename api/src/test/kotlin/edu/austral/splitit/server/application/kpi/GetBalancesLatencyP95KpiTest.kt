@@ -4,12 +4,8 @@ import edu.austral.splitit.server.application.port.LatencyMetricsPort
 import edu.austral.splitit.server.domain.kpi.KpiCalculationContext
 import edu.austral.splitit.server.domain.kpi.KpiIds
 import edu.austral.splitit.server.domain.kpi.KpiValue
-import edu.austral.splitit.server.infrastructure.kpi.InMemoryRequestMetrics
-import edu.austral.splitit.server.infrastructure.kpi.RequestSample
-import java.time.Clock
 import java.time.Duration
 import java.time.Instant
-import java.time.ZoneOffset
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -57,21 +53,6 @@ class GetBalancesLatencyP95KpiTest {
 
         assertEquals("GET /api/events/{eventId}/balances", endpoint)
         assertEquals(from..to, window)
-    }
-
-    @Test
-    fun `reads only the balances samples of the window`() {
-        val at = Instant.parse("2026-10-10T12:00:00Z")
-        val metrics = InMemoryRequestMetrics(Clock.fixed(at, ZoneOffset.UTC))
-        (1..20L).forEach { millis ->
-            metrics.record(RequestSample(KpiEndpoints.GET_BALANCES, 200, Duration.ofMillis(millis * 10), at))
-        }
-        metrics.record(RequestSample(KpiEndpoints.POST_EXPENSES, 201, Duration.ofSeconds(9), at))
-        metrics.record(RequestSample(KpiEndpoints.GET_BALANCES, 200, Duration.ofSeconds(9), from.minusSeconds(1)))
-
-        val kpi = GetBalancesLatencyP95Kpi(metrics)
-
-        assertEquals(KpiValue.Numeric(190.0), kpi.calculate(context))
     }
 
     private fun fixed(duration: Duration?): LatencyMetricsPort = LatencyMetricsPort { _, _ -> duration }
