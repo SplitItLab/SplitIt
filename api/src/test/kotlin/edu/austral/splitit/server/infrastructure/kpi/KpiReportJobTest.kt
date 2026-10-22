@@ -11,6 +11,8 @@ import edu.austral.splitit.server.domain.kpi.KpiIds
 import edu.austral.splitit.server.domain.kpi.KpiResult
 import edu.austral.splitit.server.domain.kpi.KpiValue
 import edu.austral.splitit.server.infrastructure.persistence.JpaRequestMetrics
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
@@ -23,6 +25,7 @@ import java.time.ZoneOffset
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertSame
 
 class KpiReportJobTest {
     private val runKpiReport = mock<RunKpiReport>()
@@ -81,6 +84,43 @@ class KpiReportJobTest {
         whenever(runKpiReport.run(null)).thenThrow(IllegalStateException("store down"))
 
         assertFailsWith<IllegalStateException> {
+            job.runDaily()
+        }
+    }
+
+    @Test
+    fun `daily run deletes old request samples even when the report fails`() {
+        whenever(runKpiReport.run(null)).thenThrow(IllegalStateException("store down"))
+
+        assertFailsWith<IllegalStateException> {
+            job.runDaily()
+        }
+
+        verify(requestMetrics).deleteRecordedBefore(Instant.parse("2026-10-05T03:15:00Z"))
+    }
+
+    @Test
+    fun `daily run keeps the report failure when the cleanup also fails`() {
+        val reportFailure = IllegalStateException("store down")
+        val cleanupFailure = IllegalArgumentException("delete failed")
+        whenever(runKpiReport.run(null)).thenThrow(reportFailure)
+        doThrow(cleanupFailure).whenever(requestMetrics).deleteRecordedBefore(any())
+
+        val thrown =
+            assertFailsWith<IllegalStateException> {
+                job.runDaily()
+            }
+
+        assertSame(reportFailure, thrown)
+        assertSame(cleanupFailure, thrown.suppressed.single())
+    }
+
+    @Test
+    fun `daily run propagates a cleanup failure after a successful report`() {
+        whenever(runKpiReport.run(null)).thenReturn(receipt())
+        doThrow(IllegalArgumentException("delete failed")).whenever(requestMetrics).deleteRecordedBefore(any())
+
+        assertFailsWith<IllegalArgumentException> {
             job.runDaily()
         }
     }

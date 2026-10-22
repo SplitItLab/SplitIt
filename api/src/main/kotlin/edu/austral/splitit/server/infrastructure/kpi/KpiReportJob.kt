@@ -19,6 +19,15 @@ class KpiReportJob(
 ) {
     @Scheduled(cron = "\${kpi.report.cron}", zone = "\${kpi.report.zone}")
     fun runDaily() {
+        val report = runCatching { report() }
+        // Cleanup runs even after a failed report; the report failure stays the one thrown.
+        runCatching { deleteExpiredSamples() }.onFailure { cleanupFailure ->
+            report.exceptionOrNull()?.addSuppressed(cleanupFailure) ?: throw cleanupFailure
+        }
+        report.getOrThrow()
+    }
+
+    private fun report() {
         val receipt = runKpiReport.run()
         logger.info(
             "KPI run stored. destination={} reportDay={} id={} kpiCount={}",
@@ -30,6 +39,9 @@ class KpiReportJob(
         receipt.results.forEach { result ->
             logger.info("KPI value. id={} value={}", result.id, result.loggedValue())
         }
+    }
+
+    private fun deleteExpiredSamples() {
         requestMetrics.deleteRecordedBefore(clock.instant().minus(Duration.ofDays(SAMPLE_RETENTION_DAYS)))
     }
 
