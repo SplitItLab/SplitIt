@@ -1,7 +1,9 @@
 package edu.austral.splitit.server.infrastructure.config
 
 import edu.austral.splitit.server.application.port.TokenProvider
+import edu.austral.splitit.server.infrastructure.security.GUEST_ROLE
 import edu.austral.splitit.server.infrastructure.security.JwtAuthenticationFilter
+import edu.austral.splitit.server.infrastructure.security.USER_ROLE
 import jakarta.servlet.DispatcherType
 import jakarta.servlet.http.HttpServletResponse
 import org.springframework.beans.factory.annotation.Value
@@ -44,13 +46,17 @@ class SecurityConfig(
                         "/api/auth/login",
                         "/api/auth/register",
                         "/api/auth/logout",
+                        "/api/invite-links/*/guest-session",
                     ).permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/status")
                     .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/auth/session")
+                    .hasAnyRole(USER_ROLE, GUEST_ROLE)
                     .requestMatchers(HttpMethod.GET, "/api/invitations/*", "/api/invitations/*/members")
                     .permitAll()
 
-                it.anyRequest().authenticated()
+                // Guests only reach the routes opened above for them.
+                it.anyRequest().hasRole(USER_ROLE)
             }.httpBasic { it.disable() }
             .formLogin { it.disable() }
             .exceptionHandling {

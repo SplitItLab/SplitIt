@@ -57,6 +57,11 @@ cors:
 kpi:
   export:
     mode: ${KPI_EXPORT_MODE:local}
+    env: ${KPI_EXPORT_ENV:dev}
+    supabase:
+      url: ${SUPABASE_URL:}
+      publishable-key: ${SUPABASE_PUBLISHABLE_KEY:}
+      project-key: ${SUPABASE_PROJECT_KEY:}
   report:
     cron: ${KPI_REPORT_CRON:0 15 3 * * *}
     zone: ${KPI_REPORT_ZONE:UTC}

@@ -382,9 +382,10 @@ Cookie: auth_token={{authToken}}
 > {%
 import { assertNoContent, assertSessionCookieCleared } from './scripts/assert.js'
 
-client.test("expires the session cookie without a body", function () {
+client.test("expires the session and guest cookies without a body", function () {
     assertNoContent(client, response)
     assertSessionCookieCleared(client, response, "auth_token")
+    assertSessionCookieCleared(client, response, "guest_token")
 })
 %}
 
@@ -425,6 +426,7 @@ import { assertNoContent, assertSessionCookieCleared } from './scripts/assert.js
 client.test("logs out without an active session", function () {
     assertNoContent(client, response)
     assertSessionCookieCleared(client, response, "auth_token")
+    assertSessionCookieCleared(client, response, "guest_token")
 })
 %}
 
@@ -439,6 +441,7 @@ import { assertNoContent, assertSessionCookieCleared } from './scripts/assert.js
 client.test("logout stays idempotent", function () {
     assertNoContent(client, response)
     assertSessionCookieCleared(client, response, "auth_token")
+    assertSessionCookieCleared(client, response, "guest_token")
 })
 %}
 

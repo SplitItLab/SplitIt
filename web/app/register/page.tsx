@@ -1,14 +1,13 @@
 "use client";
-import Image from "next/image";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Field, FieldLabel, FieldError, FieldGroup } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LoadingIndicator } from "@/components/loading-indicator";
+import { AuthLayout } from "@/components/auth-layout";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { registerUser, RegisterError, RegisterInput, registerSchema } from "@/lib/auth";
 import { showAppToast } from "@/lib/toast";
@@ -44,81 +43,73 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="relative grid h-screen md:grid-cols-2">
-      <Link href="/login" className="absolute top-6 right-6 text-sm font-medium">
-        LogIn
-      </Link>
+    <AuthLayout
+      heroTitle="Empezá a dividir gastos en menos de un minuto."
+      heroDescription="Creá tu cuenta, sumá a tu grupo y olvidate de las cuentas pendientes."
+      title="Crea una cuenta"
+      description="Ingresá mail y contraseña para crear tu cuenta"
+      footer={{ text: "¿Ya tenés cuenta?", linkLabel: "Iniciá sesión", href: "/login" }}
+    >
+      <form onSubmit={handleSubmit(onSubmit)} noValidate>
+        <FieldGroup>
+          {generalError && (
+            <Alert variant="destructive">
+              <AlertDescription>{generalError}</AlertDescription>
+            </Alert>
+          )}
 
-      <div className="relative hidden h-screen overflow-hidden md:block">
-        <Image src="/register-image.png" alt="" fill unoptimized className="object-cover" />
-      </div>
+          <Field className="gap-1.5" data-invalid={!!errors.name}>
+            <FieldLabel htmlFor="name" className="font-bold">
+              Nombre completo
+            </FieldLabel>
+            <Input
+              id="name"
+              placeholder="Tu nombre"
+              autoComplete="name"
+              aria-invalid={!!errors.name}
+              className="h-11"
+              {...register("name")}
+            />
+            <FieldError errors={[errors.name]} />
+          </Field>
 
-      <div className="flex flex-col items-center justify-center gap-2 text-center">
-        <div className="w-full max-w-sm">
-          <h1 className="text-[32px] font-extrabold text-black">Crea una cuenta</h1>
-          <p className="text-muted-foreground text-sm font-medium">
-            Ingresá mail y contraseña para crear tu cuenta
-          </p>
+          <Field className="gap-1.5" data-invalid={!!errors.email}>
+            <FieldLabel htmlFor="email" className="font-bold">
+              Email
+            </FieldLabel>
+            <Input
+              id="email"
+              placeholder="tu@email.com"
+              autoComplete="email"
+              type="email"
+              aria-invalid={!!errors.email}
+              className="h-11"
+              {...register("email")}
+            />
+            <FieldError errors={[errors.email]} />
+          </Field>
 
-          <form onSubmit={handleSubmit(onSubmit)} noValidate>
-            <FieldGroup>
-              {generalError && (
-                <Alert variant="destructive">
-                  <AlertDescription>{generalError}</AlertDescription>
-                </Alert>
-              )}
+          <Field className="gap-1.5" data-invalid={!!errors.password}>
+            <FieldLabel htmlFor="password" className="font-bold">
+              Contraseña
+            </FieldLabel>
+            <Input
+              id="password"
+              placeholder="Creá una contraseña"
+              type="password"
+              autoComplete="new-password"
+              aria-invalid={!!errors.password}
+              className="h-11"
+              {...register("password")}
+            />
+            <FieldError errors={[errors.password]} />
+          </Field>
 
-              <Field data-invalid={!!errors.name}>
-                <FieldLabel htmlFor="name">Nombre</FieldLabel>
-                <Input
-                  id="name"
-                  placeholder="Nombre"
-                  autoComplete="name"
-                  aria-invalid={!!errors.name}
-                  {...register("name")}
-                />
-                <FieldError errors={[errors.name]} />
-              </Field>
-
-              <Field data-invalid={!!errors.email}>
-                <FieldLabel htmlFor="email">Email</FieldLabel>
-                <Input
-                  id="email"
-                  placeholder="Email"
-                  autoComplete="email"
-                  type="email"
-                  aria-invalid={!!errors.email}
-                  {...register("email")}
-                />
-                <FieldError errors={[errors.email]} />
-              </Field>
-
-              <Field data-invalid={!!errors.password}>
-                <FieldLabel htmlFor="password">Contraseña</FieldLabel>
-                <Input
-                  id="password"
-                  placeholder="Contraseña"
-                  type="password"
-                  autoComplete="new-password"
-                  aria-invalid={!!errors.password}
-                  {...register("password")}
-                />
-                <FieldError errors={[errors.password]} />
-              </Field>
-
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? <LoadingIndicator message="Creando tu cuenta…" /> : "Crear cuenta"}
-              </Button>
-            </FieldGroup>
-          </form>
-          <p className="text-muted-foreground mt-3 text-center text-sm">
-            ¿Ya tenés cuenta?{" "}
-            <Link className="text-primary font-medium hover:underline" href="/login">
-              Iniciá Sesión
-            </Link>
-          </p>
-        </div>
-      </div>
-    </div>
+          <Button type="submit" className="h-11 w-full" disabled={isSubmitting}>
+            {isSubmitting ? <LoadingIndicator message="Creando tu cuenta…" /> : "Crear cuenta"}
+          </Button>
+        </FieldGroup>
+      </form>
+    </AuthLayout>
   );
 }

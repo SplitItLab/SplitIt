@@ -8,4 +8,7 @@ object KpiIds {
     const val ERROR_RATE_5XX_24H = "error-rate-5xx-24h"
     const val BACKEND_HEALTH = "backend-health"
     const val LAST_SUCCESSFUL_RUN = "last-successful-run"
+    const val EVENTS_WITH_EXPENSE_IN_2_MIN_PERCENT = "eventos-con-gasto-en-2-min-pct"
+    const val SHARED_EVENTS_PERCENT = "eventos-compartidos-pct"
+    const val GET_BALANCES_LATENCY_P95 = "latencia-p95-saldos"
 }

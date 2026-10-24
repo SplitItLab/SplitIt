@@ -17,6 +17,8 @@ class InviteLinkService(
         inviteLinkRepository.findByEventId(requireNotNull(event.id))
             ?: inviteLinkRepository.save(InviteLink.create(event, generateToken()))
 
+    fun findByToken(token: String): InviteLink? = inviteLinkRepository.findByToken(token)
+
     fun findEventByToken(token: String): Event? = inviteLinkRepository.findByToken(token)?.event
 
     private fun generateToken(): String {

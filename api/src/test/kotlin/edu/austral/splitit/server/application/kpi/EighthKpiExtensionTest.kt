@@ -5,7 +5,9 @@ import edu.austral.splitit.server.application.port.ErrorRatePort
 import edu.austral.splitit.server.application.port.EventCreationCount
 import edu.austral.splitit.server.application.port.EventExpenseCoverage
 import edu.austral.splitit.server.application.port.ExpenseRegistrationCount
+import edu.austral.splitit.server.application.port.FirstExpenseDelay
 import edu.austral.splitit.server.application.port.LatencyMetricsPort
+import edu.austral.splitit.server.application.port.SharedEventCount
 import edu.austral.splitit.server.application.service.KpiEngine
 import edu.austral.splitit.server.domain.kpi.Kpi
 import edu.austral.splitit.server.domain.kpi.KpiCalculationContext
@@ -28,14 +30,15 @@ class EighthKpiExtensionTest {
     private val clock = Clock.fixed(Instant.parse("2026-10-10T15:00:00Z"), ZoneOffset.UTC)
 
     @Test
-    fun `adding an eighth kpi keeps the seven values`() {
-        val seven = calculate(extra = null)
-        val eight = calculate(extra = eighthKpi())
+    fun `adding another kpi keeps the ten values`() {
+        val ten = calculate(extra = null)
+        val eleven = calculate(extra = eighthKpi())
 
-        assertEquals(seven.map { it.id to it.value }, eight.take(seven.size).map { it.id to it.value })
-        assertEquals(eight.size, seven.size + 1)
-        assertEquals("eighth-kpi", eight.last().id)
-        assertEquals(KpiValue.Numeric(1.0), eight.last().value)
+        assertEquals(10, ten.size)
+        assertEquals(ten.map { it.id to it.value }, eleven.take(ten.size).map { it.id to it.value })
+        assertEquals(eleven.size, ten.size + 1)
+        assertEquals("eighth-kpi", eleven.last().id)
+        assertEquals(KpiValue.Numeric(1.0), eleven.last().value)
     }
 
     private fun calculate(extra: Kpi?): List<KpiResult> {
@@ -59,6 +62,9 @@ class EighthKpiExtensionTest {
             ErrorRate5xxKpi(ErrorRatePort { 0.0 }),
             BackendHealthKpi(BackendHealthPort { "OK" }),
             LastSuccessfulRunKpi(lastRun),
+            FirstExpenseWithinTwoMinutesPercentKpi(FirstExpenseDelay { _, _ -> listOf(Duration.ofMinutes(1), null) }),
+            SharedEventsPercentKpi(EventCreationCount { _, _ -> 4 }, SharedEventCount { _, _ -> 1 }),
+            GetBalancesLatencyP95Kpi(LatencyMetricsPort { _, _ -> Duration.ofMillis(40) }),
         )
 
     private fun eighthKpi(): Kpi =

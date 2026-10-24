@@ -5,7 +5,7 @@ import edu.austral.splitit.server.domain.kpi.KpiCalculationContext
 import org.springframework.stereotype.Service
 import java.time.Clock
 import java.time.LocalDate
-import java.time.ZoneOffset
+import java.time.ZoneId
 
 @Service
 class RunKpiReport(
@@ -14,12 +14,12 @@ class RunKpiReport(
     private val clock: Clock,
 ) {
     fun run(reportDay: LocalDate? = null): KpiRunReceipt {
-        val day = reportDay ?: LocalDate.now(clock.withZone(ZoneOffset.UTC)).minusDays(1)
-        val from = day.atStartOfDay(ZoneOffset.UTC).toInstant()
+        val day = reportDay ?: LocalDate.now(clock.withZone(REPORT_ZONE)).minusDays(1)
+        val from = day.atStartOfDay(REPORT_ZONE).toInstant()
         val to =
             day
                 .plusDays(1)
-                .atStartOfDay(ZoneOffset.UTC)
+                .atStartOfDay(REPORT_ZONE)
                 .toInstant()
                 // TIMESTAMP(6) rounds 1 ns before midnight up to the next day.
                 .minusNanos(1_000)
@@ -35,4 +35,9 @@ class RunKpiReport(
     }
 
     fun list(): List<KpiRunReceipt> = exporter.list()
+
+    private companion object {
+        // The central platform measures each report day in Buenos Aires time.
+        val REPORT_ZONE: ZoneId = ZoneId.of("America/Argentina/Buenos_Aires")
+    }
 }
