@@ -89,7 +89,7 @@ describe("invitaciones", () => {
     expect(error).toBeInstanceOf(EventError);
     expect(error).toMatchObject({
       type: "conflict",
-      message: "Esa persona ya entró con otra cuenta. Elegí otro nombre de la lista.",
+      message: "No pudimos vincular tu cuenta. Elegí de nuevo.",
     });
   });
 

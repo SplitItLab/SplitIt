@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
+  useSearchParams: () => new URLSearchParams(window.location.search),
 }));
 
 vi.mock("next/image", () => ({
@@ -51,6 +52,36 @@ describe("LoginPage", () => {
     await submitLogin();
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/eventos/invitacion/abc"));
+  });
+
+  it("el link para registrarse conserva la ruta pedida", () => {
+    window.history.replaceState(
+      null,
+      "",
+      `/login?redirect=${encodeURIComponent("/eventos/invitacion/abc")}`
+    );
+    render(<LoginPage />);
+
+    expect(screen.getByRole("link", { name: "Registrate gratis" })).toHaveAttribute(
+      "href",
+      `/register?redirect=${encodeURIComponent("/eventos/invitacion/abc")}`
+    );
+  });
+
+  it("ignora una ruta pedida hacia otro sitio", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      `/login?redirect=${encodeURIComponent("//otro-sitio.com")}`
+    );
+
+    await submitLogin();
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/eventos"));
+    expect(screen.getByRole("link", { name: "Registrate gratis" })).toHaveAttribute(
+      "href",
+      "/register"
+    );
   });
 
   it("sin ruta pedida va a mis eventos", async () => {

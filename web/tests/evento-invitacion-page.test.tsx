@@ -126,6 +126,30 @@ describe("EventInvitationView", () => {
     expect(screen.getByText(/Entrás con la cuenta de sofia@email.com/)).toBeInTheDocument();
   });
 
+  it("avisa cuando no queda ningún integrante disponible sin ocultar la lista", async () => {
+    signedIn();
+    vi.mocked(listInvitationMembers).mockResolvedValue(
+      members.map((member) => ({ ...member, isLinked: true }))
+    );
+    render(<EventInvitationView token={TOKEN} />);
+
+    expect(
+      await screen.findByText("Todos los integrantes ya tienen una cuenta vinculada")
+    ).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /Francisco/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Soy esta persona" })).toBeDisabled();
+  });
+
+  it("no muestra el aviso mientras quede algún integrante disponible", async () => {
+    signedIn();
+    render(<EventInvitationView token={TOKEN} />);
+
+    await screen.findByRole("option", { name: "Francisco" });
+    expect(
+      screen.queryByText("Todos los integrantes ya tienen una cuenta vinculada")
+    ).not.toBeInTheDocument();
+  });
+
   it("vincularse deja al usuario en el evento", async () => {
     signedIn();
     vi.mocked(linkInvitationMember).mockResolvedValue({
@@ -156,13 +180,10 @@ describe("EventInvitationView", () => {
     expect(linkInvitationMember).not.toHaveBeenCalled();
   });
 
-  it("explica el conflicto y recarga la lista si el integrante ya fue tomado", async () => {
+  it("si la vinculación falla, pide elegir de nuevo y actualiza la lista", async () => {
     signedIn();
     vi.mocked(linkInvitationMember).mockRejectedValue(
-      new EventError(
-        "conflict",
-        "Esa persona ya entró con otra cuenta. Elegí otro nombre de la lista."
-      )
+      new EventError("conflict", "No pudimos vincular tu cuenta. Elegí de nuevo.")
     );
     const user = userEvent.setup();
     render(<EventInvitationView token={TOKEN} />);
@@ -174,9 +195,7 @@ describe("EventInvitationView", () => {
     await user.click(screen.getByRole("button", { name: "Soy esta persona" }));
 
     expect(
-      await screen.findByText(
-        "Esa persona ya entró con otra cuenta. Elegí otro nombre de la lista."
-      )
+      await screen.findByText("No pudimos vincular tu cuenta. Elegí de nuevo.")
     ).toBeInTheDocument();
     expect(push).not.toHaveBeenCalled();
     await waitFor(() => expect(listInvitationMembers).toHaveBeenCalledTimes(2));

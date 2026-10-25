@@ -46,11 +46,23 @@ export class LoginError extends Error {
 
 export const DEFAULT_POST_LOGIN_PATH = "/eventos";
 
+// Only internal routes are accepted, so a crafted link can't send the user to another site.
+function isInternalPath(path: string): boolean {
+  return path.startsWith("/") && !path.startsWith("//") && !path.startsWith("/\\");
+}
+
 export function postLoginPath(redirect: string | null): string {
-  if (!redirect || !redirect.startsWith("/") || redirect.startsWith("//")) {
+  if (!redirect || !isInternalPath(redirect)) {
     return DEFAULT_POST_LOGIN_PATH;
   }
   return redirect;
+}
+
+export function withRedirect(path: string, redirect: string | null): string {
+  if (!redirect || !isInternalPath(redirect)) {
+    return path;
+  }
+  return `${path}?redirect=${encodeURIComponent(redirect)}`;
 }
 
 export type SessionUser = {

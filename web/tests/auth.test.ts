@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { postLoginPath, registerSchema } from "@/lib/auth";
+import { postLoginPath, registerSchema, withRedirect } from "@/lib/auth";
 
 describe("registerSchema", () => {
   it("acepta datos válidos", () => {
@@ -51,5 +51,28 @@ describe("postLoginPath", () => {
   it("ignora rutas a otros sitios", () => {
     expect(postLoginPath("https://otro-sitio.com")).toBe("/eventos");
     expect(postLoginPath("//otro-sitio.com")).toBe("/eventos");
+    expect(postLoginPath("/\\otro-sitio.com")).toBe("/eventos");
+  });
+
+  it("ignora rutas que no empiezan con barra", () => {
+    expect(postLoginPath("eventos")).toBe("/eventos");
+  });
+});
+
+describe("withRedirect", () => {
+  it("agrega la ruta de vuelta cuando es interna", () => {
+    expect(withRedirect("/register", "/eventos/invitacion/abc")).toBe(
+      `/register?redirect=${encodeURIComponent("/eventos/invitacion/abc")}`
+    );
+  });
+
+  it("deja la ruta como está cuando no hay ruta de vuelta", () => {
+    expect(withRedirect("/login", null)).toBe("/login");
+  });
+
+  it("descarta rutas de vuelta a otros sitios", () => {
+    expect(withRedirect("/login", "https://otro-sitio.com")).toBe("/login");
+    expect(withRedirect("/login", "//otro-sitio.com")).toBe("/login");
+    expect(withRedirect("/login", "/\\otro-sitio.com")).toBe("/login");
   });
 });

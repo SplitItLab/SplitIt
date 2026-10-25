@@ -58,10 +58,7 @@ export async function linkInvitationMember(
     });
   } catch (err) {
     if (err instanceof ApiError && err.status === 409) {
-      throw new EventError(
-        "conflict",
-        "Esa persona ya entró con otra cuenta. Elegí otro nombre de la lista."
-      );
+      throw new EventError("conflict", "No pudimos vincular tu cuenta. Elegí de nuevo.");
     }
     toEventError(err);
   }

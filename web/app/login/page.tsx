@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useForm } from "react-hook-form";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Field, FieldLabel, FieldError, FieldGroup } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,27 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LoadingIndicator } from "@/components/loading-indicator";
 import { AuthLayout } from "@/components/auth-layout";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { login, LoginError, LoginInput, loginSchema, postLoginPath } from "@/lib/auth";
+import {
+  login,
+  LoginError,
+  LoginInput,
+  loginSchema,
+  postLoginPath,
+  withRedirect,
+} from "@/lib/auth";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const redirect = useSearchParams().get("redirect");
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const {
@@ -28,7 +44,7 @@ export default function LoginPage() {
     setGeneralError(null);
     try {
       await login(data);
-      router.push(postLoginPath(new URLSearchParams(window.location.search).get("redirect")));
+      router.push(postLoginPath(redirect));
     } catch (err) {
       if (err instanceof LoginError) {
         setGeneralError(err.message);
@@ -42,7 +58,11 @@ export default function LoginPage() {
       heroDescription="Entrá y mirá al toque quién pagó qué y cuánto le debe cada uno."
       title="Iniciá sesión"
       description="Ingresá tus datos para continuar"
-      footer={{ text: "¿No tenés cuenta?", linkLabel: "Registrate gratis", href: "/register" }}
+      footer={{
+        text: "¿No tenés cuenta?",
+        linkLabel: "Registrate gratis",
+        href: withRedirect("/register", redirect),
+      }}
     >
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <FieldGroup>
