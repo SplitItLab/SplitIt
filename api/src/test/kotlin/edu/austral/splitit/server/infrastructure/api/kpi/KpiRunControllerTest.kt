@@ -4,6 +4,7 @@ import edu.austral.splitit.server.application.port.AuthGuest
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.KpiRunReceipt
+import edu.austral.splitit.server.application.service.KpiRunStatus
 import edu.austral.splitit.server.application.service.RunKpiReport
 import edu.austral.splitit.server.domain.kpi.KpiIds
 import edu.austral.splitit.server.domain.kpi.KpiResult
@@ -131,6 +132,7 @@ class KpiRunControllerTest(
         KpiRunReceipt(
             id = id,
             destination = "local",
+            status = KpiRunStatus.SENT,
             reportDay = day,
             windowFrom = Instant.parse("${day}T00:00:00Z"),
             windowTo = Instant.parse("${day}T23:59:59.999999999Z"),

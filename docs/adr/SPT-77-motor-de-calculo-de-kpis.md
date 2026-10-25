@@ -39,7 +39,7 @@ Implementar un motor de cálculo extensible basado en estrategia + inyección de
 - Método principal: `fun calculate(context: KpiCalculationContext): List<KpiResult>`
 - Recorre la lista, llama a cada KPI, captura excepciones, loguea y continúa.
 - Si un KPI falla → su resultado lleva `value = null`.
-- El cálculo de cada KPI es puro (sin side effects). Después de obtener todos los resultados, el engine llama a `LastRunPort.recordSuccessfulRun` (efecto fuera del core de cálculo).
+- El cálculo de cada KPI es puro (sin side effects). El engine no registra la corrida: desde SPT-87 la graba `RunKpiReport`, después del envío.
 
 `KpiCalculationContext`: data class inmutable con el rango de fechas sobre el que calcular. El engine lo recibe como parámetro y se lo pasa a cada KPI.
 
@@ -58,10 +58,10 @@ Agregar un nuevo KPI = crear una clase nueva que implemente `Kpi` y anotarla. Ce
 | Eventos creados por día | Repositorios/services existentes (misma base) | Implementación real |
 | Gastos registrados por día | Repositorios/services existentes | Implementación real |
 | % eventos con ≥1 gasto | Repositorios/services existentes | Implementación real |
-| Latencia p95 POST /expenses | Puerto `LatencyMetricsPort` | `InMemoryRequestMetrics`, alimentado por las observaciones de Micrometer |
+| Latencia p95 POST /expenses | Puerto `LatencyMetricsPort` | `JpaRequestMetrics` (tabla `request_sample`, SPT-87), alimentado por las observaciones de Micrometer |
 | Tasa error 5xx últimas 24h | Puerto `ErrorRatePort` | La misma fuente. 4xx no cuenta como error. Null si no hay muestras en la ventana |
 | Health check backend | `/api/status` existente (devuelve OK) | Llamada o chequeo equivalente |
-| Última ejecución exitosa del job | Puerto `LastRunPort` | Implementación in-memory por ahora |
+| Última ejecución exitosa del job | Puerto `LastRunPort` | `JpaLastRun` (tabla `kpi_run`, SPT-87) |
 
 Puertos definidos (segregados, ISP):
 
@@ -75,14 +75,14 @@ interface ErrorRatePort {
 }
 
 interface LastRunPort {
-    fun recordSuccessfulRun(at: Instant)
+    fun recordRun(reportDay: LocalDate, ranAt: Instant, status: KpiRunStatus) // desde SPT-87
     fun lastSuccessfulRun(): Instant?
 }
 ```
 
-Cada KPI depende únicamente del puerto que necesita. La persistencia del last-run queda fuera de scope: sigue en memoria y se pierde al reiniciar.
+Cada KPI depende únicamente del puerto que necesita. Desde SPT-87 el last-run se guarda en `kpi_run` y sobrevive a los reinicios.
 
-Los requests entrantes se observan con Micrometer (`spring-boot-micrometer-metrics`). `ServerRequestMetricsHandler` implementa `ObservationHandler` sobre `ServerRequestObservationContext`. Al terminar cada request guarda método, ruta, status y duración en `InMemoryRequestMetrics`. Los timers de Micrometer no responden “p95 de esta ventana”, así que los puertos leen ese store (retención de 25 horas, en memoria). Una muestra con status menor a 100 no se guarda. 4xx entra en el total y no suma como error.
+Los requests entrantes se observan con Micrometer (`spring-boot-micrometer-metrics`). `ServerRequestMetricsHandler` implementa `ObservationHandler` sobre `ServerRequestObservationContext`. Al terminar cada request guarda método, ruta, status y duración en la tabla `request_sample` (`JpaRequestMetrics`, SPT-87). Los timers de Micrometer no responden “p95 de esta ventana”, así que los puertos leen esa tabla (retención de 7 días). Una muestra con status menor a 100 no se guarda. 4xx entra en el total y no suma como error.
 
 ### Manejo de errores
 
@@ -104,7 +104,7 @@ Descartado: mismo problema de extensibilidad y mezcla de responsabilidades.
 
 Instrumentar requests a mano, con histogramas propios.
 
-Descartado. Se usa Micrometer, que ya observa los requests del servidor. Los puertos `LatencyMetricsPort` y `ErrorRatePort` quedan como contrato. El store en memoria existe solo porque el timer de Micrometer no está partido por ventana.
+Descartado. Se usa Micrometer, que ya observa los requests del servidor. Los puertos `LatencyMetricsPort` y `ErrorRatePort` quedan como contrato. La tabla de muestras existe solo porque el timer de Micrometer no está partido por ventana.
 
 Timestamp de última corrida como campo mutable en el engine.
 
@@ -118,11 +118,11 @@ Descartado: viola Interface Segregation. Los KPIs de latencia y de error rate no
 
 El motor queda desacoplado del destino de los datos.
 
-Core de cálculo puro e inmutable: `KpiCalculationContext` y `KpiResult` son data classes inmutables; los KPIs no tienen side effects. El único efecto (`recordSuccessfulRun`) ocurre después del cálculo.
+Core de cálculo puro e inmutable: `KpiCalculationContext` y `KpiResult` son data classes inmutables; los KPIs no tienen side effects. La corrida se registra fuera del engine, después del cálculo y del envío (SPT-87).
 
 Agregar KPIs futuros es barato y no requiere tocar código existente (cumple criterio de aceptación + test del 8vo KPI).
 
-Los KPIs de latencia y de tasa 5xx leen muestras reales del proceso. Sin requests en la ventana, el valor es null. Esas muestras se pierden al reiniciar, igual que el last-run.
+Los KPIs de latencia y de tasa 5xx leen muestras reales de los requests. Sin requests en la ventana, el valor es null. Desde SPT-87 las muestras y el last-run sobreviven a los reinicios.
 
 Se deja este ADR como registro corto de alternativas (cumple criterio de aceptación).
 
@@ -138,3 +138,14 @@ Se deja este ADR como registro corto de alternativas (cumple criterio de aceptac
 - Posibilidad de agregar un 8vo KPI sin modificar los anteriores + evidencia (test).
 - Registro de alternativas (este ADR).
 - Tests por KPI, test del 8vo KPI, test que 4xx no cuenta como error 5xx, y test del puerto de métricas si aplica.
+
+## Actualización (SPT-87)
+
+Las muestras de request y las corridas pasan a Postgres (migración `V3__kpi_persistence.sql`), así que un deploy ya no las borra.
+
+- `request_sample`: una fila por request, con endpoint, status, duración en µs e instante. `JpaRequestMetrics` implementa `LatencyMetricsPort` y `ErrorRatePort`, y calcula el p95 y la tasa de 5xx en SQL.
+- El p95 sigue siendo nearest-rank (`ceil(0.95 · n)`), así que el valor no cambia. Se calcula con `ROW_NUMBER()` en lugar de `percentile_disc`: en Postgres dan lo mismo, pero H2, la base de los tests, no implementa `percentile_disc` como nearest-rank.
+- Si falla el insert de una muestra, se loguea y la request sigue. Solo se pierde esa muestra.
+- Después de cada corrida, `KpiReportJob` borra las muestras de más de 7 días.
+- `kpi_run`: una fila por corrida, con `report_day`, `ran_at` y `status` (`sent`, `failed` o `skipped`). El engine ya no registra la corrida: la graba `RunKpiReport` después del envío.
+- `last_successful_run` cambia de significado. Antes era "el cálculo terminó"; ahora es el `ran_at` más reciente con `status = 'sent'`. Una corrida `failed` o `skipped` no lo mueve. El detalle por modo está en el ADR de SPT-78.

@@ -13,7 +13,7 @@ import edu.austral.splitit.server.domain.kpi.Kpi
 import edu.austral.splitit.server.domain.kpi.KpiCalculationContext
 import edu.austral.splitit.server.domain.kpi.KpiResult
 import edu.austral.splitit.server.domain.kpi.KpiValue
-import edu.austral.splitit.server.infrastructure.kpi.InMemoryLastRun
+import org.mockito.kotlin.mock
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -42,12 +42,11 @@ class EighthKpiExtensionTest {
     }
 
     private fun calculate(extra: Kpi?): List<KpiResult> {
-        val lastRun = InMemoryLastRun()
-        val kpis = productionKpis(lastRun) + listOfNotNull(extra)
-        return KpiEngine(kpis = kpis, lastRunPort = lastRun, clock = clock).calculate(context)
+        val kpis = productionKpis() + listOfNotNull(extra)
+        return KpiEngine(kpis = kpis, clock = clock).calculate(context)
     }
 
-    private fun productionKpis(lastRun: InMemoryLastRun): List<Kpi> =
+    private fun productionKpis(): List<Kpi> =
         listOf(
             EventsCreatedPerDayKpi(EventCreationCount { _, _ -> 4 }),
             ExpensesRegisteredPerDayKpi(ExpenseRegistrationCount { _, _ -> 7 }),
@@ -61,7 +60,7 @@ class EighthKpiExtensionTest {
             PostExpensesLatencyP95Kpi(LatencyMetricsPort { _, _ -> Duration.ofMillis(80) }),
             ErrorRate5xxKpi(ErrorRatePort { 0.0 }),
             BackendHealthKpi(BackendHealthPort { "OK" }),
-            LastSuccessfulRunKpi(lastRun),
+            LastSuccessfulRunKpi(mock()),
             FirstExpenseWithinTwoMinutesPercentKpi(FirstExpenseDelay { _, _ -> listOf(Duration.ofMinutes(1), null) }),
             SharedEventsPercentKpi(EventCreationCount { _, _ -> 4 }, SharedEventCount { _, _ -> 1 }),
             GetBalancesLatencyP95Kpi(LatencyMetricsPort { _, _ -> Duration.ofMillis(40) }),

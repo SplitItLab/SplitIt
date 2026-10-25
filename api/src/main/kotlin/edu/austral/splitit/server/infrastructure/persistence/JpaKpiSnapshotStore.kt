@@ -2,6 +2,7 @@ package edu.austral.splitit.server.infrastructure.persistence
 
 import edu.austral.splitit.server.application.service.KpiRun
 import edu.austral.splitit.server.application.service.KpiRunReceipt
+import edu.austral.splitit.server.application.service.KpiRunStatus
 import edu.austral.splitit.server.domain.kpi.KpiResult
 import edu.austral.splitit.server.domain.kpi.KpiValue
 import org.springframework.stereotype.Repository
@@ -67,6 +68,8 @@ private fun KpiSnapshotEntity.toReceipt(): KpiRunReceipt {
     return KpiRunReceipt(
         id = storedId,
         destination = channel,
+        // The local and report channels deliver a run by storing it.
+        status = KpiRunStatus.SENT,
         reportDay = reportDay,
         windowFrom = windowFrom,
         windowTo = windowTo,

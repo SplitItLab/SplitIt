@@ -1,6 +1,7 @@
 package edu.austral.splitit.server.infrastructure.persistence
 
 import edu.austral.splitit.server.application.service.KpiRun
+import edu.austral.splitit.server.application.service.KpiRunStatus
 import edu.austral.splitit.server.domain.kpi.KpiIds
 import edu.austral.splitit.server.domain.kpi.KpiResult
 import edu.austral.splitit.server.domain.kpi.KpiValue
@@ -48,6 +49,8 @@ class JpaKpiSnapshotStoreTest(
             listed.map { it.reportDay },
         )
         assertEquals("local", listed[0].destination)
+        assertEquals(KpiRunStatus.SENT, first.status)
+        assertEquals(KpiRunStatus.SENT, listed[0].status)
         assertEquals(WINDOW_FROM, listed[0].windowFrom)
         assertEquals(WINDOW_TO, listed[0].windowTo)
         assertEquals(CALCULATED_AT, listed[0].calculatedAt)

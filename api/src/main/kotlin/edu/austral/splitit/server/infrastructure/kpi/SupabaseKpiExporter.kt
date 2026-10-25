@@ -3,6 +3,7 @@ package edu.austral.splitit.server.infrastructure.kpi
 import edu.austral.splitit.server.application.port.KpiExporter
 import edu.austral.splitit.server.application.service.KpiRun
 import edu.austral.splitit.server.application.service.KpiRunReceipt
+import edu.austral.splitit.server.application.service.KpiRunStatus
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders
@@ -33,30 +34,33 @@ class SupabaseKpiExporter(
     private val runIdSupplier: () -> UUID = UUID::randomUUID,
 ) : KpiExporter {
     override fun export(run: KpiRun): KpiRunReceipt {
-        if (!settings.canSend) {
-            logger.warn(
-                "KPI export skipped: no {} key configured. reportDay={}",
-                settings.env,
-                run.reportDay,
-            )
-        } else {
-            send(run)
-        }
-        return run.toReceipt()
+        val status =
+            if (!settings.canSend) {
+                logger.warn(
+                    "KPI export skipped: no {} key configured. reportDay={}",
+                    settings.env,
+                    run.reportDay,
+                )
+                KpiRunStatus.SKIPPED
+            } else {
+                send(run)
+            }
+        return run.toReceipt(status)
     }
 
     override fun list(): List<KpiRunReceipt> = emptyList()
 
-    private fun send(run: KpiRun) {
+    private fun send(run: KpiRun): KpiRunStatus {
         val batch = batchFor(run)
         if (batch.isEmpty()) {
             logger.warn("KPI export skipped: no numeric values to send. reportDay={}", run.reportDay)
-            return
+            return KpiRunStatus.SKIPPED
         }
-        try {
+        return try {
             registerMissingCatalogEntries()
             post(MEASUREMENT_PATH, batch, ignoreDuplicates = true)
             logger.info("KPI export sent. env={} reportDay={} rows={}", settings.env, run.reportDay, batch.size)
+            KpiRunStatus.SENT
         } catch (exception: RestClientException) {
             logger.error(
                 "KPI export failed. env={} reportDay={} reason={}",
@@ -64,6 +68,7 @@ class SupabaseKpiExporter(
                 run.reportDay,
                 exception.message,
             )
+            KpiRunStatus.FAILED
         }
     }
 
@@ -137,10 +142,11 @@ class SupabaseKpiExporter(
         headers.set("X-Project-Key", settings.projectKey)
     }
 
-    private fun KpiRun.toReceipt(): KpiRunReceipt =
+    private fun KpiRun.toReceipt(status: KpiRunStatus): KpiRunReceipt =
         KpiRunReceipt(
             id = 0,
             destination = DESTINATION,
+            status = status,
             reportDay = reportDay,
             windowFrom = windowFrom,
             windowTo = windowTo,
