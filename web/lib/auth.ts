@@ -50,7 +50,16 @@ export function postLoginPath(redirect: string | null): string {
   if (!redirect || !redirect.startsWith("/") || redirect.startsWith("//")) {
     return DEFAULT_POST_LOGIN_PATH;
   }
-  return redirect;
+  try {
+    const base = new URL("https://splitit.invalid");
+    const target = new URL(redirect, base);
+    if (target.origin !== base.origin || target.pathname.startsWith("//")) {
+      return DEFAULT_POST_LOGIN_PATH;
+    }
+    return `${target.pathname}${target.search}${target.hash}`;
+  } catch {
+    return DEFAULT_POST_LOGIN_PATH;
+  }
 }
 
 export type SessionUser = {

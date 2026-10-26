@@ -93,7 +93,7 @@ class InvitationApplicationService(
             throw AccountAlreadyLinkedException()
         }
 
-        val member = eventMemberService.findById(command.memberId)
+        val member = eventMemberService.findByIdForUpdate(command.memberId)
         require(member != null && member.event.id == eventId) {
             "Member does not belong to the event"
         }

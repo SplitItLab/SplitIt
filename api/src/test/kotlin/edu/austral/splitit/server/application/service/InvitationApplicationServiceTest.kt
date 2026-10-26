@@ -114,7 +114,7 @@ class InvitationApplicationServiceTest {
     fun `linkMember links the account to the chosen member`() {
         whenever(inviteLinkService.findEventByToken(TOKEN)).thenReturn(event)
         whenever(eventMemberService.isUserMemberOfEvent(10L, 2L)).thenReturn(false)
-        whenever(eventMemberService.findById(2L)).thenReturn(freeMember)
+        whenever(eventMemberService.findByIdForUpdate(2L)).thenReturn(freeMember)
         whenever(userService.getById(2L)).thenReturn(guest)
         whenever(eventMemberService.saveAndFlush(freeMember)).thenReturn(freeMember)
 
@@ -131,7 +131,7 @@ class InvitationApplicationServiceTest {
     fun `linkMember rejects a member already linked to another account`() {
         whenever(inviteLinkService.findEventByToken(TOKEN)).thenReturn(event)
         whenever(eventMemberService.isUserMemberOfEvent(10L, 2L)).thenReturn(false)
-        whenever(eventMemberService.findById(1L)).thenReturn(ownerMember)
+        whenever(eventMemberService.findByIdForUpdate(1L)).thenReturn(ownerMember)
         whenever(userService.getById(2L)).thenReturn(guest)
 
         assertFailsWith<MemberAlreadyLinkedException> {
@@ -158,7 +158,7 @@ class InvitationApplicationServiceTest {
     fun `linkMember translates the unique constraint violation into a link conflict`() {
         whenever(inviteLinkService.findEventByToken(TOKEN)).thenReturn(event)
         whenever(eventMemberService.isUserMemberOfEvent(10L, 2L)).thenReturn(false)
-        whenever(eventMemberService.findById(2L)).thenReturn(freeMember)
+        whenever(eventMemberService.findByIdForUpdate(2L)).thenReturn(freeMember)
         whenever(userService.getById(2L)).thenReturn(guest)
         val violation = DataIntegrityViolationException("uk_event_members_event_user")
         whenever(eventMemberService.saveAndFlush(freeMember)).thenThrow(violation)
@@ -174,7 +174,7 @@ class InvitationApplicationServiceTest {
         val foreignMember = EventMember.create(otherEvent, "Lucas").apply { id = 5L }
         whenever(inviteLinkService.findEventByToken(TOKEN)).thenReturn(event)
         whenever(eventMemberService.isUserMemberOfEvent(10L, 2L)).thenReturn(false)
-        whenever(eventMemberService.findById(5L)).thenReturn(foreignMember)
+        whenever(eventMemberService.findByIdForUpdate(5L)).thenReturn(foreignMember)
 
         assertFailsWith<IllegalArgumentException> {
             invitationApplicationService.linkMember(LinkMemberCommand(userId = 2L, token = TOKEN, memberId = 5L))
