@@ -64,6 +64,7 @@ class EventMember private constructor(
     }
 
     fun linkUser(user: User) {
+        if (this.user != null) throw MemberAlreadyLinkedException()
         this.user = user
     }
 }

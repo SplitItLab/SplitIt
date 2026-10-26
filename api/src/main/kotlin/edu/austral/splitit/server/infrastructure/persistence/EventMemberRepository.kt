@@ -1,12 +1,20 @@
 package edu.austral.splitit.server.infrastructure.persistence
 
 import edu.austral.splitit.server.domain.model.event.EventMember
+import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
 interface EventMemberRepository : JpaRepository<EventMember, Long> {
     fun countByEventId(eventId: Long): Long
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT em FROM EventMember em WHERE em.id = :id")
+    fun findByIdForUpdate(
+        @Param("id") id: Long,
+    ): EventMember?
 
     @Query(
         """
@@ -19,6 +27,11 @@ interface EventMemberRepository : JpaRepository<EventMember, Long> {
     fun findAllByEventId(
         @Param("eventId") eventId: Long,
     ): List<EventMember>
+
+    fun findByEventIdAndUserId(
+        eventId: Long,
+        userId: Long,
+    ): EventMember?
 
     fun existsByEventIdAndUserId(
         eventId: Long,

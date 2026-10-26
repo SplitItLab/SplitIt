@@ -1,5 +1,6 @@
 package edu.austral.splitit.server.infrastructure.api
 
+import edu.austral.splitit.server.application.exception.AccountAlreadyLinkedException
 import edu.austral.splitit.server.application.exception.AuthenticatedUserMissingException
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
 import edu.austral.splitit.server.application.exception.EventDeletionConflictException
@@ -11,6 +12,7 @@ import edu.austral.splitit.server.application.exception.InvalidRequestException
 import edu.austral.splitit.server.application.exception.InviteLinkNotFoundException
 import edu.austral.splitit.server.application.exception.MemberHasAccountException
 import edu.austral.splitit.server.application.exception.MemberNotInEventException
+import edu.austral.splitit.server.domain.model.event.MemberAlreadyLinkedException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -68,6 +70,8 @@ class GlobalExceptionHandler {
         EmailAlreadyInUseException::class,
         EventDeletionConflictException::class,
         MemberHasAccountException::class,
+        MemberAlreadyLinkedException::class,
+        AccountAlreadyLinkedException::class,
     )
     fun handleConflict(exception: RuntimeException): ResponseEntity<ErrorMessage> =
         error(HttpStatus.CONFLICT, exception.message ?: CONFLICT_MESSAGE)

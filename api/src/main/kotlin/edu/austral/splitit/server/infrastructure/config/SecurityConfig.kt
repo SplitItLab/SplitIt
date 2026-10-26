@@ -52,6 +52,8 @@ class SecurityConfig(
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/auth/session")
                     .hasAnyRole(USER_ROLE, GUEST_ROLE)
+                    .requestMatchers(HttpMethod.GET, "/api/invitations/*", "/api/invitations/*/members")
+                    .permitAll()
 
                 // Guests only reach the routes opened above for them.
                 it.anyRequest().hasRole(USER_ROLE)
