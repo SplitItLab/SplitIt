@@ -1,11 +1,19 @@
 package edu.austral.splitit.server.infrastructure.persistence
 
 import edu.austral.splitit.server.domain.model.event.EventMember
+import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
 interface EventMemberRepository : JpaRepository<EventMember, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT em FROM EventMember em WHERE em.id = :id")
+    fun findByIdForUpdate(
+        @Param("id") id: Long,
+    ): EventMember?
+
     fun countByEventId(eventId: Long): Long
 
     @Query(

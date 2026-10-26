@@ -48,7 +48,7 @@ export const DEFAULT_POST_LOGIN_PATH = "/eventos";
 
 // Only internal routes are accepted, so a crafted link can't send the user to another site.
 function isInternalPath(path: string): boolean {
-  return path.startsWith("/") && !path.startsWith("//") && !path.startsWith("/\\");
+  return path.startsWith("/") && !path.startsWith("//") && !/[\\\p{Cc}]/u.test(path);
 }
 
 export function postLoginPath(redirect: string | null): string {

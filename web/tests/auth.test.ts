@@ -1,6 +1,17 @@
 import { describe, it, expect } from "vitest";
 import { postLoginPath, registerSchema, withRedirect } from "@/lib/auth";
 
+const unsafeRedirects = [
+  "/\t/otro-sitio.com",
+  "/\n/otro-sitio.com",
+  "/\r/otro-sitio.com",
+  "/\t\\otro-sitio.com",
+  "/eventos\\invitacion/abc",
+  "/eventos?next=\\otro-sitio.com",
+  ...Array.from({ length: 32 }, (_, code) => `/eventos${String.fromCharCode(code)}`),
+  ...Array.from({ length: 33 }, (_, code) => `/eventos${String.fromCharCode(127 + code)}`),
+];
+
 describe("registerSchema", () => {
   it("acepta datos válidos", () => {
     const result = registerSchema.safeParse({
@@ -40,6 +51,10 @@ describe("registerSchema", () => {
 });
 
 describe("postLoginPath", () => {
+  it.each(unsafeRedirects)("descarta la ruta insegura %j", (redirect) => {
+    expect(postLoginPath(redirect)).toBe("/eventos");
+  });
+
   it("vuelve a la ruta interna pedida", () => {
     expect(postLoginPath("/eventos/invitacion/abc")).toBe("/eventos/invitacion/abc");
   });
@@ -60,6 +75,10 @@ describe("postLoginPath", () => {
 });
 
 describe("withRedirect", () => {
+  it.each(unsafeRedirects)("descarta la ruta de vuelta insegura %j", (redirect) => {
+    expect(withRedirect("/login", redirect)).toBe("/login");
+  });
+
   it("agrega la ruta de vuelta cuando es interna", () => {
     expect(withRedirect("/register", "/eventos/invitacion/abc")).toBe(
       `/register?redirect=${encodeURIComponent("/eventos/invitacion/abc")}`

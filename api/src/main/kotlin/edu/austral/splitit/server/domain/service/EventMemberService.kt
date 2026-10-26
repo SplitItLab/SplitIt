@@ -56,6 +56,8 @@ class EventMemberService(
 
     fun findById(id: Long): EventMember? = eventMemberRepository.findByIdOrNull(id)
 
+    fun findByIdForUpdate(id: Long): EventMember? = eventMemberRepository.findByIdForUpdate(id)
+
     fun findByEventIdAndUserId(
         eventId: Long,
         userId: Long,
