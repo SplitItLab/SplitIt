@@ -56,6 +56,17 @@ class SecurityConfig(
                     .hasAnyRole(USER_ROLE, GUEST_ROLE)
                     .requestMatchers(HttpMethod.GET, "/api/invitations/*", "/api/invitations/*/members")
                     .permitAll()
+                    // What a guest does inside its event; the services keep it to that event and member.
+                    .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/events/*",
+                        "/api/events/*/expenses",
+                        "/api/events/*/expenses/quote",
+                        "/api/events/*/balances",
+                        "/api/events/*/suggested-payments",
+                    ).hasAnyRole(USER_ROLE, GUEST_ROLE)
+                    .requestMatchers(HttpMethod.POST, "/api/events/*/expenses")
+                    .hasAnyRole(USER_ROLE, GUEST_ROLE)
 
                 // Guests only reach the routes opened above for them.
                 it.anyRequest().hasRole(USER_ROLE)
