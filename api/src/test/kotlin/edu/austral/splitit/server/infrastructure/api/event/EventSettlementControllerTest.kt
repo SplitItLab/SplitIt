@@ -68,7 +68,7 @@ class EventSettlementControllerTest(
     @Test
     fun `get suggested payments returns who pays whom and how much with 200`() {
         whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
-        whenever(settlementApplicationService.listSuggestedPayments(1L, 7L)).thenReturn(
+        whenever(settlementApplicationService.listSuggestedPayments(authUser, 7L)).thenReturn(
             listOf(
                 SuggestedPaymentSummary(
                     fromMember = SuggestedPaymentMemberSummary(id = 13L, name = "Juan"),
@@ -89,13 +89,13 @@ class EventSettlementControllerTest(
             .andExpect(jsonPath("$[0].toMember.name").value("Ana"))
             .andExpect(jsonPath("$[0].amount").value(2500.0))
 
-        verify(settlementApplicationService).listSuggestedPayments(1L, 7L)
+        verify(settlementApplicationService).listSuggestedPayments(authUser, 7L)
     }
 
     @Test
     fun `get suggested payments returns an empty list with 200 when the split is settled`() {
         whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
-        whenever(settlementApplicationService.listSuggestedPayments(1L, 7L)).thenReturn(emptyList())
+        whenever(settlementApplicationService.listSuggestedPayments(authUser, 7L)).thenReturn(emptyList())
 
         mockMvc
             .perform(

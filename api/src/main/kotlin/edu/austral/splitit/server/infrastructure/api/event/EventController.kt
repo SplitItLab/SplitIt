@@ -1,5 +1,6 @@
 package edu.austral.splitit.server.infrastructure.api.event
 
+import edu.austral.splitit.server.application.port.AuthPrincipal
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.service.CreateEventCommand
 import edu.austral.splitit.server.application.service.CreateExpenseCommand
@@ -61,10 +62,10 @@ class EventController(
 
     @GetMapping("/{id}")
     fun getEventById(
-        @AuthenticationPrincipal user: AuthUser,
+        @AuthenticationPrincipal principal: AuthPrincipal,
         @PathVariable id: Long,
     ): EventDetailResponse {
-        val detail = eventApplicationService.getEventById(user.id, id)
+        val detail = eventApplicationService.getEventById(principal, id)
         return EventDetailResponse.of(detail)
     }
 
@@ -80,13 +81,13 @@ class EventController(
     @PostMapping("/{eventId}/expenses")
     @ResponseStatus(HttpStatus.CREATED)
     fun createExpense(
-        @AuthenticationPrincipal user: AuthUser,
+        @AuthenticationPrincipal principal: AuthPrincipal,
         @PathVariable eventId: Long,
         @Valid @RequestBody request: CreateExpenseRequest,
     ): ExpenseResponse {
         val command =
             CreateExpenseCommand(
-                userId = user.id,
+                principal = principal,
                 eventId = eventId,
                 name = request.name,
                 amount = request.amount,
@@ -134,7 +135,7 @@ class EventController(
 
     @GetMapping("/{eventId}/expenses/quote")
     fun quoteExpense(
-        @AuthenticationPrincipal user: AuthUser,
+        @AuthenticationPrincipal principal: AuthPrincipal,
         @PathVariable eventId: Long,
         @RequestParam amount: BigDecimal,
         @RequestParam currency: String,
@@ -142,7 +143,7 @@ class EventController(
         val quote =
             expenseApplicationService.quoteExpense(
                 QuoteExpenseQuery(
-                    userId = user.id,
+                    principal = principal,
                     eventId = eventId,
                     amount = amount,
                     currency = currency,
@@ -154,10 +155,10 @@ class EventController(
 
     @GetMapping("/{eventId}/expenses")
     fun listExpenses(
-        @AuthenticationPrincipal user: AuthUser,
+        @AuthenticationPrincipal principal: AuthPrincipal,
         @PathVariable eventId: Long,
     ): List<ExpenseResponse> {
-        val summaries = expenseApplicationService.listExpenses(user.id, eventId)
+        val summaries = expenseApplicationService.listExpenses(principal, eventId)
 
         return summaries.map { ExpenseResponse.of(it) }
     }

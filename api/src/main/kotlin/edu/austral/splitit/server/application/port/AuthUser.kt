@@ -6,4 +6,4 @@ data class AuthUser(
     val password: String,
     val roles: Collection<String>,
     val name: String,
-)
+) : AuthPrincipal

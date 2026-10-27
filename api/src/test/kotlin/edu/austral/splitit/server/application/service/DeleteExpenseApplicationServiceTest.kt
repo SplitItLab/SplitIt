@@ -29,7 +29,7 @@ class DeleteExpenseApplicationServiceTest {
 
     private val expenseApplicationService =
         ExpenseApplicationService(
-            eventService = eventService,
+            eventAccessService = EventAccessService(eventService, eventMemberService),
             eventMemberService = eventMemberService,
             expenseService = expenseService,
             exchangeQuoteService = ExchangeQuoteService(exchangeRateProvider),

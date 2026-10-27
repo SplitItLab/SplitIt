@@ -1,5 +1,6 @@
 package edu.austral.splitit.server
 
+import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.domain.model.user.Email
 import edu.austral.splitit.server.domain.model.user.User
 
@@ -20,4 +21,13 @@ object Helpers {
                 email = emailOf(email),
                 passwordHash = passwordHash,
             ).apply { this.id = id }
+
+    fun authUser(id: Long = 1L): AuthUser =
+        AuthUser(
+            id = id,
+            username = "ada@example.com",
+            password = "",
+            roles = emptyList(),
+            name = "Ada Lovelace",
+        )
 }

@@ -1,6 +1,6 @@
 package edu.austral.splitit.server.infrastructure.api.event
 
-import edu.austral.splitit.server.application.port.AuthUser
+import edu.austral.splitit.server.application.port.AuthPrincipal
 import edu.austral.splitit.server.application.service.SettlementApplicationService
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
@@ -15,8 +15,10 @@ class EventSettlementController(
 ) {
     @GetMapping("/{eventId}/suggested-payments")
     fun listSuggestedPayments(
-        @AuthenticationPrincipal user: AuthUser,
+        @AuthenticationPrincipal principal: AuthPrincipal,
         @PathVariable eventId: Long,
     ): List<SuggestedPaymentResponse> =
-        settlementApplicationService.listSuggestedPayments(user.id, eventId).map { SuggestedPaymentResponse.of(it) }
+        settlementApplicationService
+            .listSuggestedPayments(principal, eventId)
+            .map { SuggestedPaymentResponse.of(it) }
 }

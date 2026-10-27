@@ -1,5 +1,6 @@
 package edu.austral.splitit.server.application.service
 
+import edu.austral.splitit.server.application.port.AuthPrincipal
 import edu.austral.splitit.server.domain.service.SettlementCalculator
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -22,10 +23,10 @@ class SettlementApplicationService(
 ) {
     @Transactional(readOnly = true)
     fun listSuggestedPayments(
-        userId: Long,
+        principal: AuthPrincipal,
         eventId: Long,
     ): List<SuggestedPaymentSummary> {
-        val balances = balanceApplicationService.listBalances(userId, eventId)
+        val balances = balanceApplicationService.listBalances(principal, eventId)
         val membersById =
             balances.associate { balance ->
                 balance.memberId to SuggestedPaymentMemberSummary(id = balance.memberId, name = balance.memberName)

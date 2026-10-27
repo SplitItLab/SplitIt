@@ -136,7 +136,7 @@ class EventExpensesControllerTest(
 
         verify(expenseApplicationService).addExpense(
             check<CreateExpenseCommand> {
-                assertEquals(1L, it.userId)
+                assertEquals(authUser, it.principal)
                 assertEquals(7L, it.eventId)
                 assertEquals("Cena", it.name)
                 assertEquals(BigDecimal("5000"), it.amount)
@@ -223,7 +223,7 @@ class EventExpensesControllerTest(
     @Test
     fun `get expenses returns list of event expenses with 200`() {
         whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
-        whenever(expenseApplicationService.listExpenses(1L, 7L)).thenReturn(listOf(expenseSummary()))
+        whenever(expenseApplicationService.listExpenses(authUser, 7L)).thenReturn(listOf(expenseSummary()))
 
         mockMvc
             .perform(
@@ -237,7 +237,7 @@ class EventExpensesControllerTest(
             .andExpect(jsonPath("$[0].baseAmount").value(5000.0))
             .andExpect(jsonPath("$[0].paidByMember.name").value("Ana"))
 
-        verify(expenseApplicationService).listExpenses(1L, 7L)
+        verify(expenseApplicationService).listExpenses(authUser, 7L)
     }
 
     @Test
@@ -321,7 +321,7 @@ class EventExpensesControllerTest(
 
         verify(expenseApplicationService).quoteExpense(
             check<QuoteExpenseQuery> {
-                assertEquals(1L, it.userId)
+                assertEquals(authUser, it.principal)
                 assertEquals(7L, it.eventId)
                 assertEquals(BigDecimal("10"), it.amount)
                 assertEquals("USD", it.currency)

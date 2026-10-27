@@ -1,11 +1,10 @@
 package edu.austral.splitit.server.application.service
 
-import edu.austral.splitit.server.application.exception.EventNotFoundException
 import edu.austral.splitit.server.application.exception.ExpenseNotFoundException
-import edu.austral.splitit.server.domain.model.event.Event
+import edu.austral.splitit.server.application.port.AuthGuest
+import edu.austral.splitit.server.application.port.AuthPrincipal
 import edu.austral.splitit.server.domain.model.event.ExchangeQuote
 import edu.austral.splitit.server.domain.service.EventMemberService
-import edu.austral.splitit.server.domain.service.EventService
 import edu.austral.splitit.server.domain.service.ExpenseService
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.stereotype.Service
@@ -14,7 +13,7 @@ import java.math.BigDecimal
 import java.time.LocalDate
 
 data class CreateExpenseCommand(
-    val userId: Long,
+    val principal: AuthPrincipal,
     val eventId: Long,
     val name: String,
     val amount: BigDecimal,
@@ -33,7 +32,7 @@ data class UpdateExpenseCommand(
 )
 
 data class QuoteExpenseQuery(
-    val userId: Long,
+    val principal: AuthPrincipal,
     val eventId: Long,
     val amount: BigDecimal,
     val currency: String,
@@ -59,14 +58,14 @@ data class ExpenseSummary(
 
 @Service
 class ExpenseApplicationService(
-    private val eventService: EventService,
+    private val eventAccessService: EventAccessService,
     private val eventMemberService: EventMemberService,
     private val expenseService: ExpenseService,
     private val exchangeQuoteService: ExchangeQuoteService,
 ) {
     @Transactional(readOnly = true)
     fun quoteExpense(query: QuoteExpenseQuery): ExchangeQuote {
-        val event = findEventForMember(query.userId, query.eventId)
+        val event = eventAccessService.findEventFor(query.principal, query.eventId)
 
         return exchangeQuoteService.quote(
             amount = query.amount,
@@ -77,7 +76,12 @@ class ExpenseApplicationService(
 
     @Transactional
     fun addExpense(command: CreateExpenseCommand): ExpenseSummary {
-        val event = findEventForMember(command.userId, command.eventId)
+        val event = eventAccessService.findEventFor(command.principal, command.eventId)
+
+        // A guest only loads expenses paid by its own member.
+        if (command.principal is AuthGuest && command.principal.memberId != command.paidByMemberId) {
+            throw AccessDeniedException("Forbidden")
+        }
 
         val paidByMember = eventMemberService.findById(command.paidByMemberId)
         require(paidByMember != null && paidByMember.event.id == event.id) {
@@ -121,7 +125,7 @@ class ExpenseApplicationService(
 
     @Transactional
     fun updateExpense(command: UpdateExpenseCommand): ExpenseSummary {
-        val event = findEventForMember(command.userId, command.eventId)
+        val event = eventAccessService.findEventForMember(command.userId, command.eventId)
 
         val expense = expenseService.findById(command.expenseId)
         if (expense == null || expense.event.id != event.id) {
@@ -179,7 +183,7 @@ class ExpenseApplicationService(
         eventId: Long,
         expenseId: Long,
     ) {
-        val event = findEventForMember(userId, eventId)
+        val event = eventAccessService.findEventForMember(userId, eventId)
 
         val expense = expenseService.findById(expenseId)
         if (expense == null || expense.event.id != event.id) {
@@ -191,10 +195,10 @@ class ExpenseApplicationService(
 
     @Transactional(readOnly = true)
     fun listExpenses(
-        userId: Long,
+        principal: AuthPrincipal,
         eventId: Long,
     ): List<ExpenseSummary> {
-        val event = findEventForMember(userId, eventId)
+        val event = eventAccessService.findEventFor(principal, eventId)
 
         return expenseService.findByEventId(eventId).map { expense ->
             ExpenseSummary(
@@ -214,20 +218,5 @@ class ExpenseApplicationService(
                 expenseDate = expense.expenseDate,
             )
         }
-    }
-
-    private fun findEventForMember(
-        userId: Long,
-        eventId: Long,
-    ): Event {
-        val event = eventService.findById(eventId) ?: throw EventNotFoundException()
-
-        val isOwner = event.owner.id == userId
-        val isMember = isOwner || eventMemberService.isUserMemberOfEvent(eventId, userId)
-        if (!isMember) {
-            throw AccessDeniedException("Forbidden")
-        }
-
-        return event
     }
 }

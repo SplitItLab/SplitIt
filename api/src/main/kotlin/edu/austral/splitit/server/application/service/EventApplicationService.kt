@@ -2,6 +2,9 @@ package edu.austral.splitit.server.application.service
 
 import edu.austral.splitit.server.application.exception.EventDeletionConflictException
 import edu.austral.splitit.server.application.exception.EventNotFoundException
+import edu.austral.splitit.server.application.port.AuthGuest
+import edu.austral.splitit.server.application.port.AuthPrincipal
+import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.domain.service.EventMemberService
 import edu.austral.splitit.server.domain.service.EventService
 import edu.austral.splitit.server.domain.service.InviteLinkService
@@ -46,6 +49,8 @@ data class EventDetail(
     val memberCount: Long,
     val members: List<EventMemberSummary>,
     val isOwner: Boolean,
+    // The member a guest acts as; null when the requester is a user.
+    val guestMemberId: Long?,
 )
 
 data class EventMemberSummary(
@@ -61,6 +66,7 @@ class EventApplicationService(
     private val eventService: EventService,
     private val eventMemberService: EventMemberService,
     private val inviteLinkService: InviteLinkService,
+    private val eventAccessService: EventAccessService,
 ) {
     @Transactional
     fun createEvent(command: CreateEventCommand): EventSummary {
@@ -137,17 +143,10 @@ class EventApplicationService(
 
     @Transactional(readOnly = true)
     fun getEventById(
-        userId: Long,
+        principal: AuthPrincipal,
         eventId: Long,
     ): EventDetail {
-        val event = eventService.findById(eventId) ?: throw EventNotFoundException()
-
-        val isOwner = event.owner.id == userId
-        val isMember = isOwner || eventMemberService.isUserMemberOfEvent(eventId, userId)
-
-        if (!isMember) {
-            throw AccessDeniedException("Forbidden")
-        }
+        val event = eventAccessService.findEventFor(principal, eventId)
 
         val members = eventMemberService.findByEventId(eventId)
 
@@ -167,7 +166,8 @@ class EventApplicationService(
                         isGuest = member.user == null,
                     )
                 },
-            isOwner = isOwner,
+            isOwner = principal is AuthUser && event.owner.id == principal.id,
+            guestMemberId = (principal as? AuthGuest)?.memberId,
         )
     }
 

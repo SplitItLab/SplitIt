@@ -45,6 +45,7 @@ import kotlin.test.assertTrue
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 @Import(
     EventApplicationService::class,
+    EventAccessService::class,
     ExpenseApplicationService::class,
     ExchangeQuoteService::class,
     EventService::class,
@@ -213,7 +214,7 @@ class EventApplicationServiceRollbackTest(
         val summary =
             expenseApplicationService.addExpense(
                 CreateExpenseCommand(
-                    userId = requireNotNull(owner.id),
+                    principal = Helpers.authUser(requireNotNull(owner.id)),
                     eventId = event.id,
                     name = "Cena",
                     amount = BigDecimal("5000"),
@@ -235,7 +236,7 @@ class EventApplicationServiceRollbackTest(
 
         expenseApplicationService.addExpense(
             CreateExpenseCommand(
-                userId = requireNotNull(owner.id),
+                principal = Helpers.authUser(requireNotNull(owner.id)),
                 eventId = event.id,
                 name = "Cena",
                 amount = BigDecimal("5000"),
@@ -245,7 +246,7 @@ class EventApplicationServiceRollbackTest(
         )
         expenseApplicationService.addExpense(
             CreateExpenseCommand(
-                userId = requireNotNull(owner.id),
+                principal = Helpers.authUser(requireNotNull(owner.id)),
                 eventId = otherEvent.id,
                 name = "Almuerzo",
                 amount = BigDecimal("2000"),
@@ -254,7 +255,7 @@ class EventApplicationServiceRollbackTest(
             ),
         )
 
-        val expenses = expenseApplicationService.listExpenses(requireNotNull(owner.id), event.id)
+        val expenses = expenseApplicationService.listExpenses(Helpers.authUser(requireNotNull(owner.id)), event.id)
 
         assertEquals(1, expenses.size)
         assertEquals("Cena", expenses[0].name)
@@ -267,15 +268,15 @@ class EventApplicationServiceRollbackTest(
         val memberId = requireNotNull(eventMemberRepository.findAllByEventId(event.id).first().id)
         val dinner =
             expenseApplicationService.addExpense(
-                CreateExpenseCommand(ownerId, event.id, "Cena", BigDecimal("5000"), "ARS", memberId),
+                CreateExpenseCommand(Helpers.authUser(ownerId), event.id, "Cena", BigDecimal("5000"), "ARS", memberId),
             )
         expenseApplicationService.addExpense(
-            CreateExpenseCommand(ownerId, event.id, "Bebidas", BigDecimal("1500"), "ARS", memberId),
+            CreateExpenseCommand(Helpers.authUser(ownerId), event.id, "Bebidas", BigDecimal("1500"), "ARS", memberId),
         )
 
         expenseApplicationService.deleteExpense(ownerId, event.id, dinner.id)
 
-        val remaining = expenseApplicationService.listExpenses(ownerId, event.id)
+        val remaining = expenseApplicationService.listExpenses(Helpers.authUser(ownerId), event.id)
         assertEquals(listOf("Bebidas"), remaining.map { it.name })
         assertEquals(0, BigDecimal("1500").compareTo(remaining.sumOf { it.baseAmount }))
         assertFailsWith<ExpenseNotFoundException> {

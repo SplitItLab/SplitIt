@@ -32,11 +32,13 @@ class ExpenseApplicationServiceTest {
 
     private val expenseApplicationService =
         ExpenseApplicationService(
-            eventService = eventService,
+            eventAccessService = EventAccessService(eventService, eventMemberService),
             eventMemberService = eventMemberService,
             expenseService = expenseService,
             exchangeQuoteService = ExchangeQuoteService(exchangeRateProvider),
         )
+
+    private val authUser = Helpers.authUser(1L)
 
     private val user = Helpers.user(name = "Mateo", email = "mateo@example.com", passwordHash = "hash")
 
@@ -74,7 +76,7 @@ class ExpenseApplicationServiceTest {
         val summary =
             expenseApplicationService.addExpense(
                 CreateExpenseCommand(
-                    userId = 1L,
+                    principal = authUser,
                     eventId = 10L,
                     name = "Cena",
                     amount = BigDecimal("5000"),
@@ -103,7 +105,7 @@ class ExpenseApplicationServiceTest {
         assertFailsWith<EventNotFoundException> {
             expenseApplicationService.addExpense(
                 CreateExpenseCommand(
-                    userId = 1L,
+                    principal = authUser,
                     eventId = 999L,
                     name = "Cena",
                     amount = BigDecimal("5000"),
@@ -133,7 +135,7 @@ class ExpenseApplicationServiceTest {
         assertFailsWith<AccessDeniedException> {
             expenseApplicationService.addExpense(
                 CreateExpenseCommand(
-                    userId = 1L,
+                    principal = authUser,
                     eventId = 30L,
                     name = "Cena",
                     amount = BigDecimal("5000"),
@@ -164,7 +166,7 @@ class ExpenseApplicationServiceTest {
         assertFailsWith<IllegalArgumentException> {
             expenseApplicationService.addExpense(
                 CreateExpenseCommand(
-                    userId = 1L,
+                    principal = authUser,
                     eventId = 10L,
                     name = "Cena",
                     amount = BigDecimal("5000"),
@@ -190,7 +192,7 @@ class ExpenseApplicationServiceTest {
         assertFailsWith<IllegalArgumentException> {
             expenseApplicationService.addExpense(
                 CreateExpenseCommand(
-                    userId = 1L,
+                    principal = authUser,
                     eventId = 10L,
                     name = "Cena",
                     amount = BigDecimal("5000"),
@@ -239,7 +241,7 @@ class ExpenseApplicationServiceTest {
         val summary =
             expenseApplicationService.addExpense(
                 CreateExpenseCommand(
-                    userId = 1L,
+                    principal = authUser,
                     eventId = 10L,
                     name = "Taxi",
                     amount = BigDecimal("10"),
@@ -269,7 +271,7 @@ class ExpenseApplicationServiceTest {
         assertFailsWith<ExchangeRateUnavailableException> {
             expenseApplicationService.addExpense(
                 CreateExpenseCommand(
-                    userId = 1L,
+                    principal = authUser,
                     eventId = 10L,
                     name = "Taxi",
                     amount = BigDecimal("10"),
@@ -296,7 +298,7 @@ class ExpenseApplicationServiceTest {
         assertFailsWith<IllegalArgumentException> {
             expenseApplicationService.addExpense(
                 CreateExpenseCommand(
-                    userId = 1L,
+                    principal = authUser,
                     eventId = 10L,
                     name = "Cena",
                     amount = BigDecimal("5000"),
@@ -337,7 +339,7 @@ class ExpenseApplicationServiceTest {
         whenever(eventMemberService.isUserMemberOfEvent(20L, 1L)).thenReturn(true)
         whenever(expenseService.findByEventId(20L)).thenReturn(listOf(expense))
 
-        val result = expenseApplicationService.listExpenses(userId = 1L, eventId = 20L)
+        val result = expenseApplicationService.listExpenses(principal = authUser, eventId = 20L)
 
         assertEquals(1, result.size)
         assertEquals(34L, result[0].id)
@@ -352,7 +354,7 @@ class ExpenseApplicationServiceTest {
         whenever(eventService.findById(999L)).thenReturn(null)
 
         assertFailsWith<EventNotFoundException> {
-            expenseApplicationService.listExpenses(userId = 1L, eventId = 999L)
+            expenseApplicationService.listExpenses(principal = authUser, eventId = 999L)
         }
 
         verify(expenseService, never()).findByEventId(any())
@@ -373,7 +375,7 @@ class ExpenseApplicationServiceTest {
         whenever(eventMemberService.isUserMemberOfEvent(30L, 1L)).thenReturn(false)
 
         assertFailsWith<AccessDeniedException> {
-            expenseApplicationService.listExpenses(userId = 1L, eventId = 30L)
+            expenseApplicationService.listExpenses(principal = authUser, eventId = 30L)
         }
 
         verify(expenseService, never()).findByEventId(any())
@@ -391,7 +393,7 @@ class ExpenseApplicationServiceTest {
 
         val quote =
             expenseApplicationService.quoteExpense(
-                QuoteExpenseQuery(userId = 1L, eventId = 10L, amount = BigDecimal("10"), currency = "usd"),
+                QuoteExpenseQuery(principal = authUser, eventId = 10L, amount = BigDecimal("10"), currency = "usd"),
             )
 
         assertEquals(BigDecimal("10"), quote.originalAmount)
@@ -407,7 +409,7 @@ class ExpenseApplicationServiceTest {
 
         assertFailsWith<EventNotFoundException> {
             expenseApplicationService.quoteExpense(
-                QuoteExpenseQuery(userId = 1L, eventId = 999L, amount = BigDecimal("10"), currency = "USD"),
+                QuoteExpenseQuery(principal = authUser, eventId = 999L, amount = BigDecimal("10"), currency = "USD"),
             )
         }
 
@@ -430,7 +432,7 @@ class ExpenseApplicationServiceTest {
 
         assertFailsWith<AccessDeniedException> {
             expenseApplicationService.quoteExpense(
-                QuoteExpenseQuery(userId = 1L, eventId = 30L, amount = BigDecimal("10"), currency = "USD"),
+                QuoteExpenseQuery(principal = authUser, eventId = 30L, amount = BigDecimal("10"), currency = "USD"),
             )
         }
 
