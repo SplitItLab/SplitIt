@@ -3,10 +3,13 @@ package edu.austral.splitit.server.infrastructure.security
 import edu.austral.splitit.server.application.port.AuthGuest
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
+import edu.austral.splitit.server.application.service.GuestAccessService
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.Cookie
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -22,7 +25,11 @@ import kotlin.test.assertTrue
 
 class JwtAuthenticationFilterTest {
     private val tokenProvider: TokenProvider = mock()
-    private val filter = JwtAuthenticationFilter(tokenProvider, COOKIE_NAME)
+    private val guestAccessService: GuestAccessService =
+        mock {
+            on { isActive(any()) } doReturn true
+        }
+    private val filter = JwtAuthenticationFilter(tokenProvider, guestAccessService, COOKIE_NAME)
     private val realTokenProvider = JwtTokenProvider(SECRET, EXPIRATION_HOURS, Clock.systemUTC())
 
     @AfterEach
@@ -134,6 +141,21 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    fun `a guest credential stops authenticating once its member has an account`() {
+        whenever(tokenProvider.parseGuest("guest-token")).thenReturn(juanGuest())
+        whenever(guestAccessService.isActive(juanGuest())).thenReturn(false)
+        val chain = mock<FilterChain>()
+        val request = MockHttpServletRequest()
+        request.setCookies(Cookie(GUEST_COOKIE_NAME, "guest-token"))
+        val response = MockHttpServletResponse()
+
+        filter.doFilter(request, response, chain)
+
+        assertNull(SecurityContextHolder.getContext().authentication)
+        verify(chain).doFilter(request, response)
+    }
+
+    @Test
     fun `the user session wins over a guest credential`() {
         whenever(tokenProvider.parse("good-token")).thenReturn(adaAuthUser())
         whenever(tokenProvider.parseGuest("guest-token")).thenReturn(juanGuest())
@@ -148,7 +170,7 @@ class JwtAuthenticationFilterTest {
 
     @Test
     fun `a guest token in the session cookie does not authenticate`() {
-        val realFilter = JwtAuthenticationFilter(realTokenProvider, COOKIE_NAME)
+        val realFilter = JwtAuthenticationFilter(realTokenProvider, guestAccessService, COOKIE_NAME)
         val request = MockHttpServletRequest()
         request.setCookies(Cookie(COOKIE_NAME, realTokenProvider.issueGuest(juanGuest())))
 
@@ -159,7 +181,7 @@ class JwtAuthenticationFilterTest {
 
     @Test
     fun `a user token in the guest cookie does not authenticate`() {
-        val realFilter = JwtAuthenticationFilter(realTokenProvider, COOKIE_NAME)
+        val realFilter = JwtAuthenticationFilter(realTokenProvider, guestAccessService, COOKIE_NAME)
         val request = MockHttpServletRequest()
         request.setCookies(Cookie(GUEST_COOKIE_NAME, realTokenProvider.issue(adaAuthUser())))
 
@@ -170,7 +192,7 @@ class JwtAuthenticationFilterTest {
 
     @Test
     fun `a guest bearer token authenticates as a guest, never as a user`() {
-        val realFilter = JwtAuthenticationFilter(realTokenProvider, COOKIE_NAME)
+        val realFilter = JwtAuthenticationFilter(realTokenProvider, guestAccessService, COOKIE_NAME)
         val request = MockHttpServletRequest()
         request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer ${realTokenProvider.issueGuest(juanGuest())}")
 
@@ -182,7 +204,7 @@ class JwtAuthenticationFilterTest {
 
     @Test
     fun `a user bearer token authenticates as a user, never as a guest`() {
-        val realFilter = JwtAuthenticationFilter(realTokenProvider, COOKIE_NAME)
+        val realFilter = JwtAuthenticationFilter(realTokenProvider, guestAccessService, COOKIE_NAME)
         val request = MockHttpServletRequest()
         request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer ${realTokenProvider.issue(adaAuthUser())}")
 

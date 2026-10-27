@@ -1,6 +1,7 @@
 package edu.austral.splitit.server.infrastructure.security
 
 import edu.austral.splitit.server.application.port.TokenProvider
+import edu.austral.splitit.server.application.service.GuestAccessService
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
@@ -19,6 +20,7 @@ const val GUEST_ROLE = "GUEST"
 
 class JwtAuthenticationFilter(
     private val tokenProvider: TokenProvider,
+    private val guestAccessService: GuestAccessService,
     private val cookieName: String,
     private val securityContextRepository: SecurityContextRepository = RequestAttributeSecurityContextRepository(),
 ) : OncePerRequestFilter() {
@@ -53,6 +55,7 @@ class JwtAuthenticationFilter(
         val guest =
             listOfNotNull(cookieToken(request, GUEST_COOKIE_NAME), bearerToken(request))
                 .firstNotNullOfOrNull { tokenProvider.parseGuest(it) }
+                ?.takeIf { guestAccessService.isActive(it) }
                 ?: return null
         return UsernamePasswordAuthenticationToken(guest, null, listOf(SimpleGrantedAuthority("ROLE_$GUEST_ROLE")))
     }

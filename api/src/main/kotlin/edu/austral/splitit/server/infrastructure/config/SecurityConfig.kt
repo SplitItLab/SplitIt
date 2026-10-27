@@ -1,6 +1,7 @@
 package edu.austral.splitit.server.infrastructure.config
 
 import edu.austral.splitit.server.application.port.TokenProvider
+import edu.austral.splitit.server.application.service.GuestAccessService
 import edu.austral.splitit.server.infrastructure.security.GUEST_ROLE
 import edu.austral.splitit.server.infrastructure.security.JwtAuthenticationFilter
 import edu.austral.splitit.server.infrastructure.security.USER_ROLE
@@ -26,6 +27,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableMethodSecurity
 class SecurityConfig(
     private val tokenProvider: TokenProvider,
+    private val guestAccessService: GuestAccessService,
     @Value("\${auth.cookie.name}") private val cookieName: String,
 ) {
     @Bean
@@ -33,7 +35,7 @@ class SecurityConfig(
 
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
-        val jwtAuthenticationFilter = JwtAuthenticationFilter(tokenProvider, cookieName)
+        val jwtAuthenticationFilter = JwtAuthenticationFilter(tokenProvider, guestAccessService, cookieName)
         http
             .csrf { it.disable() }
             .cors { }

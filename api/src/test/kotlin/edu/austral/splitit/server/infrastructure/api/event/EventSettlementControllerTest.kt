@@ -3,6 +3,7 @@ package edu.austral.splitit.server.infrastructure.api.event
 import edu.austral.splitit.server.application.exception.EventNotFoundException
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
+import edu.austral.splitit.server.application.service.GuestAccessService
 import edu.austral.splitit.server.application.service.SettlementApplicationService
 import edu.austral.splitit.server.application.service.SuggestedPaymentMemberSummary
 import edu.austral.splitit.server.application.service.SuggestedPaymentSummary
@@ -51,6 +52,9 @@ class EventSettlementControllerTest(
 
     @MockitoBean
     private lateinit var tokenProvider: TokenProvider
+
+    @MockitoBean
+    private lateinit var guestAccessService: GuestAccessService
 
     private val authUser =
         AuthUser(

@@ -10,6 +10,7 @@ import edu.austral.splitit.server.application.service.EventApplicationService
 import edu.austral.splitit.server.application.service.ExpenseApplicationService
 import edu.austral.splitit.server.application.service.ExpensePayerSummary
 import edu.austral.splitit.server.application.service.ExpenseSummary
+import edu.austral.splitit.server.application.service.GuestAccessService
 import edu.austral.splitit.server.application.service.QuoteExpenseQuery
 import edu.austral.splitit.server.application.service.UpdateExpenseCommand
 import edu.austral.splitit.server.domain.model.event.Currency
@@ -73,6 +74,9 @@ class EventExpensesControllerTest(
 
     @MockitoBean
     private lateinit var tokenProvider: TokenProvider
+
+    @MockitoBean
+    private lateinit var guestAccessService: GuestAccessService
 
     private val authUser =
         AuthUser(

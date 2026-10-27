@@ -5,6 +5,7 @@ import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.BalanceApplicationService
 import edu.austral.splitit.server.application.service.BalanceSummary
+import edu.austral.splitit.server.application.service.GuestAccessService
 import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
 import edu.austral.splitit.server.infrastructure.config.SecurityConfig
 import jakarta.servlet.http.Cookie
@@ -50,6 +51,9 @@ class EventBalancesControllerTest(
 
     @MockitoBean
     private lateinit var tokenProvider: TokenProvider
+
+    @MockitoBean
+    private lateinit var guestAccessService: GuestAccessService
 
     private val authUser =
         AuthUser(

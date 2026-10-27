@@ -11,6 +11,7 @@ import edu.austral.splitit.server.application.service.EventDetail
 import edu.austral.splitit.server.application.service.EventMemberSummary
 import edu.austral.splitit.server.application.service.EventSummary
 import edu.austral.splitit.server.application.service.ExpenseApplicationService
+import edu.austral.splitit.server.application.service.GuestAccessService
 import edu.austral.splitit.server.application.service.UpdateEventCommand
 import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
 import edu.austral.splitit.server.infrastructure.config.SecurityConfig
@@ -68,6 +69,9 @@ class EventControllerTest(
 
     @MockitoBean
     private lateinit var tokenProvider: TokenProvider
+
+    @MockitoBean
+    private lateinit var guestAccessService: GuestAccessService
 
     private val authUser =
         AuthUser(
@@ -672,6 +676,7 @@ class EventControllerTest(
     fun `listing events is forbidden for a guest`() {
         whenever(tokenProvider.parseGuest("guest-token"))
             .thenReturn(AuthGuest(eventId = 10L, memberId = 30L, name = "Juan"))
+        whenever(guestAccessService.isActive(any())).thenReturn(true)
 
         mockMvc
             .perform(get("/api/events").cookie(Cookie("guest_token", "guest-token")))
@@ -685,6 +690,7 @@ class EventControllerTest(
     fun `creating an event is forbidden for a guest`() {
         whenever(tokenProvider.parseGuest("guest-token"))
             .thenReturn(AuthGuest(eventId = 10L, memberId = 30L, name = "Juan"))
+        whenever(guestAccessService.isActive(any())).thenReturn(true)
 
         mockMvc
             .perform(
