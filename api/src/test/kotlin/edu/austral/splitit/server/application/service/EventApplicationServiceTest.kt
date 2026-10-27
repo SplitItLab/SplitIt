@@ -311,6 +311,27 @@ class EventApplicationServiceTest {
     }
 
     @Test
+    fun `getEventById hides the members' emails from a guest`() {
+        val event =
+            Event
+                .create(owner = user, name = "Viaje a Bariloche", baseCurrency = "ARS")
+                .apply { id = 10L }
+        val owner = EventMember.create(event, user.name, user).apply { id = 20L }
+
+        whenever(eventService.findById(10L)).thenReturn(event)
+        whenever(eventMemberService.findByEventId(10L)).thenReturn(listOf(owner))
+
+        val detail =
+            eventApplicationService.getEventById(
+                principal = AuthGuest(eventId = 10L, memberId = 30L, name = "Juan"),
+                eventId = 10L,
+            )
+
+        assertNull(detail.members.single().email)
+        assertFalse(detail.members.single().isGuest)
+    }
+
+    @Test
     fun `getEventById returns event detail when requested by linked member`() {
         val otherOwner =
             Helpers

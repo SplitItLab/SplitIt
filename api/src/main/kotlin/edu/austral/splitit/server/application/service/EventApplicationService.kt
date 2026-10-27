@@ -162,7 +162,8 @@ class EventApplicationService(
                     EventMemberSummary(
                         id = requireNotNull(member.id),
                         name = member.displayName,
-                        email = member.user?.email,
+                        // A guest only holds an invite link, so it never sees the members' emails.
+                        email = member.user?.email?.takeIf { principal is AuthUser },
                         isGuest = member.user == null,
                     )
                 },
