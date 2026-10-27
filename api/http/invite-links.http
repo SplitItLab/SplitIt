@@ -11,6 +11,7 @@
 @baseUrl = http://localhost:8080
 @ownerEmail = guest.owner-{{$timestamp}}@example.com
 @ownerPassword = una-clave-segura
+@juanEmail = guest.juan-{{$timestamp}}@example.com
 
 ### 1. Seed — Crear cuenta del dueño
 # @no-cookie-jar
@@ -418,5 +419,366 @@ client.test("expira las dos cookies", function () {
     assertNoContent(client, response)
     assertSessionCookieCleared(client, response, "auth_token")
     assertSessionCookieCleared(client, response, "guest_token")
+})
+%}
+
+### 24. Events — Invitado ve su evento y sabe qué integrante es (200)
+# @no-cookie-jar
+GET {{baseUrl}}/api/events/{{guestEventId}}
+Accept: application/json
+Cookie: guest_token={{guestToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("el invitado ve el evento como Juan, sin ser dueño", function () {
+    assertStatus(client, response, 200)
+    const event = jsonBody(response)
+    client.assert(String(event.id) === client.global.get("guestEventId"), "Expected the guest event")
+    client.assert(event.isOwner === false, "A guest is never the owner")
+    client.assert(String(event.guestMemberId) === client.global.get("juanMemberId"), "Expected Juan as the guest member")
+})
+%}
+
+### 25. Events — El dueño no figura como invitado (200)
+# @no-cookie-jar
+GET {{baseUrl}}/api/events/{{guestEventId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("para el dueño no hay integrante de invitado", function () {
+    assertStatus(client, response, 200)
+    client.assert(jsonBody(response).isOwner === true, "Expected the owner")
+    client.assert(jsonBody(response).guestMemberId === null, "A user has no guest member")
+})
+%}
+
+### 26. Expenses — Invitado carga un gasto pagado por su integrante (201)
+# @no-cookie-jar
+POST {{baseUrl}}/api/events/{{guestEventId}}/expenses
+Content-Type: application/json
+Accept: application/json
+Cookie: guest_token={{guestToken}}
+
+{
+  "name": "Helado",
+  "amount": 3000,
+  "currency": "ARS",
+  "paidByMemberId": {{juanMemberId}}
+}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("el invitado carga lo que pagó Juan", function () {
+    assertStatus(client, response, 201)
+    client.assert(String(jsonBody(response).paidByMember.id) === client.global.get("juanMemberId"), "Expected Juan as payer")
+    client.global.set("guestExpenseId", String(jsonBody(response).id))
+})
+%}
+
+### 27. Expenses — Invitado carga un gasto a nombre de otro (403)
+# @no-cookie-jar
+POST {{baseUrl}}/api/events/{{guestEventId}}/expenses
+Content-Type: application/json
+Accept: application/json
+Cookie: guest_token={{guestToken}}
+
+{
+  "name": "Nafta",
+  "amount": 10000,
+  "currency": "ARS",
+  "paidByMemberId": {{ownerMemberId}}
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("el invitado no carga a nombre del dueño", function () {
+    assertError(client, response, 403, "Forbidden")
+})
+%}
+
+### 28. Expenses — Invitado lista los gastos (200)
+# @no-cookie-jar
+GET {{baseUrl}}/api/events/{{guestEventId}}/expenses
+Accept: application/json
+Cookie: guest_token={{guestToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("el invitado ve el gasto que cargó", function () {
+    assertStatus(client, response, 200)
+    const expense = jsonBody(response).find(e => String(e.id) === client.global.get("guestExpenseId"))
+    client.assert(expense !== undefined, "Expected the guest expense in the list")
+})
+%}
+
+### 29. Expenses — Invitado cotiza en otra moneda (200)
+# @no-cookie-jar
+GET {{baseUrl}}/api/events/{{guestEventId}}/expenses/quote?amount=10&currency=USD
+Accept: application/json
+Cookie: guest_token={{guestToken}}
+
+> {%
+import { assertStatus } from './scripts/assert.js'
+
+client.test("el invitado cotiza", function () {
+    assertStatus(client, response, 200)
+})
+%}
+
+### 30. Balances — Invitado ve los saldos (200)
+# @no-cookie-jar
+GET {{baseUrl}}/api/events/{{guestEventId}}/balances
+Accept: application/json
+Cookie: guest_token={{guestToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("el invitado ve el saldo de Juan", function () {
+    assertStatus(client, response, 200)
+    const juan = jsonBody(response).find(b => String(b.memberId) === client.global.get("juanMemberId"))
+    client.assert(juan !== undefined && juan.netBalance > 0, "Juan paid, so he is owed money")
+})
+%}
+
+### 31. Suggested payments — Invitado ve los pagos sugeridos (200)
+# @no-cookie-jar
+GET {{baseUrl}}/api/events/{{guestEventId}}/suggested-payments
+Accept: application/json
+Cookie: guest_token={{guestToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("el invitado ve a quién le pagan", function () {
+    assertStatus(client, response, 200)
+    const toJuan = jsonBody(response).filter(p => String(p.toMember.id) === client.global.get("juanMemberId"))
+    client.assert(toJuan.length > 0, "Expected payments to Juan")
+})
+%}
+
+### 32. Expenses — Invitado edita su gasto (403)
+# @no-cookie-jar
+PUT {{baseUrl}}/api/events/{{guestEventId}}/expenses/{{guestExpenseId}}
+Content-Type: application/json
+Accept: application/json
+Cookie: guest_token={{guestToken}}
+
+{
+  "name": "Helado doble",
+  "amount": 6000,
+  "currency": "ARS",
+  "paidByMemberId": {{juanMemberId}}
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("el invitado no edita gastos, ni los suyos", function () {
+    assertError(client, response, 403, "Forbidden")
+})
+%}
+
+### 33. Expenses — Invitado borra su gasto (403)
+# @no-cookie-jar
+DELETE {{baseUrl}}/api/events/{{guestEventId}}/expenses/{{guestExpenseId}}
+Accept: application/json
+Cookie: guest_token={{guestToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("el invitado no borra gastos, ni los suyos", function () {
+    assertError(client, response, 403, "Forbidden")
+})
+%}
+
+### 34. Events — Invitado edita el evento (403)
+# @no-cookie-jar
+PUT {{baseUrl}}/api/events/{{guestEventId}}
+Content-Type: application/json
+Accept: application/json
+Cookie: guest_token={{guestToken}}
+
+{
+  "name": "Evento renombrado"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("el invitado no edita el evento", function () {
+    assertError(client, response, 403, "Forbidden")
+})
+%}
+
+### 35. Events — Invitado borra el evento (403)
+# @no-cookie-jar
+DELETE {{baseUrl}}/api/events/{{guestEventId}}
+Accept: application/json
+Cookie: guest_token={{guestToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("el invitado no borra el evento", function () {
+    assertError(client, response, 403, "Forbidden")
+})
+%}
+
+### 36. Invite link — Invitado genera el link (403)
+# @no-cookie-jar
+POST {{baseUrl}}/api/events/{{guestEventId}}/invite-link
+Accept: application/json
+Cookie: guest_token={{guestToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("el invitado no genera el link", function () {
+    assertError(client, response, 403, "Forbidden")
+})
+%}
+
+### 37. Events — Invitado entra a otro evento (403)
+# @no-cookie-jar
+GET {{baseUrl}}/api/events/{{otherEventId}}
+Accept: application/json
+Cookie: guest_token={{guestToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("la credencial solo sirve para su evento", function () {
+    assertError(client, response, 403, "Forbidden")
+})
+%}
+
+### 38. Expenses — Invitado lista gastos de otro evento (403)
+# @no-cookie-jar
+GET {{baseUrl}}/api/events/{{otherEventId}}/expenses
+Accept: application/json
+Cookie: guest_token={{guestToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("tampoco ve gastos de otro evento", function () {
+    assertError(client, response, 403, "Forbidden")
+})
+%}
+
+### 39. Login — Iniciar sesión borra la credencial de invitado (200)
+# @no-cookie-jar
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+Cookie: guest_token={{guestToken}}
+
+{
+  "email": "{{ownerEmail}}",
+  "password": "{{ownerPassword}}"
+}
+
+> {%
+import { assertSessionCookieCleared, assertStatus } from './scripts/assert.js'
+
+client.test("expira guest_token al iniciar sesión", function () {
+    assertStatus(client, response, 200)
+    assertSessionCookieCleared(client, response, "guest_token")
+})
+%}
+
+### 40. Seed — Juan crea su cuenta
+# @no-cookie-jar
+POST {{baseUrl}}/api/auth/register
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Juan",
+  "email": "{{juanEmail}}",
+  "password": "{{ownerPassword}}"
+}
+
+> {%
+import { assertStatus } from './scripts/assert.js'
+
+client.test("crea la cuenta de Juan", function () {
+    assertStatus(client, response, 201)
+})
+%}
+
+### 41. Login — Juan
+# @no-cookie-jar
+POST {{baseUrl}}/api/auth/login
+Content-Type: application/json
+Accept: application/json
+
+{
+  "email": "{{juanEmail}}",
+  "password": "{{ownerPassword}}"
+}
+
+> {%
+import { assertStatus, authTokenFromSetCookie } from './scripts/assert.js'
+
+client.test("Juan inicia sesión", function () {
+    assertStatus(client, response, 200)
+})
+client.global.set("juanAuthToken", authTokenFromSetCookie(response, "auth_token"))
+%}
+
+### 42. Invitations — Juan vincula su cuenta al integrante (200)
+# @no-cookie-jar
+POST {{baseUrl}}/api/invitations/{{guestInviteToken}}/link
+Content-Type: application/json
+Accept: application/json
+Cookie: auth_token={{juanAuthToken}}
+
+{
+  "memberId": {{juanMemberId}}
+}
+
+> {%
+import { assertStatus } from './scripts/assert.js'
+
+client.test("Juan queda vinculado", function () {
+    assertStatus(client, response, 200)
+})
+%}
+
+### 43. Events — La credencial de invitado ya no sirve tras vincular (401)
+# @no-cookie-jar
+GET {{baseUrl}}/api/events/{{guestEventId}}
+Accept: application/json
+Cookie: guest_token={{guestToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("la credencial deja de servir sin esperar a que venza", function () {
+    assertError(client, response, 401, "Unauthorized")
+})
+%}
+
+### 44. Session — La credencial de invitado ya no es una sesión (401)
+# @no-cookie-jar
+GET {{baseUrl}}/api/auth/session
+Accept: application/json
+Cookie: guest_token={{guestToken}}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("la sesión de invitado ya no existe", function () {
+    assertError(client, response, 401, "Unauthorized")
 })
 %}
