@@ -8,8 +8,10 @@ import edu.austral.splitit.server.application.service.SignUpService
 import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
 import edu.austral.splitit.server.infrastructure.security.SessionCookieWriter
+import jakarta.servlet.http.Cookie
 import org.hamcrest.Matchers.allOf
 import org.hamcrest.Matchers.containsString
+import org.hamcrest.Matchers.hasItem
 import org.hamcrest.Matchers.not
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -103,6 +105,26 @@ class LoginControllerTest(
                         containsString("Max-Age=28800"),
                         not(containsString("Secure")),
                     ),
+                ),
+            )
+    }
+
+    @Test
+    fun `login expires the guest credential`() {
+        whenever(loginService.login(Helpers.emailOf("ada@example.com"), "una-clave-segura")).thenReturn(ada())
+        whenever(tokenProvider.issue(any())).thenReturn("signed.jwt.token")
+
+        mockMvc
+            .perform(
+                post("/api/auth/login")
+                    .cookie(Cookie("guest_token", "guest.jwt.token"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"email":"ada@example.com","password":"una-clave-segura"}"""),
+            ).andExpect(status().isOk)
+            .andExpect(
+                header().stringValues(
+                    HttpHeaders.SET_COOKIE,
+                    hasItem(allOf(containsString("guest_token=;"), containsString("Max-Age=0"))),
                 ),
             )
     }

@@ -30,6 +30,21 @@ class SessionCookieWriterTest {
     }
 
     @Test
+    fun `write expires the guest credential so an expired session never falls back to guest`() {
+        val response = MockHttpServletResponse()
+
+        localWriter().write(response, TOKEN)
+
+        assertThat(
+            response.getHeaders(HttpHeaders.SET_COOKIE),
+            contains(
+                allOf(containsString("auth_token=$TOKEN"), containsString("Max-Age=28800")),
+                allOf(containsString("guest_token=;"), containsString("Max-Age=0"), containsString("HttpOnly")),
+            ),
+        )
+    }
+
+    @Test
     fun `clear expires the same cookie attributes used by write`() {
         val response = MockHttpServletResponse()
 
