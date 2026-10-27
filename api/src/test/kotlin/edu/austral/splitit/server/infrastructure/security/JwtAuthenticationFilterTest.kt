@@ -156,6 +156,21 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    fun `a valid guest bearer token authenticates when the guest cookie is no longer active`() {
+        val staleGuest = AuthGuest(eventId = 10L, memberId = 31L, name = "Sofi")
+        whenever(tokenProvider.parseGuest("stale-guest-token")).thenReturn(staleGuest)
+        whenever(tokenProvider.parseGuest("guest-token")).thenReturn(juanGuest())
+        whenever(guestAccessService.isActive(staleGuest)).thenReturn(false)
+        val request = MockHttpServletRequest()
+        request.setCookies(Cookie(GUEST_COOKIE_NAME, "stale-guest-token"))
+        request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer guest-token")
+
+        filter.doFilter(request, MockHttpServletResponse(), mock<FilterChain>())
+
+        assertEquals(juanGuest(), SecurityContextHolder.getContext().authentication?.principal)
+    }
+
+    @Test
     fun `the user session wins over a guest credential`() {
         whenever(tokenProvider.parse("good-token")).thenReturn(adaAuthUser())
         whenever(tokenProvider.parseGuest("guest-token")).thenReturn(juanGuest())

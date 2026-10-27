@@ -54,8 +54,9 @@ class JwtAuthenticationFilter(
     private fun authenticateGuest(request: HttpServletRequest): UsernamePasswordAuthenticationToken? {
         val guest =
             listOfNotNull(cookieToken(request, GUEST_COOKIE_NAME), bearerToken(request))
-                .firstNotNullOfOrNull { tokenProvider.parseGuest(it) }
-                ?.takeIf { guestAccessService.isActive(it) }
+                .firstNotNullOfOrNull { token ->
+                    tokenProvider.parseGuest(token)?.takeIf { guestAccessService.isActive(it) }
+                }
                 ?: return null
         return UsernamePasswordAuthenticationToken(guest, null, listOf(SimpleGrantedAuthority("ROLE_$GUEST_ROLE")))
     }
