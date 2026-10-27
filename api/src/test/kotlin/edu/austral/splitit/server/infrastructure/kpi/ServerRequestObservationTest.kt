@@ -101,6 +101,9 @@ class ServerRequestObservationTest(
         doThrow(DataAccessResourceFailureException("database down")).whenever(metrics).record(any())
 
         mockMvc.perform(get("/api/status")).andExpect(status().isOk())
+
+        // Wait for the async insert attempt, or it lands in the next test after the mock is reset.
+        verify(metrics, timeout(TIMEOUT_MILLIS)).record(any())
     }
 
     private fun recorded(): RequestSample {
