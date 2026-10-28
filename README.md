@@ -103,6 +103,15 @@ cd api
 ./gradlew test
 ```
 
+## Despliegue a producción (Azure)
+
+Cada push a `main` con el pipeline en verde despliega solo lo que cambió: el job `deploy` de `api-pipeline.yml` actualiza la Container App `ca-splitit-api` y el de `web-pipeline.yml` el App Service `app-splitit-web`, ambos con la imagen `sha-<commit>` de GHCR. Solo se cambia la imagen; las variables y secretos de Azure no se tocan. Las PR no despliegan (QA y previews siguen en Vercel).
+
+Para volver atrás:
+
+- **API**: en Azure, Container App → *Revisions* → activar la revisión anterior, o `az containerapp update -n ca-splitit-api -g <rg> --image ghcr.io/splititlab/splitit/api:sha-<commit>`.
+- **Web**: App Service → *Deployment Center* → poner el tag `sha-<commit>` anterior, o `az webapp config container set -n app-splitit-web -g <rg> --container-image-name ghcr.io/splititlab/splitit/web:sha-<commit>`.
+
 ---
 
 Laboratorio II · Universidad Austral
