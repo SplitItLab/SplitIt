@@ -8,13 +8,13 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
 interface EventMemberRepository : JpaRepository<EventMember, Long> {
-    fun countByEventId(eventId: Long): Long
-
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT em FROM EventMember em WHERE em.id = :id")
     fun findByIdForUpdate(
         @Param("id") id: Long,
     ): EventMember?
+
+    fun countByEventId(eventId: Long): Long
 
     @Query(
         """

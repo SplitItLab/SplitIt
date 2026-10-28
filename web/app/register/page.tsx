@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useForm } from "react-hook-form";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Field, FieldLabel, FieldError, FieldGroup } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,26 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LoadingIndicator } from "@/components/loading-indicator";
 import { AuthLayout } from "@/components/auth-layout";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { registerUser, RegisterError, RegisterInput, registerSchema } from "@/lib/auth";
+import {
+  registerUser,
+  RegisterError,
+  RegisterInput,
+  registerSchema,
+  withRedirect,
+} from "@/lib/auth";
 import { showAppToast } from "@/lib/toast";
 
 export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
+  );
+}
+
+function RegisterForm() {
   const router = useRouter();
+  const loginPath = withRedirect("/login", useSearchParams().get("redirect"));
   const [generalError, setGeneralError] = useState<string | null>(null);
   const {
     register,
@@ -29,7 +44,7 @@ export default function RegisterPage() {
     try {
       await registerUser(data);
       showAppToast("success", "¡Cuenta creada con éxito!");
-      router.push("/login");
+      router.push(loginPath);
     } catch (err) {
       if (err instanceof RegisterError) {
         if (err.type === "email-taken") {
@@ -48,7 +63,7 @@ export default function RegisterPage() {
       heroDescription="Creá tu cuenta, sumá a tu grupo y olvidate de las cuentas pendientes."
       title="Crea una cuenta"
       description="Ingresá mail y contraseña para crear tu cuenta"
-      footer={{ text: "¿Ya tenés cuenta?", linkLabel: "Iniciá sesión", href: "/login" }}
+      footer={{ text: "¿Ya tenés cuenta?", linkLabel: "Iniciá sesión", href: loginPath }}
     >
       <form onSubmit={handleSubmit(onSubmit)} noValidate>
         <FieldGroup>

@@ -146,8 +146,19 @@ export function LinkMemberForm({ token, user }: { token: string; user: SessionUs
     );
   }
 
+  const noMemberAvailable = state.members.every((member) => member.isLinked);
+
   return (
     <form className="flex flex-col gap-[10px]" onSubmit={handleSubmit} noValidate>
+      {noMemberAvailable && (
+        <div className="bg-soft-info flex gap-2 rounded-[16px] p-4">
+          <Info aria-hidden="true" className="text-info mt-1 size-4 shrink-0" />
+          <p className="text-muted-foreground text-sm leading-6 font-medium">
+            Todos los integrantes ya tienen una cuenta vinculada
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-col gap-[6px]">
         <label htmlFor="link-member" className="text-foreground text-sm font-medium">
           ¿Quién sos en este evento?
@@ -182,7 +193,11 @@ export function LinkMemberForm({ token, user }: { token: string; user: SessionUs
         </Alert>
       )}
 
-      <Button type="submit" disabled={submitting} className={ACTION_CLASS_NAME}>
+      <Button
+        type="submit"
+        disabled={submitting || noMemberAvailable}
+        className={ACTION_CLASS_NAME}
+      >
         {submitting ? (
           <LoadingIndicator message="Vinculando tu cuenta…" />
         ) : (
