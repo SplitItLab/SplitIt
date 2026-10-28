@@ -2,6 +2,7 @@ package edu.austral.splitit.server.application.service
 
 import edu.austral.splitit.server.Helpers
 import edu.austral.splitit.server.application.exception.EventNotFoundException
+import edu.austral.splitit.server.application.port.AuthGuest
 import edu.austral.splitit.server.domain.model.event.Event
 import edu.austral.splitit.server.domain.model.event.EventMember
 import edu.austral.splitit.server.domain.model.event.InviteLink
@@ -36,6 +37,7 @@ class EventApplicationServiceTest {
             eventService = eventService,
             eventMemberService = eventMemberService,
             inviteLinkService = inviteLinkService,
+            eventAccessService = EventAccessService(eventService, eventMemberService),
         )
 
     private val user = Helpers.user(name = "Mateo", email = "mateo@example.com", passwordHash = "hash")
@@ -258,7 +260,7 @@ class EventApplicationServiceTest {
         whenever(eventService.findById(10L)).thenReturn(event)
         whenever(eventMemberService.findByEventId(10L)).thenReturn(listOf(member1, member2))
 
-        val detail = eventApplicationService.getEventById(userId = 1L, eventId = 10L)
+        val detail = eventApplicationService.getEventById(principal = Helpers.authUser(1L), eventId = 10L)
 
         assertEquals(10L, detail.id)
         assertEquals("Viaje a Bariloche", detail.name)
@@ -284,6 +286,49 @@ class EventApplicationServiceTest {
         verify(eventService).findById(10L)
         verify(eventMemberService).findByEventId(10L)
         assertTrue(detail.isOwner)
+        assertNull(detail.guestMemberId)
+    }
+
+    @Test
+    fun `getEventById tells a guest which member it is and that it is not the owner`() {
+        val event =
+            Event
+                .create(owner = user, name = "Viaje a Bariloche", baseCurrency = "ARS")
+                .apply { id = 10L }
+        val juan = EventMember.create(event, "Juan", null).apply { id = 30L }
+
+        whenever(eventService.findById(10L)).thenReturn(event)
+        whenever(eventMemberService.findByEventId(10L)).thenReturn(listOf(juan))
+
+        val detail =
+            eventApplicationService.getEventById(
+                principal = AuthGuest(eventId = 10L, memberId = 30L, name = "Juan"),
+                eventId = 10L,
+            )
+
+        assertFalse(detail.isOwner)
+        assertEquals(30L, detail.guestMemberId)
+    }
+
+    @Test
+    fun `getEventById hides the members' emails from a guest`() {
+        val event =
+            Event
+                .create(owner = user, name = "Viaje a Bariloche", baseCurrency = "ARS")
+                .apply { id = 10L }
+        val owner = EventMember.create(event, user.name, user).apply { id = 20L }
+
+        whenever(eventService.findById(10L)).thenReturn(event)
+        whenever(eventMemberService.findByEventId(10L)).thenReturn(listOf(owner))
+
+        val detail =
+            eventApplicationService.getEventById(
+                principal = AuthGuest(eventId = 10L, memberId = 30L, name = "Juan"),
+                eventId = 10L,
+            )
+
+        assertNull(detail.members.single().email)
+        assertFalse(detail.members.single().isGuest)
     }
 
     @Test
@@ -306,7 +351,7 @@ class EventApplicationServiceTest {
         whenever(eventMemberService.isUserMemberOfEvent(20L, 1L)).thenReturn(true)
         whenever(eventMemberService.findByEventId(20L)).thenReturn(listOf(member))
 
-        val detail = eventApplicationService.getEventById(userId = 1L, eventId = 20L)
+        val detail = eventApplicationService.getEventById(principal = Helpers.authUser(1L), eventId = 20L)
 
         assertEquals(20L, detail.id)
         assertEquals("Asado", detail.name)
@@ -324,7 +369,7 @@ class EventApplicationServiceTest {
         whenever(eventService.findById(999L)).thenReturn(null)
 
         assertFailsWith<EventNotFoundException> {
-            eventApplicationService.getEventById(userId = 1L, eventId = 999L)
+            eventApplicationService.getEventById(principal = Helpers.authUser(1L), eventId = 999L)
         }
 
         verify(eventMemberService, never()).findByEventId(any())
@@ -348,7 +393,7 @@ class EventApplicationServiceTest {
         whenever(eventMemberService.isUserMemberOfEvent(30L, 1L)).thenReturn(false)
 
         assertFailsWith<AccessDeniedException> {
-            eventApplicationService.getEventById(userId = 1L, eventId = 30L)
+            eventApplicationService.getEventById(principal = Helpers.authUser(1L), eventId = 30L)
         }
 
         verify(eventMemberService, never()).findByEventId(any())

@@ -14,6 +14,7 @@ data class EventDetailResponse(
     val members: List<EventMemberResponse>,
     @get:JsonProperty("isOwner")
     val isOwner: Boolean,
+    val guestMemberId: Long?,
 ) {
     companion object {
         fun of(detail: EventDetail): EventDetailResponse =
@@ -26,6 +27,7 @@ data class EventDetailResponse(
                 memberCount = detail.memberCount,
                 members = detail.members.map { EventMemberResponse.of(it) },
                 isOwner = detail.isOwner,
+                guestMemberId = detail.guestMemberId,
             )
     }
 }

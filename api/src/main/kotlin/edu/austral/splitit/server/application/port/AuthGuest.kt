@@ -4,4 +4,4 @@ data class AuthGuest(
     val eventId: Long,
     val memberId: Long,
     val name: String,
-)
+) : AuthPrincipal

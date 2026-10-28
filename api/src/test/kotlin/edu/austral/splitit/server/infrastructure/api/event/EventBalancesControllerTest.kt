@@ -5,6 +5,7 @@ import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.BalanceApplicationService
 import edu.austral.splitit.server.application.service.BalanceSummary
+import edu.austral.splitit.server.application.service.GuestAccessService
 import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
 import edu.austral.splitit.server.infrastructure.config.SecurityConfig
 import jakarta.servlet.http.Cookie
@@ -51,6 +52,9 @@ class EventBalancesControllerTest(
     @MockitoBean
     private lateinit var tokenProvider: TokenProvider
 
+    @MockitoBean
+    private lateinit var guestAccessService: GuestAccessService
+
     private val authUser =
         AuthUser(
             id = 1L,
@@ -63,7 +67,7 @@ class EventBalancesControllerTest(
     @Test
     fun `get balances returns each member net balance`() {
         whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
-        whenever(balanceApplicationService.listBalances(1L, 7L)).thenReturn(
+        whenever(balanceApplicationService.listBalances(authUser, 7L)).thenReturn(
             listOf(
                 BalanceSummary(memberId = 1L, memberName = "Ana", netBalance = BigDecimal("50.0000")),
                 BalanceSummary(memberId = 2L, memberName = "Luis", netBalance = BigDecimal("-50.0000")),
@@ -82,7 +86,7 @@ class EventBalancesControllerTest(
             .andExpect(jsonPath("$[1].memberName").value("Luis"))
             .andExpect(jsonPath("$[1].netBalance").value(-50.0))
 
-        verify(balanceApplicationService).listBalances(1L, 7L)
+        verify(balanceApplicationService).listBalances(authUser, 7L)
     }
 
     @Test

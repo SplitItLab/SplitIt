@@ -11,6 +11,7 @@ import edu.austral.splitit.server.application.service.EventDetail
 import edu.austral.splitit.server.application.service.EventMemberSummary
 import edu.austral.splitit.server.application.service.EventSummary
 import edu.austral.splitit.server.application.service.ExpenseApplicationService
+import edu.austral.splitit.server.application.service.GuestAccessService
 import edu.austral.splitit.server.application.service.UpdateEventCommand
 import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
 import edu.austral.splitit.server.infrastructure.config.SecurityConfig
@@ -68,6 +69,9 @@ class EventControllerTest(
 
     @MockitoBean
     private lateinit var tokenProvider: TokenProvider
+
+    @MockitoBean
+    private lateinit var guestAccessService: GuestAccessService
 
     private val authUser =
         AuthUser(
@@ -252,7 +256,7 @@ class EventControllerTest(
     @Test
     fun `getEventById returns 200 with event detail and members for owner`() {
         whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
-        whenever(eventApplicationService.getEventById(1L, 10L)).thenReturn(
+        whenever(eventApplicationService.getEventById(authUser, 10L)).thenReturn(
             EventDetail(
                 id = 10L,
                 name = "Viaje a Bariloche",
@@ -276,6 +280,7 @@ class EventControllerTest(
                         ),
                     ),
                 isOwner = true,
+                guestMemberId = null,
             ),
         )
 
@@ -305,7 +310,7 @@ class EventControllerTest(
             .andExpect(jsonPath("$.balances").doesNotExist())
             .andExpect(jsonPath("$.totals").doesNotExist())
 
-        verify(eventApplicationService).getEventById(1L, 10L)
+        verify(eventApplicationService).getEventById(authUser, 10L)
     }
 
     @Test
@@ -319,7 +324,7 @@ class EventControllerTest(
                 name = "Ana",
             )
         whenever(tokenProvider.parse("linked-token")).thenReturn(linkedUser)
-        whenever(eventApplicationService.getEventById(2L, 10L)).thenReturn(
+        whenever(eventApplicationService.getEventById(linkedUser, 10L)).thenReturn(
             EventDetail(
                 id = 10L,
                 name = "Viaje a Bariloche",
@@ -343,6 +348,7 @@ class EventControllerTest(
                         ),
                     ),
                 isOwner = false,
+                guestMemberId = null,
             ),
         )
 
@@ -361,13 +367,13 @@ class EventControllerTest(
             .andExpect(jsonPath("$.expenses").doesNotExist())
             .andExpect(jsonPath("$.balances").doesNotExist())
 
-        verify(eventApplicationService).getEventById(2L, 10L)
+        verify(eventApplicationService).getEventById(linkedUser, 10L)
     }
 
     @Test
     fun `getEventById returns 404 when event does not exist`() {
         whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
-        whenever(eventApplicationService.getEventById(1L, 999L)).thenThrow(EventNotFoundException())
+        whenever(eventApplicationService.getEventById(authUser, 999L)).thenThrow(EventNotFoundException())
 
         mockMvc
             .perform(
@@ -376,13 +382,13 @@ class EventControllerTest(
             ).andExpect(status().isNotFound)
             .andExpect(jsonPath("$.message").value("Event not found"))
 
-        verify(eventApplicationService).getEventById(1L, 999L)
+        verify(eventApplicationService).getEventById(authUser, 999L)
     }
 
     @Test
     fun `getEventById returns 403 when user is not owner or member`() {
         whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
-        whenever(eventApplicationService.getEventById(1L, 10L)).thenThrow(AccessDeniedException("Forbidden"))
+        whenever(eventApplicationService.getEventById(authUser, 10L)).thenThrow(AccessDeniedException("Forbidden"))
 
         mockMvc
             .perform(
@@ -398,7 +404,7 @@ class EventControllerTest(
             .andExpect(jsonPath("$.memberCount").doesNotExist())
             .andExpect(jsonPath("$.members").doesNotExist())
 
-        verify(eventApplicationService).getEventById(1L, 10L)
+        verify(eventApplicationService).getEventById(authUser, 10L)
     }
 
     @Test
@@ -672,6 +678,7 @@ class EventControllerTest(
     fun `listing events is forbidden for a guest`() {
         whenever(tokenProvider.parseGuest("guest-token"))
             .thenReturn(AuthGuest(eventId = 10L, memberId = 30L, name = "Juan"))
+        whenever(guestAccessService.isActive(any())).thenReturn(true)
 
         mockMvc
             .perform(get("/api/events").cookie(Cookie("guest_token", "guest-token")))
@@ -685,6 +692,7 @@ class EventControllerTest(
     fun `creating an event is forbidden for a guest`() {
         whenever(tokenProvider.parseGuest("guest-token"))
             .thenReturn(AuthGuest(eventId = 10L, memberId = 30L, name = "Juan"))
+        whenever(guestAccessService.isActive(any())).thenReturn(true)
 
         mockMvc
             .perform(

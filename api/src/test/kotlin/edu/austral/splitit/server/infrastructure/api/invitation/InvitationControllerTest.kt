@@ -4,6 +4,7 @@ import edu.austral.splitit.server.application.exception.AccountAlreadyLinkedExce
 import edu.austral.splitit.server.application.exception.EventNotFoundException
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
+import edu.austral.splitit.server.application.service.GuestAccessService
 import edu.austral.splitit.server.application.service.InvitationAccess
 import edu.austral.splitit.server.application.service.InvitationApplicationService
 import edu.austral.splitit.server.application.service.InvitationMemberSummary
@@ -56,6 +57,9 @@ class InvitationControllerTest(
 
     @MockitoBean
     private lateinit var tokenProvider: TokenProvider
+
+    @MockitoBean
+    private lateinit var guestAccessService: GuestAccessService
 
     private val authUser =
         AuthUser(

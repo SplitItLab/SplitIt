@@ -27,7 +27,7 @@ class BalanceApplicationServiceTest {
 
     private val balanceApplicationService =
         BalanceApplicationService(
-            eventService = eventService,
+            eventAccessService = EventAccessService(eventService, eventMemberService),
             eventMemberService = eventMemberService,
             expenseService = expenseService,
         )
@@ -56,7 +56,7 @@ class BalanceApplicationServiceTest {
         whenever(eventMemberService.findByEventId(10L)).thenReturn(listOf(ana, luis))
         whenever(expenseService.findByEventId(10L)).thenReturn(listOf(expense))
 
-        val balances = balanceApplicationService.listBalances(userId = 1L, eventId = 10L)
+        val balances = balanceApplicationService.listBalances(principal = Helpers.authUser(1L), eventId = 10L)
 
         assertEquals(
             listOf(
@@ -72,7 +72,7 @@ class BalanceApplicationServiceTest {
         whenever(eventService.findById(999L)).thenReturn(null)
 
         assertFailsWith<EventNotFoundException> {
-            balanceApplicationService.listBalances(userId = 1L, eventId = 999L)
+            balanceApplicationService.listBalances(principal = Helpers.authUser(1L), eventId = 999L)
         }
 
         verify(eventMemberService, never()).findByEventId(any())
@@ -94,7 +94,7 @@ class BalanceApplicationServiceTest {
         whenever(eventMemberService.isUserMemberOfEvent(30L, 1L)).thenReturn(false)
 
         assertFailsWith<AccessDeniedException> {
-            balanceApplicationService.listBalances(userId = 1L, eventId = 30L)
+            balanceApplicationService.listBalances(principal = Helpers.authUser(1L), eventId = 30L)
         }
 
         verify(eventMemberService, never()).findByEventId(any())

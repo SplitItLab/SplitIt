@@ -3,6 +3,7 @@ package edu.austral.splitit.server.infrastructure.api.kpi
 import edu.austral.splitit.server.application.port.AuthGuest
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
+import edu.austral.splitit.server.application.service.GuestAccessService
 import edu.austral.splitit.server.application.service.KpiRunReceipt
 import edu.austral.splitit.server.application.service.KpiRunStatus
 import edu.austral.splitit.server.application.service.RunKpiReport
@@ -56,6 +57,9 @@ class KpiRunControllerTest(
 
     @MockitoBean
     private lateinit var tokenProvider: TokenProvider
+
+    @MockitoBean
+    private lateinit var guestAccessService: GuestAccessService
 
     @Test
     fun `an authenticated post does not run a report`() {
@@ -116,6 +120,7 @@ class KpiRunControllerTest(
     fun `get is forbidden for a guest`() {
         whenever(tokenProvider.parseGuest("guest-token"))
             .thenReturn(AuthGuest(eventId = 10L, memberId = 30L, name = "Juan"))
+        whenever(guestAccessService.isActive(any())).thenReturn(true)
 
         mockMvc
             .perform(get("/api/kpi-runs").cookie(Cookie("guest_token", "guest-token")))

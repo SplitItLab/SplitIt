@@ -7,6 +7,7 @@ import edu.austral.splitit.server.application.port.AuthGuest
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.AccountService
+import edu.austral.splitit.server.application.service.GuestAccessService
 import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
 import edu.austral.splitit.server.infrastructure.config.SecurityConfig
@@ -60,6 +61,9 @@ class MeControllerTest(
 
     @MockitoBean
     private lateinit var tokenProvider: TokenProvider
+
+    @MockitoBean
+    private lateinit var guestAccessService: GuestAccessService
 
     @MockitoBean
     private lateinit var sessionCookieWriter: SessionCookieWriter
@@ -271,6 +275,7 @@ class MeControllerTest(
     fun `get is forbidden for a guest`() {
         whenever(tokenProvider.parseGuest("guest-token"))
             .thenReturn(AuthGuest(eventId = 10L, memberId = 30L, name = "Juan"))
+        whenever(guestAccessService.isActive(any())).thenReturn(true)
 
         mockMvc
             .perform(get("/api/me").cookie(Cookie("guest_token", "guest-token")))

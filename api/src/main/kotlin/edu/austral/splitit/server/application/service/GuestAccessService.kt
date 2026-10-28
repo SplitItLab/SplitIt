@@ -33,6 +33,13 @@ class GuestAccessService(
         )
     }
 
+    // Runs on every guest request: the credential stops working once an account is linked to its member.
+    @Transactional(readOnly = true)
+    fun isActive(guest: AuthGuest): Boolean {
+        val member = eventMemberService.findById(guest.memberId) ?: return false
+        return member.event.id == guest.eventId && member.user == null
+    }
+
     private fun findGuestMember(
         eventId: Long,
         memberId: Long,

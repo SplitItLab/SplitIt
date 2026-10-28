@@ -1,6 +1,6 @@
 package edu.austral.splitit.server.infrastructure.api.event
 
-import edu.austral.splitit.server.application.port.AuthUser
+import edu.austral.splitit.server.application.port.AuthPrincipal
 import edu.austral.splitit.server.application.service.BalanceApplicationService
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
@@ -15,7 +15,7 @@ class EventBalanceController(
 ) {
     @GetMapping("/{eventId}/balances")
     fun listBalances(
-        @AuthenticationPrincipal user: AuthUser,
+        @AuthenticationPrincipal principal: AuthPrincipal,
         @PathVariable eventId: Long,
-    ): List<BalanceResponse> = balanceApplicationService.listBalances(user.id, eventId).map { BalanceResponse.of(it) }
+    ): List<BalanceResponse> = balanceApplicationService.listBalances(principal, eventId).map { BalanceResponse.of(it) }
 }

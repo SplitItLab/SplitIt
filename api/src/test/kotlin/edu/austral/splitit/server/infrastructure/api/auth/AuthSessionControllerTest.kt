@@ -3,6 +3,7 @@ package edu.austral.splitit.server.infrastructure.api.auth
 import edu.austral.splitit.server.application.port.AuthGuest
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
+import edu.austral.splitit.server.application.service.GuestAccessService
 import edu.austral.splitit.server.application.service.LoginService
 import edu.austral.splitit.server.application.service.SignUpService
 import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
@@ -10,6 +11,7 @@ import edu.austral.splitit.server.infrastructure.config.SecurityConfig
 import edu.austral.splitit.server.infrastructure.security.SessionCookieWriter
 import jakarta.servlet.http.Cookie
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
@@ -52,6 +54,9 @@ class AuthSessionControllerTest(
 
     @MockitoBean
     private lateinit var tokenProvider: TokenProvider
+
+    @MockitoBean
+    private lateinit var guestAccessService: GuestAccessService
 
     @MockitoBean
     private lateinit var sessionCookieWriter: SessionCookieWriter
@@ -143,6 +148,7 @@ class AuthSessionControllerTest(
     @Test
     fun `session returns the guest when only the guest cookie is valid`() {
         whenever(tokenProvider.parseGuest("guest-token")).thenReturn(juanGuest())
+        whenever(guestAccessService.isActive(any())).thenReturn(true)
 
         mockMvc
             .perform(get("/api/auth/session").cookie(Cookie("guest_token", "guest-token")))
@@ -158,6 +164,7 @@ class AuthSessionControllerTest(
     fun `session answers as the user when both the session and the guest cookies are valid`() {
         whenever(tokenProvider.parse("good-token")).thenReturn(adaAuthUser())
         whenever(tokenProvider.parseGuest("guest-token")).thenReturn(juanGuest())
+        whenever(guestAccessService.isActive(any())).thenReturn(true)
 
         mockMvc
             .perform(

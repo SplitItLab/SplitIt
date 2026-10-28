@@ -21,6 +21,8 @@ class SessionCookieWriter(
         token: String,
     ) {
         addCookie(response, cookieName, token, Duration.ofHours(expirationHours))
+        // Otherwise the person silently falls back to guest once this session expires.
+        addCookie(response, GUEST_COOKIE_NAME, "", Duration.ZERO)
     }
 
     fun writeGuest(

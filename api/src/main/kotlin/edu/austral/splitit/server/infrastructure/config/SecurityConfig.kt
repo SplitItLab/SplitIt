@@ -1,6 +1,7 @@
 package edu.austral.splitit.server.infrastructure.config
 
 import edu.austral.splitit.server.application.port.TokenProvider
+import edu.austral.splitit.server.application.service.GuestAccessService
 import edu.austral.splitit.server.infrastructure.security.GUEST_ROLE
 import edu.austral.splitit.server.infrastructure.security.JwtAuthenticationFilter
 import edu.austral.splitit.server.infrastructure.security.USER_ROLE
@@ -26,6 +27,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableMethodSecurity
 class SecurityConfig(
     private val tokenProvider: TokenProvider,
+    private val guestAccessService: GuestAccessService,
     @Value("\${auth.cookie.name}") private val cookieName: String,
 ) {
     @Bean
@@ -33,7 +35,7 @@ class SecurityConfig(
 
     @Bean
     fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
-        val jwtAuthenticationFilter = JwtAuthenticationFilter(tokenProvider, cookieName)
+        val jwtAuthenticationFilter = JwtAuthenticationFilter(tokenProvider, guestAccessService, cookieName)
         http
             .csrf { it.disable() }
             .cors { }
@@ -54,6 +56,17 @@ class SecurityConfig(
                     .hasAnyRole(USER_ROLE, GUEST_ROLE)
                     .requestMatchers(HttpMethod.GET, "/api/invitations/*", "/api/invitations/*/members")
                     .permitAll()
+                    // What a guest does inside its event; the services keep it to that event and member.
+                    .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/events/*",
+                        "/api/events/*/expenses",
+                        "/api/events/*/expenses/quote",
+                        "/api/events/*/balances",
+                        "/api/events/*/suggested-payments",
+                    ).hasAnyRole(USER_ROLE, GUEST_ROLE)
+                    .requestMatchers(HttpMethod.POST, "/api/events/*/expenses")
+                    .hasAnyRole(USER_ROLE, GUEST_ROLE)
 
                 // Guests only reach the routes opened above for them.
                 it.anyRequest().hasRole(USER_ROLE)

@@ -3,6 +3,7 @@ package edu.austral.splitit.server.infrastructure.kpi
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.EventApplicationService
 import edu.austral.splitit.server.application.service.ExpenseApplicationService
+import edu.austral.splitit.server.application.service.GuestAccessService
 import edu.austral.splitit.server.infrastructure.api.StatusController
 import edu.austral.splitit.server.infrastructure.api.event.EventController
 import edu.austral.splitit.server.infrastructure.config.SecurityConfig
@@ -73,6 +74,9 @@ class ServerRequestObservationTest(
     @MockitoBean
     private lateinit var tokenProvider: TokenProvider
 
+    @MockitoBean
+    private lateinit var guestAccessService: GuestAccessService
+
     @Test
     fun `a real status request records status duration and endpoint`() {
         mockMvc.perform(get("/api/status")).andExpect(status().isOk())
@@ -97,6 +101,9 @@ class ServerRequestObservationTest(
         doThrow(DataAccessResourceFailureException("database down")).whenever(metrics).record(any())
 
         mockMvc.perform(get("/api/status")).andExpect(status().isOk())
+
+        // Wait for the async insert attempt, or it lands in the next test after the mock is reset.
+        verify(metrics, timeout(TIMEOUT_MILLIS)).record(any())
     }
 
     private fun recorded(): RequestSample {

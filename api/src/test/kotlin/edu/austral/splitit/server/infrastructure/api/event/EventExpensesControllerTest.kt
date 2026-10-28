@@ -10,6 +10,7 @@ import edu.austral.splitit.server.application.service.EventApplicationService
 import edu.austral.splitit.server.application.service.ExpenseApplicationService
 import edu.austral.splitit.server.application.service.ExpensePayerSummary
 import edu.austral.splitit.server.application.service.ExpenseSummary
+import edu.austral.splitit.server.application.service.GuestAccessService
 import edu.austral.splitit.server.application.service.QuoteExpenseQuery
 import edu.austral.splitit.server.application.service.UpdateExpenseCommand
 import edu.austral.splitit.server.domain.model.event.Currency
@@ -74,6 +75,9 @@ class EventExpensesControllerTest(
     @MockitoBean
     private lateinit var tokenProvider: TokenProvider
 
+    @MockitoBean
+    private lateinit var guestAccessService: GuestAccessService
+
     private val authUser =
         AuthUser(
             id = 1L,
@@ -132,7 +136,7 @@ class EventExpensesControllerTest(
 
         verify(expenseApplicationService).addExpense(
             check<CreateExpenseCommand> {
-                assertEquals(1L, it.userId)
+                assertEquals(authUser, it.principal)
                 assertEquals(7L, it.eventId)
                 assertEquals("Cena", it.name)
                 assertEquals(BigDecimal("5000"), it.amount)
@@ -219,7 +223,7 @@ class EventExpensesControllerTest(
     @Test
     fun `get expenses returns list of event expenses with 200`() {
         whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
-        whenever(expenseApplicationService.listExpenses(1L, 7L)).thenReturn(listOf(expenseSummary()))
+        whenever(expenseApplicationService.listExpenses(authUser, 7L)).thenReturn(listOf(expenseSummary()))
 
         mockMvc
             .perform(
@@ -233,7 +237,7 @@ class EventExpensesControllerTest(
             .andExpect(jsonPath("$[0].baseAmount").value(5000.0))
             .andExpect(jsonPath("$[0].paidByMember.name").value("Ana"))
 
-        verify(expenseApplicationService).listExpenses(1L, 7L)
+        verify(expenseApplicationService).listExpenses(authUser, 7L)
     }
 
     @Test
@@ -317,7 +321,7 @@ class EventExpensesControllerTest(
 
         verify(expenseApplicationService).quoteExpense(
             check<QuoteExpenseQuery> {
-                assertEquals(1L, it.userId)
+                assertEquals(authUser, it.principal)
                 assertEquals(7L, it.eventId)
                 assertEquals(BigDecimal("10"), it.amount)
                 assertEquals("USD", it.currency)
