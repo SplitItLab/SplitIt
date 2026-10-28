@@ -11,9 +11,17 @@ data class KpiRun(
     val results: List<KpiResult>,
 )
 
+/** What happened to a run at its destination. Only a sent run moves last_successful_run. */
+enum class KpiRunStatus {
+    SENT,
+    FAILED,
+    SKIPPED,
+}
+
 data class KpiRunReceipt(
     val id: Long,
     val destination: String,
+    val status: KpiRunStatus,
     val reportDay: LocalDate,
     val windowFrom: Instant,
     val windowTo: Instant,

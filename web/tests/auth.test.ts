@@ -94,4 +94,26 @@ describe("withRedirect", () => {
     expect(withRedirect("/login", "//otro-sitio.com")).toBe("/login");
     expect(withRedirect("/login", "/\\otro-sitio.com")).toBe("/login");
   });
+
+  it("ignora redirecciones externas con barras invertidas", () => {
+    expect(postLoginPath("/\\otro-sitio.com")).toBe("/eventos");
+  });
+
+  it("ignora redirecciones externas con tabulaciones", () => {
+    expect(postLoginPath("/\t/otro-sitio.com")).toBe("/eventos");
+  });
+
+  it("ignora URLs inválidas", () => {
+    expect(postLoginPath("/\\[invalid")).toBe("/eventos");
+  });
+
+  it("ignora rutas que se normalizan a una referencia a otro sitio", () => {
+    expect(postLoginPath("/eventos/..//otro-sitio.com")).toBe("/eventos");
+  });
+
+  it("normaliza la ruta interna y conserva los parámetros y el fragmento", () => {
+    expect(postLoginPath("/eventos/../eventos/invitacion/abc?origen=login#miembro")).toBe(
+      "/eventos/invitacion/abc?origen=login#miembro"
+    );
+  });
 });

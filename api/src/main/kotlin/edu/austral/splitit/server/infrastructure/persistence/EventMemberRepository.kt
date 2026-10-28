@@ -16,6 +16,12 @@ interface EventMemberRepository : JpaRepository<EventMember, Long> {
 
     fun countByEventId(eventId: Long): Long
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT em FROM EventMember em WHERE em.id = :id")
+    fun findByIdForUpdate(
+        @Param("id") id: Long,
+    ): EventMember?
+
     @Query(
         """
         SELECT em FROM EventMember em

@@ -1,6 +1,5 @@
 package edu.austral.splitit.server.application.service
 
-import edu.austral.splitit.server.application.port.LastRunPort
 import edu.austral.splitit.server.domain.kpi.Kpi
 import edu.austral.splitit.server.domain.kpi.KpiCalculationContext
 import edu.austral.splitit.server.domain.kpi.KpiValue
@@ -24,13 +23,7 @@ class KpiEngineTest {
 
     @Test
     fun `results keep input order and share the clock instant`() {
-        val lastRun = RecordingLastRun()
-        val engine =
-            KpiEngine(
-                kpis = listOf(fixed("first", 1.0), fixed("second", 2.0)),
-                lastRunPort = lastRun,
-                clock = clock,
-            )
+        val engine = KpiEngine(kpis = listOf(fixed("first", 1.0), fixed("second", 2.0)), clock = clock)
 
         val results = engine.calculate(context)
 
@@ -38,7 +31,6 @@ class KpiEngineTest {
         assertEquals(KpiValue.Numeric(1.0), results[0].value)
         assertEquals(KpiValue.Numeric(2.0), results[1].value)
         assertTrue(results.all { it.calculatedAt == calculatedAt })
-        assertEquals(calculatedAt, lastRun.recorded)
     }
 
     @Test
@@ -53,7 +45,6 @@ class KpiEngineTest {
                         tracking("broken", calls) { error("boom") },
                         tracking("after", calls) { KpiValue.Text("still") },
                     ),
-                lastRunPort = RecordingLastRun(),
                 clock = clock,
             )
 
@@ -68,8 +59,7 @@ class KpiEngineTest {
     }
 
     @Test
-    fun `duplicate ids fail before calculation and do not record a run`() {
-        val lastRun = RecordingLastRun()
+    fun `duplicate ids fail before calculation`() {
         var calculated = false
         val engine =
             KpiEngine(
@@ -81,7 +71,6 @@ class KpiEngineTest {
                         },
                         fixed("same", 2.0),
                     ),
-                lastRunPort = lastRun,
                 clock = clock,
             )
 
@@ -89,26 +78,13 @@ class KpiEngineTest {
             engine.calculate(context)
         }
         assertEquals(false, calculated)
-        assertNull(lastRun.recorded)
     }
 
     @Test
-    fun `a failure while recording the run propagates`() {
-        val lastRun = RecordingLastRun().also { it.failOnRecord = true }
-        val engine = KpiEngine(kpis = listOf(fixed("only", 1.0)), lastRunPort = lastRun, clock = clock)
-
-        assertFailsWith<IllegalStateException> {
-            engine.calculate(context)
-        }
-    }
-
-    @Test
-    fun `an empty kpi list records the run and returns no results`() {
-        val lastRun = RecordingLastRun()
-        val engine = KpiEngine(kpis = emptyList(), lastRunPort = lastRun, clock = clock)
+    fun `an empty kpi list returns no results`() {
+        val engine = KpiEngine(kpis = emptyList(), clock = clock)
 
         assertEquals(emptyList(), engine.calculate(context))
-        assertEquals(calculatedAt, lastRun.recorded)
     }
 
     private fun fixed(
@@ -129,16 +105,4 @@ class KpiEngineTest {
                 return body()
             }
         }
-
-    private class RecordingLastRun : LastRunPort {
-        var recorded: Instant? = null
-        var failOnRecord = false
-
-        override fun recordSuccessfulRun(at: Instant) {
-            if (failOnRecord) error("store failed")
-            recorded = at
-        }
-
-        override fun lastSuccessfulRun(): Instant? = recorded
-    }
 }

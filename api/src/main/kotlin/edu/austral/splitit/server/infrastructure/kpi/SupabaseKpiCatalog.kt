@@ -85,7 +85,7 @@ object SupabaseKpiCatalog {
                 "health",
                 "s",
                 "last",
-                "Instante de la ultima corrida exitosa del motor, en segundos desde epoch.",
+                "Instante de la ultima corrida enviada a la plataforma, en segundos desde epoch.",
             ),
             SupabaseKpi(
                 KpiIds.EVENTS_WITH_EXPENSE_IN_2_MIN_PERCENT,
