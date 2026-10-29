@@ -14,12 +14,21 @@ vi.mock("next/image", () => ({
   default: ({ src }: { src: string }) => <img src={src} alt="" />,
 }));
 
+vi.mock("@/components/google-sign-in-button", () => ({
+  GoogleSignInButton: ({ onSuccess, onError }: { onSuccess: () => void; onError: () => void }) => (
+    <>
+      <button onClick={onSuccess}>Google ok</button>
+      <button onClick={onError}>Google falla</button>
+    </>
+  ),
+}));
+
 vi.mock("@/lib/auth", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/auth")>();
   return { ...actual, login: vi.fn() };
 });
 
-import { login } from "@/lib/auth";
+import { login, LoginError } from "@/lib/auth";
 import LoginPage from "../app/login/page";
 
 async function submitLogin() {
@@ -90,5 +99,48 @@ describe("LoginPage", () => {
     await submitLogin();
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/eventos"));
+  });
+
+  // SPLT-019: el usuario que intenta con contraseña una cuenta de Google ve el aviso.
+  it("con contraseña sobre una cuenta de Google muestra que ahora ingresa con Google", async () => {
+    vi.mocked(login).mockRejectedValue(
+      new LoginError("google-account", "Esta cuenta ahora ingresa con Google")
+    );
+
+    await submitLogin();
+
+    expect(await screen.findByText("Esta cuenta ahora ingresa con Google")).toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("después de ingresar con Google vuelve a la ruta pedida", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      `/login?redirect=${encodeURIComponent("/eventos/invitacion/abc")}`
+    );
+    const user = userEvent.setup();
+    render(<LoginPage />);
+
+    await user.click(screen.getByRole("button", { name: "Google ok" }));
+
+    expect(push).toHaveBeenCalledWith("/eventos/invitacion/abc");
+  });
+
+  it("si falla el ingreso con Google muestra el error sin salir del login", async () => {
+    const user = userEvent.setup();
+    render(<LoginPage />);
+
+    await user.click(screen.getByRole("button", { name: "Google falla" }));
+
+    expect(screen.getByText("No pudimos completar el ingreso con Google")).toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("al volver de un ingreso con Google fallido muestra el error", () => {
+    window.history.replaceState(null, "", "/login?error=google");
+    render(<LoginPage />);
+
+    expect(screen.getByText("No pudimos completar el ingreso con Google")).toBeInTheDocument();
   });
 });
