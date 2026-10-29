@@ -8,8 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LoadingIndicator } from "@/components/loading-indicator";
 import { AuthLayout } from "@/components/auth-layout";
+import { GoogleSignInButton } from "@/components/google-sign-in-button";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  googleLoginErrorPath,
+  postLoginPath,
   registerUser,
   RegisterError,
   RegisterInput,
@@ -28,7 +31,8 @@ export default function RegisterPage() {
 
 function RegisterForm() {
   const router = useRouter();
-  const loginPath = withRedirect("/login", useSearchParams().get("redirect"));
+  const redirect = useSearchParams().get("redirect");
+  const loginPath = withRedirect("/login", redirect);
   const [generalError, setGeneralError] = useState<string | null>(null);
   const {
     register,
@@ -125,6 +129,10 @@ function RegisterForm() {
           </Button>
         </FieldGroup>
       </form>
+      <GoogleSignInButton
+        onSuccess={() => router.push(postLoginPath(redirect))}
+        onError={() => router.push(googleLoginErrorPath(redirect))}
+      />
     </AuthLayout>
   );
 }
