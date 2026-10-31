@@ -80,6 +80,13 @@ export type SessionUser = {
   email: string;
 };
 
+export type GuestSession = {
+  type: "guest";
+  eventId: number;
+  memberId: number;
+  name: string;
+};
+
 export type LogoutErrorType = "network" | "server-error";
 
 export class LogoutError extends Error {
@@ -117,7 +124,7 @@ async function mockLogin(input: LoginInput): Promise<void> {
   sessionStorage.setItem(MOCK_SESSION_KEY, JSON.stringify(user));
 }
 
-async function mockGetSession(): Promise<SessionUser | null> {
+async function mockGetSession(): Promise<SessionUser | GuestSession | null> {
   await new Promise((resolve) => setTimeout(resolve, 300));
   const raw = sessionStorage.getItem(MOCK_SESSION_KEY);
   return raw ? (JSON.parse(raw) as SessionUser) : null;
@@ -180,13 +187,13 @@ export async function login(input: LoginInput): Promise<void> {
   }
 }
 
-export async function getSession(): Promise<SessionUser | null> {
+export async function getSession(): Promise<SessionUser | GuestSession | null> {
   if (USE_MOCK) {
     return mockGetSession();
   }
   try {
-    const user = await request<SessionUser | null>("/api/auth/session");
-    return user ?? null;
+    const session = await request<SessionUser | GuestSession | null>("/api/auth/session");
+    return session ?? null;
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) {
       return null;

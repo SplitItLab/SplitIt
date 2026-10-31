@@ -24,6 +24,13 @@ describe("getSession", () => {
     await expect(getSession()).resolves.toEqual(user);
   });
 
+  it("devuelve la sesión de invitado cuando el backend responde type guest", async () => {
+    const guest = { type: "guest", eventId: 3, memberId: 7, name: "Juan" };
+    vi.mocked(request).mockResolvedValueOnce(guest);
+
+    await expect(getSession()).resolves.toEqual(guest);
+  });
+
   it("devuelve null cuando no hay sesión (401)", async () => {
     vi.mocked(request).mockRejectedValueOnce(new ApiError(401, "unauthorized"));
     await expect(getSession()).resolves.toBeNull();
