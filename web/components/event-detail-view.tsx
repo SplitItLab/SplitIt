@@ -95,13 +95,17 @@ export function EventDetailView({ id }: { id: string }) {
     return (
       <>
         <div className="flex items-center justify-between">
-          <Link
-            href="/eventos"
-            aria-label="Volver a eventos"
-            className="border-border text-text-secondary hover:text-text-primary hover:bg-muted focus-visible:ring-ring/50 inline-flex size-12 items-center justify-center rounded-full border outline-none focus-visible:ring-3"
-          >
-            <ArrowLeft className="size-5" />
-          </Link>
+          {state.event.guestMemberId == null ? (
+            <Link
+              href="/eventos"
+              aria-label="Volver a eventos"
+              className="border-border text-text-secondary hover:text-text-primary hover:bg-muted focus-visible:ring-ring/50 inline-flex size-12 items-center justify-center rounded-full border outline-none focus-visible:ring-3"
+            >
+              <ArrowLeft className="size-5" />
+            </Link>
+          ) : (
+            <span />
+          )}
 
           {state.event.isOwner && (
             <div className="flex items-center gap-2">

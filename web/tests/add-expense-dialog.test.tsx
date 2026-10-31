@@ -272,6 +272,24 @@ describe("AddExpenseDialog", () => {
     ).toEqual(["Ana", "Luis"]);
   });
 
+  it("el invitado solo puede cargar gastos pagados por él", async () => {
+    vi.mocked(createExpense).mockResolvedValue({
+      ...created,
+      paidByMember: { id: 13, name: "Luis" },
+    });
+    const user = userEvent.setup();
+    renderDialog({}, { ...event, guestMemberId: 13 });
+
+    const payer = await screen.findByLabelText("Pago");
+    expect(payer).toBeDisabled();
+    expect(payer).toHaveValue("13");
+    await user.type(screen.getByLabelText("Nombre"), "Supermercado");
+    await user.type(screen.getByLabelText("Monto"), "5");
+    await user.click(screen.getByRole("button", { name: "Guardar gasto" }));
+
+    expect(createExpense).toHaveBeenCalledWith(7, expect.objectContaining({ paidByMemberId: 13 }));
+  });
+
   it("antepone el gasto creado, actualiza el total y confirma", async () => {
     vi.mocked(listExpenses).mockResolvedValue([cena]);
     vi.mocked(createExpense).mockResolvedValue(created);

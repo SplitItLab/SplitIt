@@ -26,6 +26,8 @@ export type EventDetail = {
   memberCount: number;
   members: EventMember[];
   isOwner: boolean;
+  // Solo viene cuando quien mira es un invitado sin cuenta: el integrante que eligió.
+  guestMemberId?: number | null;
 };
 export const EVENT_CURRENCIES = [
   { code: "ARS", label: "ARS - Peso argentino" },

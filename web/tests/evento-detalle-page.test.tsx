@@ -245,6 +245,32 @@ describe("EventDetailView", () => {
     expect(screen.queryByRole("button", { name: "Eliminar evento" })).not.toBeInTheDocument();
   });
 
+  it("al invitado no le muestra volver a eventos ni opciones del dueño", async () => {
+    vi.mocked(getEventById).mockResolvedValue({
+      ...eventDetail,
+      isOwner: false,
+      guestMemberId: 11,
+    });
+
+    render(<EventDetailView id="1" />);
+
+    expect(await screen.findByRole("heading", { name: "Viaje a Bariloche" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Volver a eventos" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Invitar" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Editar evento" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Eliminar evento" })).not.toBeInTheDocument();
+  });
+
+  it("al usuario le sigue mostrando volver a eventos", async () => {
+    vi.mocked(getEventById).mockResolvedValue(eventDetail);
+
+    render(<EventDetailView id="1" />);
+
+    // Mientras carga también hay un enlace de volver: se espera al evento ya cargado.
+    expect(await screen.findByRole("heading", { name: "Viaje a Bariloche" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Volver a eventos" })).toBeInTheDocument();
+  });
+
   it("abre el modal de invitación y pide el token", async () => {
     vi.mocked(getEventById).mockResolvedValue(eventDetail);
     vi.mocked(getEventInviteToken).mockResolvedValue("un-token-ya-persistido-123");
