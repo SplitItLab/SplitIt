@@ -1,4 +1,5 @@
 import { request, ApiError } from "@/lib/api";
+import type { GuestSession } from "@/lib/auth";
 import { EventError, toEventError } from "@/lib/events";
 
 export type Invitation = {
@@ -61,6 +62,48 @@ export async function linkInvitationMember(
       throw new EventError("conflict", "No pudimos vincular tu cuenta. Elegí de nuevo.");
     }
     toEventError(err);
+  }
+}
+
+export async function enterAsGuest(token: string, memberId: number): Promise<GuestSession> {
+  try {
+    const guest = await request<GuestSession>(
+      `/api/invite-links/${encodeURIComponent(token)}/guest-session`,
+      { method: "POST", body: JSON.stringify({ memberId }) }
+    );
+    rememberGuestMember(token, memberId);
+    return guest;
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 409) {
+      throw new EventError(
+        "conflict",
+        "Esa persona ya tiene cuenta. Iniciá sesión con ella o elegí otro nombre de la lista."
+      );
+    }
+    toEventError(err);
+  }
+}
+
+// "Salir" borra la cookie de invitado, así que el dispositivo recuerda el integrante aparte.
+function guestMemberKey(token: string): string {
+  return `splitit:guest-member:${token}`;
+}
+
+export function rememberGuestMember(token: string, memberId: number): void {
+  try {
+    localStorage.setItem(guestMemberKey(token), String(memberId));
+  } catch {
+    // Sin storage (modo privado, bloqueado): el selector simplemente no preselecciona.
+  }
+}
+
+export function recalledGuestMemberId(token: string): number | null {
+  try {
+    const raw = localStorage.getItem(guestMemberKey(token));
+    const memberId = raw === null ? Number.NaN : Number(raw);
+    return Number.isInteger(memberId) ? memberId : null;
+  } catch {
+    return null;
   }
 }
 
