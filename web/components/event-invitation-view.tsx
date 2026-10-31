@@ -3,13 +3,15 @@
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { UserRoundCheck } from "lucide-react";
+import { UserRound, UserRoundCheck } from "lucide-react";
 
 import { EventError } from "@/lib/events";
+import type { GuestSession } from "@/lib/auth";
 import { getInvitation, invitationLoginPath, type Invitation } from "@/lib/invitations";
 import { useSession } from "@/lib/use-session";
 import { EventIcon } from "@/components/event-icon";
 import { EventNotFound } from "@/components/event-not-found";
+import { GuestMemberForm } from "@/components/guest-member-form";
 import { LinkMemberForm } from "@/components/link-member-form";
 import { LoadingIndicator } from "@/components/loading-indicator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -88,26 +90,59 @@ export function EventInvitationView({ token }: { token: string }) {
               {session.status === "authenticated" ? (
                 <LinkMemberForm token={token} user={session.user} />
               ) : (
-                <div className="flex flex-col gap-[10px]">
-                  <Link
-                    href={invitationLoginPath(token)}
-                    className={buttonVariants({
-                      className: "h-10 w-full gap-2 rounded-[8px] px-4 text-xl font-medium",
-                    })}
-                  >
-                    <UserRoundCheck aria-hidden="true" />
-                    Continuar con mi cuenta
-                  </Link>
-                  <p className="text-muted-foreground text-center text-sm">
-                    Con cuenta, el evento «{state.invitation.name}» te queda guardado entre tus
-                    eventos.
-                  </p>
-                </div>
+                <AnonymousAccess
+                  token={token}
+                  invitationName={state.invitation.name}
+                  guest={session.status === "guest" ? session.guest : null}
+                />
               )}
             </>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+const ACTION_CLASS_NAME = "h-10 w-full gap-2 rounded-[8px] px-4 text-xl font-medium";
+
+function AnonymousAccess({
+  token,
+  invitationName,
+  guest,
+}: {
+  token: string;
+  invitationName: string;
+  guest: GuestSession | null;
+}) {
+  // Quien vuelve con la cookie de invitado ve directo su integrante, sin tocar el botón.
+  const [choosing, setChoosing] = useState(guest !== null);
+
+  return (
+    <div className="flex flex-col gap-[10px]">
+      <Link
+        href={invitationLoginPath(token)}
+        className={buttonVariants({ className: ACTION_CLASS_NAME })}
+      >
+        <UserRoundCheck aria-hidden="true" />
+        Continuar con mi cuenta
+      </Link>
+      <p className="text-muted-foreground text-center text-sm">
+        Con cuenta, el evento «{invitationName}» te queda guardado entre tus eventos.
+      </p>
+      {choosing ? (
+        <GuestMemberForm token={token} guest={guest} />
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          className={ACTION_CLASS_NAME}
+          onClick={() => setChoosing(true)}
+        >
+          <UserRound aria-hidden="true" />
+          Continuar sin cuenta
+        </Button>
+      )}
     </div>
   );
 }
