@@ -70,6 +70,7 @@ function GoogleButton({
 }: GoogleSignInButtonProps & { clientId: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [isUnavailable, setIsUnavailable] = useState(false);
 
   const handleCredential = useEffectEvent(async ({ credential }: GoogleCredentialResponse) => {
     if (!credential) {
@@ -85,8 +86,6 @@ function GoogleButton({
       onError();
     }
   });
-
-  const handleLoadError = useEffectEvent(() => onError());
 
   useEffect(() => {
     let cancelled = false;
@@ -110,12 +109,14 @@ function GoogleButton({
         });
       })
       .catch(() => {
-        if (!cancelled) handleLoadError();
+        if (!cancelled) setIsUnavailable(true);
       });
     return () => {
       cancelled = true;
     };
   }, [clientId]);
+
+  if (isUnavailable) return null;
 
   return (
     <div className="mt-5 flex flex-col gap-5">

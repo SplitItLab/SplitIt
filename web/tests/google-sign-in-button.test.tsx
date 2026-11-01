@@ -36,6 +36,7 @@ describe("GoogleSignInButton", () => {
     cleanup();
     vi.unstubAllEnvs();
     delete window.google;
+    document.getElementById("google-identity-services")?.remove();
   });
 
   it("no ofrece Google cuando el ambiente no tiene client ID", () => {
@@ -46,6 +47,17 @@ describe("GoogleSignInButton", () => {
 
     expect(container).toBeEmptyDOMElement();
     expect(identity.initialize).not.toHaveBeenCalled();
+  });
+
+  it("oculta la opción sin avisar error si Google no está disponible", async () => {
+    const onError = vi.fn();
+    const { container } = render(<GoogleSignInButton onSuccess={vi.fn()} onError={onError} />);
+    expect(container).not.toBeEmptyDOMElement();
+
+    document.getElementById("google-identity-services")?.dispatchEvent(new Event("error"));
+
+    await waitFor(() => expect(container).toBeEmptyDOMElement());
+    expect(onError).not.toHaveBeenCalled();
   });
 
   it("muestra el botón oficial de continuar con Google", async () => {
