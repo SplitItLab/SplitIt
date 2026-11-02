@@ -16,6 +16,15 @@ vi.mock("next/image", () => ({
 
 vi.mock("@/lib/toast", () => ({ showAppToast: vi.fn() }));
 
+vi.mock("@/components/google-sign-in-button", () => ({
+  GoogleSignInButton: ({ onSuccess, onError }: { onSuccess: () => void; onError: () => void }) => (
+    <>
+      <button onClick={onSuccess}>Google ok</button>
+      <button onClick={onError}>Google falla</button>
+    </>
+  ),
+}));
+
 vi.mock("@/lib/auth", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/auth")>();
   return { ...actual, registerUser: vi.fn() };
@@ -92,5 +101,34 @@ describe("RegisterPage", () => {
     await submitRegister();
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/login"));
+  });
+
+  it("después de ingresar con Google entra directo a la ruta pedida", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      `/register?redirect=${encodeURIComponent(INVITATION_PATH)}`
+    );
+    const user = userEvent.setup();
+    render(<RegisterPage />);
+
+    await user.click(screen.getByRole("button", { name: "Google ok" }));
+
+    expect(push).toHaveBeenCalledWith(INVITATION_PATH);
+  });
+
+  // SPLT-019: si se cancela o falla Google, vuelve al inicio de sesión con el mensaje.
+  it("si falla el ingreso con Google vuelve al login con el error", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      `/register?redirect=${encodeURIComponent(INVITATION_PATH)}`
+    );
+    const user = userEvent.setup();
+    render(<RegisterPage />);
+
+    await user.click(screen.getByRole("button", { name: "Google falla" }));
+
+    expect(push).toHaveBeenCalledWith(`${LOGIN_WITH_REDIRECT}&error=google`);
   });
 });

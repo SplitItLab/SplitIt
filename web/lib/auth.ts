@@ -32,7 +32,7 @@ export const loginSchema = z.object({
 
 export type LoginInput = z.infer<typeof loginSchema>;
 
-export type LoginErrorType = "invalid-credentials" | "network" | "server-error";
+export type LoginErrorType = "invalid-credentials" | "google-account" | "network" | "server-error";
 
 export class LoginError extends Error {
   constructor(
@@ -117,6 +117,12 @@ async function mockLogin(input: LoginInput): Promise<void> {
   sessionStorage.setItem(MOCK_SESSION_KEY, JSON.stringify(user));
 }
 
+async function mockLoginWithGoogle(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 600));
+  const user: SessionUser = { id: 1, name: "Ada Lovelace", email: "ada@example.com" };
+  sessionStorage.setItem(MOCK_SESSION_KEY, JSON.stringify(user));
+}
+
 async function mockGetSession(): Promise<SessionUser | null> {
   await new Promise((resolve) => setTimeout(resolve, 300));
   const raw = sessionStorage.getItem(MOCK_SESSION_KEY);
@@ -171,6 +177,9 @@ export async function login(input: LoginInput): Promise<void> {
       if (err.status === 401) {
         throw new LoginError("invalid-credentials", "Email o contraseña incorrectos.");
       }
+      if (err.status === 409) {
+        throw new LoginError("google-account", "Esta cuenta ahora ingresa con Google");
+      }
       if (err.status === 0) {
         throw new LoginError("network", "No pudimos conectar con el servidor.");
       }
@@ -178,6 +187,24 @@ export async function login(input: LoginInput): Promise<void> {
     }
     throw err;
   }
+}
+
+export const GOOGLE_LOGIN_ERROR_MESSAGE = "No pudimos completar el ingreso con Google";
+
+export function googleLoginErrorPath(redirect: string | null): string {
+  const path = withRedirect("/login", redirect);
+  return `${path}${path.includes("?") ? "&" : "?"}error=google`;
+}
+
+// `credential` is the ID token Google returns; the API verifies it and opens the session.
+export async function loginWithGoogle(credential: string): Promise<void> {
+  if (USE_MOCK) {
+    return mockLoginWithGoogle();
+  }
+  await request<void>("/api/auth/google", {
+    method: "POST",
+    body: JSON.stringify({ credential }),
+  });
 }
 
 export async function getSession(): Promise<SessionUser | null> {
