@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -93,6 +94,29 @@ class SignUpControllerTest(
             .andExpect(jsonPath("$.passwordHash").doesNotExist())
     }
 
+    @Test
+    fun `register leaves the new user signed in with a session cookie`() {
+        whenever(signUpService.register(any(), any(), any())).thenReturn(Helpers.user())
+        whenever(tokenProvider.issue(any())).thenReturn("signed.jwt.token")
+
+        mockMvc
+            .perform(
+                post("/api/auth/register")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(
+                        """
+                        {
+                          "name": "Ada Lovelace",
+                          "email": "ada@example.com",
+                          "password": "una-clave-segura"
+                        }
+                        """.trimIndent(),
+                    ),
+            ).andExpect(status().isCreated)
+
+        verify(sessionCookieWriter).write(any(), eq("signed.jwt.token"))
+    }
+
     @ParameterizedTest
     @ValueSource(
         strings = [
@@ -156,6 +180,8 @@ class SignUpControllerTest(
                     ),
             ).andExpect(status().isConflict)
             .andExpect(jsonPath("$.message").value("Email already in use"))
+
+        verify(sessionCookieWriter, never()).write(any(), any())
     }
 
     @Test
