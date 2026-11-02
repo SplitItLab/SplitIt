@@ -8,6 +8,7 @@ import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.LoginService
 import edu.austral.splitit.server.application.service.SignUpService
 import edu.austral.splitit.server.domain.model.user.Email
+import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.infrastructure.security.SessionCookieWriter
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.validation.Valid
@@ -32,6 +33,7 @@ class AuthController(
     @ResponseStatus(HttpStatus.CREATED)
     fun register(
         @Valid @RequestBody request: SignUpRequest,
+        response: HttpServletResponse,
     ): UserResponse {
         val email =
             Email.create(request.email).getOrNull()
@@ -43,7 +45,7 @@ class AuthController(
                 email = email,
                 password = request.password,
             )
-
+        writeCookieSession(user, response)
         return UserResponse.of(user)
     }
 
@@ -58,17 +60,7 @@ class AuthController(
 
         val user = loginService.login(email, request.password)
 
-        val token =
-            tokenProvider.issue(
-                AuthUser(
-                    id = requireNotNull(user.id),
-                    username = user.email,
-                    password = "",
-                    roles = emptyList(),
-                    name = user.name,
-                ),
-            )
-        sessionCookieWriter.write(response, token)
+        writeCookieSession(user, response)
         return UserResponse.of(user)
     }
 
@@ -87,5 +79,22 @@ class AuthController(
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun logout(response: HttpServletResponse) {
         sessionCookieWriter.clear(response)
+    }
+
+    private fun writeCookieSession(
+        user: User,
+        response: HttpServletResponse,
+    ) {
+        val token =
+            tokenProvider.issue(
+                AuthUser(
+                    id = requireNotNull(user.id),
+                    username = user.email,
+                    password = "",
+                    roles = emptyList(),
+                    name = user.name,
+                ),
+            )
+        sessionCookieWriter.write(response, token)
     }
 }
