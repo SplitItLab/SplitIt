@@ -382,12 +382,24 @@ describe("EventInvitationView", () => {
       expect(await screen.findByLabelText("¿Quién sos en este evento?")).toBeInTheDocument();
     });
 
-    it("ignora una sesión de invitado de otro evento", async () => {
+    it("ante una sesión de invitado de otro evento, primero ofrece continuar sin cuenta", async () => {
       asGuest({ ...francisco, eventId: 77, memberId: 500 });
+      const user = userEvent.setup();
       render(<EventInvitationView token={TOKEN} />);
+
+      // Elegir acá reemplaza la cookie y le quita el acceso al otro evento: no se abre solo.
+      await user.click(await screen.findByRole("button", { name: "Continuar sin cuenta" }));
 
       expect(await screen.findByLabelText("¿Quién sos en este evento?")).toBeInTheDocument();
       expect(screen.queryByText(/Ya elegiste ser/)).not.toBeInTheDocument();
+    });
+
+    it("ante una sesión de invitado de otro evento no muestra el selector sin que lo pida", async () => {
+      asGuest({ ...francisco, eventId: 77, memberId: 500 });
+      render(<EventInvitationView token={TOKEN} />);
+
+      expect(await screen.findByRole("button", { name: "Continuar sin cuenta" })).toBeEnabled();
+      expect(screen.queryByLabelText("¿Quién sos en este evento?")).not.toBeInTheDocument();
     });
   });
 });

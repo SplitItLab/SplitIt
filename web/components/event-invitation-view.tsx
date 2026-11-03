@@ -117,6 +117,13 @@ function AnonymousAccess({
 }) {
   // Quien vuelve con la cookie de invitado ve directo su integrante, sin tocar el botón.
   const [choosing, setChoosing] = useState(guest !== null);
+  const [formGuest, setFormGuest] = useState(guest);
+
+  // Si esa cookie es de otro evento, elegir acá le quitaría el acceso al otro: que lo pida.
+  const handleGuestNotInEvent = useCallback(() => {
+    setFormGuest(null);
+    setChoosing(false);
+  }, []);
 
   return (
     <div className="flex flex-col gap-[10px]">
@@ -131,7 +138,11 @@ function AnonymousAccess({
         Con cuenta, el evento «{invitationName}» te queda guardado entre tus eventos.
       </p>
       {choosing ? (
-        <GuestMemberForm token={token} guest={guest} />
+        <GuestMemberForm
+          token={token}
+          guest={formGuest}
+          onGuestNotInEvent={handleGuestNotInEvent}
+        />
       ) : (
         <Button
           type="button"

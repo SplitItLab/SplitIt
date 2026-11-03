@@ -36,7 +36,15 @@ function recalledSelection(token: string, members: InvitationMember[]): string {
   return member && !member.isLinked ? String(member.id) : "";
 }
 
-export function GuestMemberForm({ token, guest }: { token: string; guest: GuestSession | null }) {
+export function GuestMemberForm({
+  token,
+  guest,
+  onGuestNotInEvent,
+}: {
+  token: string;
+  guest: GuestSession | null;
+  onGuestNotInEvent?: () => void;
+}) {
   const router = useRouter();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [selectedMemberId, setSelectedMemberId] = useState("");
@@ -69,6 +77,16 @@ export function GuestMemberForm({ token, guest }: { token: string; guest: GuestS
     setState({ status: "loading" });
     fetchMembers();
   };
+
+  // La cookie de invitado puede ser de otro evento: solo vale si su integrante está en este link.
+  const guestInEvent =
+    state.status === "ready" && guest
+      ? state.members.some((member) => member.id === guest.memberId)
+      : null;
+
+  useEffect(() => {
+    if (guestInEvent === false) onGuestNotInEvent?.();
+  }, [guestInEvent, onGuestNotInEvent]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -116,9 +134,7 @@ export function GuestMemberForm({ token, guest }: { token: string; guest: GuestS
     );
   }
 
-  // La cookie de invitado puede ser de otro evento: solo vale si su integrante está en este link.
-  const alreadyChosen = guest && state.members.some((member) => member.id === guest.memberId);
-  if (alreadyChosen && !changing) {
+  if (guest && guestInEvent && !changing) {
     return (
       <div className="flex flex-col gap-[10px]">
         <div className="bg-soft-info flex gap-2 rounded-[16px] p-4">
