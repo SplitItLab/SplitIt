@@ -36,6 +36,20 @@ describe("NotFound", () => {
     );
   });
 
+  it("manda al invitado de vuelta a su evento en lugar de al login", () => {
+    vi.mocked(useSession).mockReturnValue({
+      status: "guest",
+      guest: { type: "guest", eventId: 10, memberId: 2, name: "Francisco" },
+    });
+    render(<NotFound />);
+
+    expect(screen.getByRole("link", { name: "Volver a mi evento" })).toHaveAttribute(
+      "href",
+      "/eventos/10"
+    );
+    expect(screen.queryByRole("link", { name: "Iniciar sesión" })).not.toBeInTheDocument();
+  });
+
   it("muestra la 404 y oculta el CTA mientras la sesión está cargando", () => {
     vi.mocked(useSession).mockReturnValue({ status: "loading" });
     render(<NotFound />);
