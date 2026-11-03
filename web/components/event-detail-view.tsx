@@ -7,6 +7,7 @@ import { ArrowLeft, Pencil, Trash2, UserPlus } from "lucide-react";
 
 import { EventError, getEventById, type EventDetail, type EventSummary } from "@/lib/events";
 import { showAppToast } from "@/lib/toast";
+import { useSession } from "@/lib/use-session";
 import { EventNotFound } from "@/components/event-not-found";
 import { EventDetailContent } from "@/components/event-detail-content";
 import { EditEventDialog } from "@/components/edit-event-dialog";
@@ -25,6 +26,7 @@ type LoadState =
 
 export function EventDetailView({ id }: { id: string }) {
   const router = useRouter();
+  const session = useSession();
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -175,13 +177,16 @@ export function EventDetailView({ id }: { id: string }) {
 
   return (
     <>
-      <Link
-        href="/eventos"
-        className="text-text-secondary hover:text-text-primary inline-flex items-center gap-2 text-sm font-medium"
-      >
-        <ArrowLeft className="size-4" />
-        Volver a eventos
-      </Link>
+      {/* Un invitado no tiene lista de eventos adonde volver. */}
+      {session.status !== "guest" && (
+        <Link
+          href="/eventos"
+          className="text-text-secondary hover:text-text-primary inline-flex items-center gap-2 text-sm font-medium"
+        >
+          <ArrowLeft className="size-4" />
+          Volver a eventos
+        </Link>
+      )}
 
       {state.status === "loading" && (
         <section className="flex items-center justify-center gap-2 py-16">
