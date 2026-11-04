@@ -124,6 +124,17 @@ describe("EventDetailView", () => {
     expect(getEventById).toHaveBeenCalledTimes(2);
   });
 
+  it("vuelve a la invitación si el invitado pierde el acceso al evento", async () => {
+    localStorage.setItem("splitit:guest-event:1", "tok-123");
+    vi.mocked(getEventById).mockRejectedValue(new EventError("unauthorized", "Tu sesión expiró."));
+
+    render(<EventDetailView id="1" />);
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/eventos/invitacion/tok-123"));
+    expect(replace).not.toHaveBeenCalledWith("/login");
+    localStorage.clear();
+  });
+
   it("redirige al login cuando la sesión no es válida", async () => {
     vi.mocked(getEventById).mockRejectedValue(new EventError("unauthorized", "Tu sesión expiró."));
 

@@ -343,7 +343,7 @@ describe("EventInvitationView", () => {
     it("preselecciona al integrante que el dispositivo recuerda", async () => {
       vi.mocked(useSession).mockReturnValue({ status: "unauthenticated" });
       localStorage.setItem(`splitit:guest-member:${TOKEN}`, "3");
-      await openGuestForm();
+      render(<EventInvitationView token={TOKEN} />);
 
       expect(await screen.findByLabelText("¿Quién sos en este evento?")).toHaveValue("3");
     });
@@ -351,13 +351,34 @@ describe("EventInvitationView", () => {
     it("ignora un integrante recordado que ya tiene cuenta o no existe", async () => {
       vi.mocked(useSession).mockReturnValue({ status: "unauthenticated" });
       localStorage.setItem(`splitit:guest-member:${TOKEN}`, "1");
-      await openGuestForm();
+      render(<EventInvitationView token={TOKEN} />);
       expect(await screen.findByLabelText("¿Quién sos en este evento?")).toHaveValue("");
 
       cleanup();
       localStorage.setItem(`splitit:guest-member:${TOKEN}`, "99");
-      await openGuestForm();
+      render(<EventInvitationView token={TOKEN} />);
       expect(await screen.findByLabelText("¿Quién sos en este evento?")).toHaveValue("");
+    });
+
+    it("si el integrante que el dispositivo recuerda se vinculó a una cuenta, avisa y deja elegir a otro", async () => {
+      vi.mocked(useSession).mockReturnValue({ status: "unauthenticated" });
+      localStorage.setItem(`splitit:guest-member:${TOKEN}`, "1");
+      render(<EventInvitationView token={TOKEN} />);
+
+      expect(await screen.findByText(/ya está vinculado a una cuenta/)).toHaveTextContent(
+        "Nicolas ya está vinculado a una cuenta"
+      );
+      expect(screen.getByRole("option", { name: "Francisco" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Entrar como invitado" })).toBeEnabled();
+    });
+
+    it("no avisa si el integrante que el dispositivo recuerda sigue disponible", async () => {
+      vi.mocked(useSession).mockReturnValue({ status: "unauthenticated" });
+      localStorage.setItem(`splitit:guest-member:${TOKEN}`, "3");
+      render(<EventInvitationView token={TOKEN} />);
+
+      await screen.findByLabelText("¿Quién sos en este evento?");
+      expect(screen.queryByText(/ya está vinculado a una cuenta/)).not.toBeInTheDocument();
     });
 
     it("con sesión de invitado del mismo evento ofrece entrar directo", async () => {

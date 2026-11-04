@@ -164,9 +164,22 @@ export function GuestMemberForm({
   }
 
   const noMemberAvailable = state.members.every((member) => member.isLinked);
+  const recalledLinkedMember = state.members.find(
+    (member) => member.id === recalledGuestMemberId(token) && member.isLinked
+  );
 
   return (
     <form className="flex flex-col gap-[10px]" onSubmit={handleSubmit} noValidate>
+      {recalledLinkedMember && (
+        <div className="bg-soft-info flex gap-2 rounded-[16px] p-4">
+          <Info aria-hidden="true" className="text-info mt-1 size-4 shrink-0" />
+          <p className="text-muted-foreground text-sm leading-6 font-medium">
+            <span className="text-foreground font-extrabold">{recalledLinkedMember.name}</span> ya
+            está vinculado a una cuenta, así que no podés seguir entrando como esa persona.{" "}
+            {!noMemberAvailable && "Elegí otro integrante disponible."}
+          </p>
+        </div>
+      )}
       {noMemberAvailable && (
         <div className="bg-soft-info flex gap-2 rounded-[16px] p-4">
           <Info aria-hidden="true" className="text-info mt-1 size-4 shrink-0" />

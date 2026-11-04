@@ -7,7 +7,12 @@ import { UserRound, UserRoundCheck } from "lucide-react";
 
 import { EventError } from "@/lib/events";
 import type { GuestSession } from "@/lib/auth";
-import { getInvitation, invitationLoginPath, type Invitation } from "@/lib/invitations";
+import {
+  getInvitation,
+  invitationLoginPath,
+  recalledGuestMemberId,
+  type Invitation,
+} from "@/lib/invitations";
 import { useSession } from "@/lib/use-session";
 import { EventIcon } from "@/components/event-icon";
 import { EventNotFound } from "@/components/event-not-found";
@@ -115,8 +120,8 @@ function AnonymousAccess({
   invitationName: string;
   guest: GuestSession | null;
 }) {
-  // Quien vuelve con la cookie de invitado ve directo su integrante, sin tocar el botón.
-  const [choosing, setChoosing] = useState(guest !== null);
+  // Quien vuelve (con la cookie o con su integrante recordado) ve directo el selector, sin tocar el botón.
+  const [choosing, setChoosing] = useState(guest !== null || recalledGuestMemberId(token) !== null);
   const [formGuest, setFormGuest] = useState(guest);
 
   // Si esa cookie es de otro evento, elegir acá le quitaría el acceso al otro: que lo pida.

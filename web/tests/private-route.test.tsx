@@ -28,6 +28,7 @@ describe("PrivateRoute", () => {
   beforeEach(() => {
     replace.mockClear();
     pathname = "/eventos/10";
+    localStorage.clear();
   });
 
   afterEach(() => {
@@ -40,6 +41,23 @@ describe("PrivateRoute", () => {
 
     expect(replace).toHaveBeenCalledWith("/login");
     expect(screen.queryByText("contenido privado")).not.toBeInTheDocument();
+  });
+
+  it("vuelve a la invitación si el invitado perdió el acceso a su evento", () => {
+    localStorage.setItem("splitit:guest-event:10", "tok-123");
+    vi.mocked(useSession).mockReturnValue({ status: "unauthenticated" });
+    renderRoute();
+
+    expect(replace).toHaveBeenCalledWith("/eventos/invitacion/tok-123");
+    expect(replace).not.toHaveBeenCalledWith("/login");
+  });
+
+  it("manda al login si la invitación recordada es de otro evento", () => {
+    localStorage.setItem("splitit:guest-event:11", "tok-123");
+    vi.mocked(useSession).mockReturnValue({ status: "unauthenticated" });
+    renderRoute();
+
+    expect(replace).toHaveBeenCalledWith("/login");
   });
 
   it("deja pasar al usuario a cualquier ruta", () => {

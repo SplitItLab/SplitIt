@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { recalledInvitationPath } from "@/lib/invitations";
 import { useSession } from "@/lib/use-session";
 import { LoadingIndicator } from "@/components/loading-indicator";
 
@@ -19,12 +20,14 @@ export function PrivateRoute({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (session.status === "unauthenticated") {
-      router.replace("/login");
+      // Un invitado que perdió el acceso a su evento vuelve a la invitación, no al login.
+      const eventId = /^\/eventos\/(\d+)(\/|$)/.exec(pathname)?.[1];
+      router.replace((eventId && recalledInvitationPath(eventId)) || "/login");
     }
     if (guestOutsideEvent) {
       router.replace(guestEventPath);
     }
-  }, [session.status, guestOutsideEvent, guestEventPath, router]);
+  }, [session.status, guestOutsideEvent, guestEventPath, pathname, router]);
 
   if (session.status === "loading") {
     return (

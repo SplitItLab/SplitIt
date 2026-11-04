@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Pencil, Trash2, UserPlus } from "lucide-react";
 
 import { EventError, getEventById, type EventDetail, type EventSummary } from "@/lib/events";
+import { recalledInvitationPath } from "@/lib/invitations";
 import { showAppToast } from "@/lib/toast";
 import { useSession } from "@/lib/use-session";
 import { EventNotFound } from "@/components/event-not-found";
@@ -59,8 +60,8 @@ export function EventDetailView({ id }: { id: string }) {
   }, [fetchEvent]);
 
   useEffect(() => {
-    if (state.status === "unauthorized") router.replace("/login");
-  }, [state.status, router]);
+    if (state.status === "unauthorized") router.replace(recalledInvitationPath(id) ?? "/login");
+  }, [state.status, id, router]);
 
   const retry = () => {
     setState({ status: "loading" });

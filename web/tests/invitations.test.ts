@@ -9,6 +9,7 @@ import {
   linkInvitationMember,
   listInvitationMembers,
   recalledGuestMemberId,
+  recalledInvitationPath,
   rememberGuestMember,
 } from "../lib/invitations";
 
@@ -118,6 +119,21 @@ describe("invitaciones", () => {
     expect(recalledGuestMemberId(TOKEN)).toBe(2);
   });
 
+  it("al entrar como invitado el dispositivo recuerda la invitación de su evento", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({ type: "guest", eventId: 10, memberId: 2, name: "Francisco" })
+    );
+
+    await enterAsGuest(TOKEN, 2);
+
+    expect(recalledInvitationPath(10)).toBe(`/eventos/invitacion/${TOKEN}`);
+    expect(recalledInvitationPath("10")).toBe(`/eventos/invitacion/${TOKEN}`);
+  });
+
+  it("no recuerda ninguna invitación de un evento al que no entró como invitado", () => {
+    expect(recalledInvitationPath(10)).toBeNull();
+  });
+
   it("explica que el integrante ya tiene cuenta cuando el backend responde 409", async () => {
     vi.mocked(fetch).mockResolvedValue(jsonResponse({ message: "Member has an account" }, 409));
 
@@ -164,6 +180,7 @@ describe("invitaciones", () => {
 
     expect(() => rememberGuestMember(TOKEN, 2)).not.toThrow();
     expect(recalledGuestMemberId(TOKEN)).toBeNull();
+    expect(recalledInvitationPath(10)).toBeNull();
     vi.restoreAllMocks();
   });
 
