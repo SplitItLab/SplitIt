@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { UserRound } from "lucide-react";
 
 import { currencyLabel, type EventDetail, type EventMember } from "@/lib/events";
@@ -24,13 +24,19 @@ export function EventDetailContent({
   event,
   onUnauthorized,
   onNotFound,
+  onExpenseCountChange,
 }: {
   event: EventDetail;
   onUnauthorized: () => void;
   onNotFound: () => void;
+  onExpenseCountChange: (count: number | null) => void;
 }) {
   const [active, setActive] = useState<TabId>("gastos");
   const expenses = useEventExpenses({ event, onUnauthorized, onNotFound });
+  const expenseCount = expenses.state.status === "ready" ? expenses.state.expenses.length : null;
+  useEffect(() => {
+    onExpenseCountChange(expenseCount);
+  }, [expenseCount, onExpenseCountChange]);
   const baseId = useId();
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 

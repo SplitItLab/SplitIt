@@ -336,7 +336,8 @@ describe("deleteEvent", () => {
 
     await expect(deleteEvent(10)).rejects.toMatchObject({
       type: "conflict",
-      message: "No se puede eliminar el evento porque tiene registros relacionados.",
+      message:
+        "No se puede eliminar el evento porque tiene gastos cargados. Borrá los gastos primero.",
     });
   });
 });

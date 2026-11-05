@@ -171,7 +171,7 @@ export async function deleteEvent(id: number | string): Promise<void> {
     if (err instanceof ApiError && err.status === 409) {
       throw new EventError(
         "conflict",
-        "No se puede eliminar el evento porque tiene registros relacionados."
+        "No se puede eliminar el evento porque tiene gastos cargados. Borrá los gastos primero."
       );
     }
     toEventError(err);
