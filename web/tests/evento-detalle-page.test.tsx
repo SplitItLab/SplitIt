@@ -299,6 +299,22 @@ describe("EventDetailView", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("no ofrece eliminar mientras se recargan los gastos al abrir el diálogo", async () => {
+    vi.mocked(getEventById).mockResolvedValue(eventDetail);
+    const pending = Promise.withResolvers<Expense[]>();
+    vi.mocked(listExpenses).mockResolvedValueOnce([]).mockReturnValue(pending.promise);
+    const user = userEvent.setup();
+
+    render(<EventDetailView id="1" />);
+    await screen.findByText("Todavía no hay gastos");
+    await user.click(screen.getByRole("button", { name: "Eliminar evento" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).queryByRole("button", { name: "Eliminar evento" })
+    ).not.toBeInTheDocument();
+  });
+
   it("ofrece eliminar el evento en el diálogo cuando no tiene gastos", async () => {
     vi.mocked(getEventById).mockResolvedValue(eventDetail);
     const user = userEvent.setup();

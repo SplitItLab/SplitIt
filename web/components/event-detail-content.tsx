@@ -39,11 +39,14 @@ export function EventDetailContent({
   useEffect(() => {
     onExpenseCountChange(expenseCount);
   }, [expenseCount, onExpenseCountChange]);
-  const { load: reloadExpenses } = expenses;
-  // Otro integrante pudo cambiar los gastos: se recarga al abrir el diálogo de eliminar.
+  const { load: reloadExpenses, setState: setExpensesState } = expenses;
+  // Otro integrante pudo cambiar los gastos: se invalida el conteo y se recarga al abrir el
+  // diálogo de eliminar, para que un conteo viejo no habilite el botón.
   useEffect(() => {
-    if (refreshExpenses) reloadExpenses();
-  }, [refreshExpenses, reloadExpenses]);
+    if (!refreshExpenses) return;
+    setExpensesState({ status: "loading" });
+    reloadExpenses();
+  }, [refreshExpenses, reloadExpenses, setExpensesState]);
   const baseId = useId();
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
