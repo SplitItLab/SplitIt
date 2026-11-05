@@ -102,3 +102,31 @@ jobs:
             NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
+
+  deploy:
+    name: Deploy → Azure App Service
+    needs: image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # Same tag docker/metadata-action publishes with type=sha (lowercase repo, short sha).
+      - id: image
+        run: echo "ref=ghcr.io/${GITHUB_REPOSITORY,,}/web:sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      # Only the image changes: app settings are kept.
+      - uses: azure/webapps-deploy@v3
+        with:
+          app-name: app-splitit-web
+          images: ${{ steps.image.outputs.ref }}

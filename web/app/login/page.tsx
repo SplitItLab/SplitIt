@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { LoadingIndicator } from "@/components/loading-indicator";
 import { AuthLayout } from "@/components/auth-layout";
+import { GoogleSignInButton } from "@/components/google-sign-in-button";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
+  GOOGLE_LOGIN_ERROR_MESSAGE,
   login,
   LoginError,
   LoginInput,
@@ -29,8 +31,11 @@ export default function LoginPage() {
 
 function LoginForm() {
   const router = useRouter();
-  const redirect = useSearchParams().get("redirect");
-  const [generalError, setGeneralError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect");
+  const [generalError, setGeneralError] = useState<string | null>(
+    searchParams.get("error") === "google" ? GOOGLE_LOGIN_ERROR_MESSAGE : null
+  );
   const [showPassword, setShowPassword] = useState(false);
   const {
     register,
@@ -123,6 +128,10 @@ function LoginForm() {
           </Button>
         </FieldGroup>
       </form>
+      <GoogleSignInButton
+        onSuccess={() => router.push(postLoginPath(redirect))}
+        onError={() => setGeneralError(GOOGLE_LOGIN_ERROR_MESSAGE)}
+      />
     </AuthLayout>
   );
 }

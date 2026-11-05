@@ -53,14 +53,14 @@ export function AuthLayout({
 
           <Card className="mt-6 rounded-[24px] p-6 shadow-[0_18px_50px_rgba(7,27,58,0.08)] sm:p-7">
             {children}
-          </Card>
 
-          <p className="text-text-secondary mt-6 text-center text-sm">
-            {footer.text}{" "}
-            <Link className="text-primary font-bold hover:underline" href={footer.href}>
-              {footer.linkLabel}
-            </Link>
-          </p>
+            <p className="text-text-secondary text-center text-sm">
+              {footer.text}{" "}
+              <Link className="text-primary font-bold hover:underline" href={footer.href}>
+                {footer.linkLabel}
+              </Link>
+            </p>
+          </Card>
         </div>
       </main>
     </div>
