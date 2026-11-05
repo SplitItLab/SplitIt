@@ -31,13 +31,14 @@ Accept: application/json
 }
 
 > {%
-import { assertCreatedUser } from './scripts/assert.js'
+import { assertCreatedUser, assertSetCookieHttpOnly } from './scripts/assert.js'
 
-client.test("creates a user with public fields only", function () {
+client.test("creates a user and signs them in", function () {
     assertCreatedUser(client, response, {
         name: "Ada Lovelace",
         emailPattern: /^ada-\d+@example\.com$/,
     })
+    assertSetCookieHttpOnly(client, response, "auth_token")
 })
 %}
 
