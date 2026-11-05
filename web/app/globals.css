@@ -51,6 +51,7 @@
   --color-info: var(--info);
   --color-soft-info: var(--soft-info);
   --background: var(--Stale-Gray);
+  --color-warning: var(--warning);
 }
 
 :root {
@@ -66,6 +67,7 @@
   --Stale-Gray: #f1f5f9;
   --info: #2d9cdb;
   --soft-info: #eaf4ff;
+  --warning: #f2994a;
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -92,7 +94,6 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 }
-
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -137,4 +138,71 @@
   html {
     @apply font-sans;
   }
+}
+
+/*
+ * nextjs-toast-notify injects its styles at runtime, after this file. Its theme
+ * variables live on :root, so they are redefined on the container to win; the icon
+ * color is an inline style and needs !important.
+ */
+.toast-container {
+  --toast-bg-color: var(--card);
+  --toast-text-color: var(--Text-Primary);
+  --toast-close-color: var(--Text-Secondary);
+  --toast-success-color: var(--primary);
+  --toast-error-color: var(--destructive);
+  --toast-warning-color: var(--warning);
+  --toast-info-color: var(--info);
+  --toast-padding: 0.75rem 2.75rem 0.75rem 0.75rem;
+  --toast-border-radius: var(--radius);
+  --toast-icon-size: 2rem;
+  --toast-message-margin: 0 0 0 0.75rem;
+  --toast-close-position-top: 50%;
+  --toast-close-position-right: 0.75rem;
+  --toast-box-shadow: 0 4px 16px rgb(0 22 37 / 8%);
+}
+
+.toast-nextjs {
+  border: 1px solid var(--border);
+  font-family: var(--font-sans);
+}
+
+.toast-nextjs .text {
+  text-align: left;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+}
+
+.toast-nextjs .check {
+  animation: none;
+}
+
+.toast-nextjs .check svg {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.toast-nextjs .close-toast {
+  margin-top: calc(var(--toast-close-padding) * -1);
+}
+
+.toast-nextjs.success .check {
+  color: var(--toast-success-color);
+  background-color: color-mix(in oklab, var(--toast-success-color) 12%, transparent) !important;
+}
+
+.toast-nextjs.error .check {
+  color: var(--toast-error-color);
+  background-color: color-mix(in oklab, var(--toast-error-color) 12%, transparent) !important;
+}
+
+.toast-nextjs.warning .check {
+  color: var(--toast-warning-color);
+  background-color: color-mix(in oklab, var(--toast-warning-color) 12%, transparent) !important;
+}
+
+.toast-nextjs.info .check {
+  color: var(--toast-info-color);
+  background-color: var(--soft-info) !important;
 }
