@@ -18,7 +18,7 @@ class AuthUserDetailsService(
                 ?: throw UsernameNotFoundException(email)
         return User(
             user.email,
-            user.passwordHash,
+            user.passwordHash ?: "",
             emptyList(),
         )
     }

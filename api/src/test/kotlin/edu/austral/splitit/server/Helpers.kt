@@ -22,6 +22,19 @@ object Helpers {
                 passwordHash = passwordHash,
             ).apply { this.id = id }
 
+    fun googleUser(
+        name: String = "Ada Lovelace",
+        email: String = "ada@example.com",
+        googleSubject: String = "google-subject-1",
+        id: Long? = 1L,
+    ): User =
+        User
+            .createWithGoogle(
+                name = name,
+                email = emailOf(email),
+                googleSubject = googleSubject,
+            ).apply { this.id = id }
+
     fun authUser(id: Long = 1L): AuthUser =
         AuthUser(
             id = id,

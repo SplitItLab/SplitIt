@@ -7,11 +7,13 @@ import edu.austral.splitit.server.application.exception.EventDeletionConflictExc
 import edu.austral.splitit.server.application.exception.EventNotFoundException
 import edu.austral.splitit.server.application.exception.ExchangeRateUnavailableException
 import edu.austral.splitit.server.application.exception.ExpenseNotFoundException
+import edu.austral.splitit.server.application.exception.GoogleAccountLoginRequiredException
 import edu.austral.splitit.server.application.exception.InvalidCredentialsException
 import edu.austral.splitit.server.application.exception.InvalidRequestException
 import edu.austral.splitit.server.application.exception.InviteLinkNotFoundException
 import edu.austral.splitit.server.application.exception.MemberHasAccountException
 import edu.austral.splitit.server.application.exception.MemberNotInEventException
+import edu.austral.splitit.server.application.exception.PasswordAccountExistsException
 import edu.austral.splitit.server.domain.model.event.MemberAlreadyLinkedException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -72,6 +74,8 @@ class GlobalExceptionHandler {
         MemberHasAccountException::class,
         MemberAlreadyLinkedException::class,
         AccountAlreadyLinkedException::class,
+        PasswordAccountExistsException::class,
+        GoogleAccountLoginRequiredException::class,
     )
     fun handleConflict(exception: RuntimeException): ResponseEntity<ErrorMessage> =
         error(HttpStatus.CONFLICT, exception.message ?: CONFLICT_MESSAGE)

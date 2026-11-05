@@ -29,6 +29,26 @@ class UserService(
         return persist(user)
     }
 
+    fun saveGoogle(
+        name: String,
+        email: Email,
+        googleSubject: String,
+    ): User = persist(User.createWithGoogle(name = name, email = email, googleSubject = googleSubject))
+
+    fun linkGoogle(
+        user: User,
+        googleSubject: String,
+    ): User {
+        user.linkGoogle(googleSubject)
+        return persist(user)
+    }
+
+    // Flushes, so the freed email can be taken right away by the account that replaces this one.
+    fun disable(user: User): User {
+        user.disable()
+        return persist(user)
+    }
+
     fun update(
         id: Long,
         name: String,
@@ -66,6 +86,8 @@ class UserService(
     fun findById(id: Long): User? = userRepository.findByIdOrNull(id)
 
     fun findByEmail(email: Email): User? = userRepository.findByEmail(email.value)
+
+    fun findByGoogleSubject(googleSubject: String): User? = userRepository.findByGoogleSubject(googleSubject)
 
     fun getById(id: Long): User = findById(id) ?: throw AuthenticatedUserMissingException()
 

@@ -1,5 +1,6 @@
 package edu.austral.splitit.server.application.service
 
+import edu.austral.splitit.server.application.exception.GoogleAccountLoginRequiredException
 import edu.austral.splitit.server.application.exception.InvalidCredentialsException
 import edu.austral.splitit.server.domain.model.user.Email
 import edu.austral.splitit.server.domain.model.user.User
@@ -17,6 +18,10 @@ class LoginService(
         password: String,
     ): User {
         val user = userService.findByEmail(email)
+
+        if (user != null && user.googleSubject != null) {
+            throw GoogleAccountLoginRequiredException()
+        }
 
         val passwordHash = user?.passwordHash ?: DUMMY_PASSWORD_HASH
         val passwordMatches =

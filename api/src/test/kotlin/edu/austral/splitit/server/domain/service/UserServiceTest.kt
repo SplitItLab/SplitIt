@@ -35,7 +35,7 @@ class UserServiceTest {
                 id = 1L,
                 name = unsaved.name,
                 email = unsaved.email,
-                passwordHash = unsaved.passwordHash,
+                passwordHash = requireNotNull(unsaved.passwordHash),
             )
         }
 
