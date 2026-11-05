@@ -3,6 +3,7 @@ package edu.austral.splitit.server.domain.service
 import edu.austral.splitit.server.Helpers
 import edu.austral.splitit.server.application.exception.AuthenticatedUserMissingException
 import edu.austral.splitit.server.application.exception.EmailAlreadyInUseException
+import edu.austral.splitit.server.domain.model.user.GoogleAccountEmailLockedException
 import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.infrastructure.persistence.UserRepository
 import org.hibernate.exception.ConstraintViolationException
@@ -189,6 +190,32 @@ class UserServiceTest {
         assertEquals("Ada Byron Lovelace", user.name)
         assertEquals("ada@example.com", user.email)
         verify(userRepository).saveAndFlush(stored)
+    }
+
+    @Test
+    fun `update refuses to change the email of an account that signs in with Google`() {
+        val stored = Helpers.googleUser()
+        whenever(userRepository.findById(1L)).thenReturn(Optional.of(stored))
+
+        assertFailsWith<GoogleAccountEmailLockedException> {
+            userService.update(id = 1L, name = "Ada Lovelace", email = Helpers.emailOf("other@example.com"))
+        }
+
+        assertEquals("ada@example.com", stored.email)
+        verify(userRepository, never()).saveAndFlush(any())
+    }
+
+    @Test
+    fun `update lets an account that signs in with Google change only its name`() {
+        val stored = Helpers.googleUser()
+        whenever(userRepository.findById(1L)).thenReturn(Optional.of(stored))
+        whenever(userRepository.existsByEmailAndIdNot("ada@example.com", 1L)).thenReturn(false)
+        whenever(userRepository.saveAndFlush(any())).thenAnswer { it.getArgument(0) }
+
+        val user = userService.update(id = 1L, name = "Ada Byron", email = Helpers.emailOf("Ada@Example.com"))
+
+        assertEquals("Ada Byron", user.name)
+        assertEquals("ada@example.com", user.email)
     }
 
     @Test

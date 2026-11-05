@@ -82,6 +82,9 @@ class User private constructor(
         name: String,
         email: Email,
     ) {
+        // The email is what ties the account to Google, so it can never change.
+        if (googleSubject != null && email.value != this.email) throw GoogleAccountEmailLockedException()
+
         this.name = normalizeName(name)
         this.email = email.value
     }

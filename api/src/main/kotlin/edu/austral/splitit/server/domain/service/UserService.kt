@@ -56,11 +56,11 @@ class UserService(
     ): User {
         val user = getById(id)
 
+        user.updateProfile(name, email)
+
         if (userRepository.existsByEmailAndIdNot(email.value, id)) {
             throw EmailAlreadyInUseException()
         }
-
-        user.updateProfile(name, email)
 
         return persist(user)
     }

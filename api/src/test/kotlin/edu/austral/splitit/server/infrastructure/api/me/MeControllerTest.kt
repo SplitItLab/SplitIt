@@ -8,6 +8,7 @@ import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.AccountService
 import edu.austral.splitit.server.application.service.GuestAccessService
+import edu.austral.splitit.server.domain.model.user.GoogleAccountEmailLockedException
 import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
 import edu.austral.splitit.server.infrastructure.config.SecurityConfig
@@ -88,6 +89,28 @@ class MeControllerTest(
 
         verify(accountService).get(1L)
         verify(sessionCookieWriter, never()).write(any(), any())
+    }
+
+    @Test
+    fun `get tells whether the account signs in with Google`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(staleAuthUser())
+        whenever(accountService.get(1L)).thenReturn(Helpers.googleUser())
+
+        mockMvc
+            .perform(get("/api/me").cookie(Cookie("auth_token", "good-token")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.signsInWithGoogle").value(true))
+    }
+
+    @Test
+    fun `get tells a password account does not sign in with Google`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(staleAuthUser())
+        whenever(accountService.get(1L)).thenReturn(ada())
+
+        mockMvc
+            .perform(get("/api/me").cookie(Cookie("auth_token", "good-token")))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.signsInWithGoogle").value(false))
     }
 
     @Test
@@ -246,6 +269,24 @@ class MeControllerTest(
                     ),
             ).andExpect(status().isConflict)
             .andExpect(jsonPath("$.message").value("Email already in use"))
+
+        verify(sessionCookieWriter, never()).write(any(), any())
+        verify(tokenProvider, never()).issue(any())
+    }
+
+    @Test
+    fun `patch returns 422 when an account that signs in with Google changes its email`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(staleAuthUser())
+        whenever(accountService.update(any(), any(), any())).thenThrow(GoogleAccountEmailLockedException())
+
+        mockMvc
+            .perform(
+                patch("/api/me")
+                    .cookie(Cookie("auth_token", "good-token"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"name":"Ada Lovelace","email":"other@example.com"}"""),
+            ).andExpect(status().isUnprocessableContent)
+            .andExpect(jsonPath("$.message").value("Email cannot be changed on an account that signs in with Google"))
 
         verify(sessionCookieWriter, never()).write(any(), any())
         verify(tokenProvider, never()).issue(any())
