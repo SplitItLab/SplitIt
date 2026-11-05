@@ -252,6 +252,99 @@ describe("EventDetailView", () => {
     expect(await screen.findByRole("button", { name: "Invitar" })).toBeInTheDocument();
   });
 
+  it("avisa en el diálogo de eliminar que hay que borrar los gastos primero", async () => {
+    const expense = (id: number): Expense => ({
+      id,
+      eventId: 1,
+      name: `Gasto ${id}`,
+      originalAmount: 100,
+      originalCurrency: "ARS",
+      baseAmount: 100,
+      baseCurrency: "ARS",
+      paidByMember: { id: 10, name: "Ana" },
+      expenseDate: "2026-01-10",
+    });
+    vi.mocked(getEventById).mockResolvedValue(eventDetail);
+    vi.mocked(listExpenses).mockResolvedValue([expense(1), expense(2), expense(3)]);
+    const user = userEvent.setup();
+
+    render(<EventDetailView id="1" />);
+    await screen.findByText("Gasto 1");
+    await user.click(screen.getByRole("button", { name: "Eliminar evento" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByText(
+        "Este evento tiene 3 gastos. Para eliminarlo, primero borrá sus gastos."
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("button", { name: "Eliminar evento" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("recarga los gastos al abrir el diálogo de eliminar", async () => {
+    vi.mocked(getEventById).mockResolvedValue(eventDetail);
+    vi.mocked(listExpenses)
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([
+        {
+          id: 1,
+          eventId: 1,
+          name: "Gasto de otro integrante",
+          originalAmount: 100,
+          originalCurrency: "ARS",
+          baseAmount: 100,
+          baseCurrency: "ARS",
+          paidByMember: { id: 11, name: "Juan" },
+          expenseDate: "2026-01-10",
+        },
+      ]);
+    const user = userEvent.setup();
+
+    render(<EventDetailView id="1" />);
+    await screen.findByText("Todavía no hay gastos");
+    await user.click(screen.getByRole("button", { name: "Eliminar evento" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText(
+        "Este evento tiene 1 gasto. Para eliminarlo, primero borrá sus gastos."
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("button", { name: "Eliminar evento" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("no ofrece eliminar mientras se recargan los gastos al abrir el diálogo", async () => {
+    vi.mocked(getEventById).mockResolvedValue(eventDetail);
+    const pending = Promise.withResolvers<Expense[]>();
+    vi.mocked(listExpenses).mockResolvedValueOnce([]).mockReturnValue(pending.promise);
+    const user = userEvent.setup();
+
+    render(<EventDetailView id="1" />);
+    await screen.findByText("Todavía no hay gastos");
+    await user.click(screen.getByRole("button", { name: "Eliminar evento" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).queryByRole("button", { name: "Eliminar evento" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("ofrece eliminar el evento en el diálogo cuando no tiene gastos", async () => {
+    vi.mocked(getEventById).mockResolvedValue(eventDetail);
+    const user = userEvent.setup();
+
+    render(<EventDetailView id="1" />);
+    await screen.findByText("Todavía no hay gastos");
+    await user.click(screen.getByRole("button", { name: "Eliminar evento" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByRole("button", { name: "Eliminar evento" })).toBeInTheDocument();
+  });
+
   it("oculta Invitar, editar y eliminar cuando el usuario no es dueño", async () => {
     vi.mocked(getEventById).mockResolvedValue({ ...eventDetail, isOwner: false });
 

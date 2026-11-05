@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { UserRound } from "lucide-react";
 
 import { currencyLabel, type EventDetail, type EventMember } from "@/lib/events";
@@ -24,13 +24,29 @@ export function EventDetailContent({
   event,
   onUnauthorized,
   onNotFound,
+  onExpenseCountChange,
+  refreshExpenses,
 }: {
   event: EventDetail;
   onUnauthorized: () => void;
   onNotFound: () => void;
+  onExpenseCountChange: (count: number | null) => void;
+  refreshExpenses: boolean;
 }) {
   const [active, setActive] = useState<TabId>("gastos");
   const expenses = useEventExpenses({ event, onUnauthorized, onNotFound });
+  const expenseCount = expenses.state.status === "ready" ? expenses.state.expenses.length : null;
+  useEffect(() => {
+    onExpenseCountChange(expenseCount);
+  }, [expenseCount, onExpenseCountChange]);
+  const { load: reloadExpenses, setState: setExpensesState } = expenses;
+  // Otro integrante pudo cambiar los gastos: se invalida el conteo y se recarga al abrir el
+  // diálogo de eliminar, para que un conteo viejo no habilite el botón.
+  useEffect(() => {
+    if (!refreshExpenses) return;
+    setExpensesState({ status: "loading" });
+    reloadExpenses();
+  }, [refreshExpenses, reloadExpenses, setExpensesState]);
   const baseId = useId();
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 

@@ -32,6 +32,7 @@ export function EventDetailView({ id }: { id: string }) {
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [inviting, setInviting] = useState(false);
+  const [expenseCount, setExpenseCount] = useState<number | null>(null);
 
   const fetchEvent = useCallback(() => {
     getEventById(id)
@@ -150,6 +151,8 @@ export function EventDetailView({ id }: { id: string }) {
           event={state.event}
           onUnauthorized={handleUnauthorized}
           onNotFound={handleNotFound}
+          onExpenseCountChange={setExpenseCount}
+          refreshExpenses={deleting}
         />
 
         <InviteEventDialog
@@ -169,6 +172,7 @@ export function EventDetailView({ id }: { id: string }) {
           open={deleting}
           onOpenChange={setDeleting}
           event={state.event}
+          expenseCount={expenseCount}
           onDeleted={handleDeleted}
           onUnauthorized={() => setState({ status: "unauthorized" })}
         />

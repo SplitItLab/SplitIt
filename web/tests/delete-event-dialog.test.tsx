@@ -25,12 +25,13 @@ const event: EventDetail = {
   isOwner: true,
 };
 
-function renderDialog(onDeleted = () => {}) {
+function renderDialog(onDeleted = () => {}, expenseCount: number | null = 0) {
   return render(
     <DeleteEventDialog
       open
       onOpenChange={() => {}}
       event={event}
+      expenseCount={expenseCount}
       onDeleted={onDeleted}
       onUnauthorized={() => {}}
     />
@@ -58,6 +59,7 @@ describe("DeleteEventDialog", () => {
         open
         onOpenChange={onOpenChange}
         event={event}
+        expenseCount={0}
         onDeleted={() => {}}
         onUnauthorized={() => {}}
       />
@@ -110,12 +112,9 @@ describe("DeleteEventDialog", () => {
     expect(deleteEvent).toHaveBeenCalledTimes(1);
   });
 
-  it("muestra mensaje de conflicto cuando el evento tiene registros relacionados", async () => {
+  it("muestra el mensaje de conflicto cuando la API responde 409", async () => {
     vi.mocked(deleteEvent).mockRejectedValue(
-      new EventError(
-        "conflict",
-        "No se puede eliminar el evento porque tiene registros relacionados."
-      )
+      new EventError("conflict", "No se puede eliminar el evento porque tiene gastos cargados.")
     );
     const user = userEvent.setup();
     renderDialog();
@@ -125,8 +124,48 @@ describe("DeleteEventDialog", () => {
 
     expect(
       await within(dialog).findByText(
-        "No se puede eliminar el evento porque tiene registros relacionados."
+        "No se puede eliminar el evento porque tiene gastos cargados."
       )
     ).toBeInTheDocument();
+  });
+
+  it.each([
+    [1, "Este evento tiene 1 gasto. Para eliminarlo, primero borrá sus gastos."],
+    [3, "Este evento tiene 3 gastos. Para eliminarlo, primero borrá sus gastos."],
+  ])("con %i gasto(s) avisa que hay que borrarlos y no ofrece eliminar", async (count, message) => {
+    const onOpenChange = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <DeleteEventDialog
+        open
+        onOpenChange={onOpenChange}
+        event={event}
+        expenseCount={count}
+        onDeleted={() => {}}
+        onUnauthorized={() => {}}
+      />
+    );
+    const dialog = await screen.findByRole("dialog");
+
+    expect(within(dialog).getByText(message)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/Esta acción no se puede deshacer/)).not.toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("button", { name: "Eliminar evento" })
+    ).not.toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole("button", { name: "Cerrar" }));
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(deleteEvent).not.toHaveBeenCalled();
+  });
+
+  it("si todavía no se conocen los gastos, no ofrece eliminar", async () => {
+    renderDialog(() => {}, null);
+    const dialog = await screen.findByRole("dialog");
+
+    expect(within(dialog).getByText(/Esta acción no se puede deshacer/)).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("button", { name: "Eliminar evento" })
+    ).not.toBeInTheDocument();
   });
 });

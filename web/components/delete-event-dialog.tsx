@@ -13,6 +13,7 @@ type DeleteEventDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   event: EventDetail;
+  expenseCount: number | null;
   onDeleted: () => void;
   onUnauthorized: () => void;
 };
@@ -21,11 +22,14 @@ export function DeleteEventDialog({
   open,
   onOpenChange,
   event,
+  expenseCount,
   onDeleted,
   onUnauthorized,
 }: DeleteEventDialogProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const hasExpenses = expenseCount !== null && expenseCount > 0;
 
   const handleOpenChange = (next: boolean) => {
     if (next) setError(null);
@@ -67,9 +71,15 @@ export function DeleteEventDialog({
           </span>
           <DialogTitle className="text-[28px]">Eliminar «{event.name}»</DialogTitle>
           <DialogDescription className="text-muted-foreground text-sm leading-6 font-medium">
-            Se eliminan también{" "}
-            {event.memberCount === 1 ? "1 integrante" : `${event.memberCount} integrantes`}. El
-            resto de los integrantes deja de ver el evento. Esta acción no se puede deshacer.
+            {hasExpenses ? (
+              `Este evento tiene ${expenseCount === 1 ? "1 gasto" : `${expenseCount} gastos`}. Para eliminarlo, primero borrá sus gastos.`
+            ) : (
+              <>
+                Se eliminan también{" "}
+                {event.memberCount === 1 ? "1 integrante" : `${event.memberCount} integrantes`}. El
+                resto de los integrantes deja de ver el evento. Esta acción no se puede deshacer.
+              </>
+            )}
           </DialogDescription>
         </div>
 
@@ -87,16 +97,18 @@ export function DeleteEventDialog({
             onClick={() => onOpenChange(false)}
             className="text-muted-foreground hover:text-foreground mt-0 h-10 rounded-[8px] border-0 px-4 text-xl font-medium"
           >
-            Cancelar
+            {hasExpenses ? "Cerrar" : "Cancelar"}
           </Button>
-          <Button
-            type="button"
-            disabled={isDeleting}
-            onClick={handleConfirm}
-            className="bg-destructive hover:bg-destructive/90 h-10 gap-2 rounded-[8px] px-4 text-xl font-medium text-white"
-          >
-            {isDeleting ? <LoadingIndicator message="Eliminando evento…" /> : "Eliminar evento"}
-          </Button>
+          {expenseCount === 0 && (
+            <Button
+              type="button"
+              disabled={isDeleting}
+              onClick={handleConfirm}
+              className="bg-destructive hover:bg-destructive/90 h-10 gap-2 rounded-[8px] px-4 text-xl font-medium text-white"
+            >
+              {isDeleting ? <LoadingIndicator message="Eliminando evento…" /> : "Eliminar evento"}
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
