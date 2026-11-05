@@ -1,9 +1,11 @@
 package edu.austral.splitit.server.infrastructure.persistence
 
 import edu.austral.splitit.server.domain.model.event.EventMember
+import edu.austral.splitit.server.domain.model.user.User
 import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 
@@ -39,6 +41,13 @@ interface EventMemberRepository : JpaRepository<EventMember, Long> {
     ): Boolean
 
     fun deleteAllByEventId(eventId: Long)
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE EventMember em SET em.user = :to WHERE em.user = :from")
+    fun transferMemberships(
+        @Param("from") from: User,
+        @Param("to") to: User,
+    ): Int
 
     @Query(
         """

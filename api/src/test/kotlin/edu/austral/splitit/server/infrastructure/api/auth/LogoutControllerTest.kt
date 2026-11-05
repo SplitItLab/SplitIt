@@ -1,6 +1,7 @@
 package edu.austral.splitit.server.infrastructure.api.auth
 
 import edu.austral.splitit.server.application.port.TokenProvider
+import edu.austral.splitit.server.application.service.GoogleLoginService
 import edu.austral.splitit.server.application.service.LoginService
 import edu.austral.splitit.server.application.service.SignUpService
 import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
@@ -56,6 +57,9 @@ class LogoutControllerTest(
 
     @MockitoBean
     private lateinit var loginService: LoginService
+
+    @MockitoBean
+    private lateinit var googleLoginService: GoogleLoginService
 
     @MockitoBean
     private lateinit var tokenProvider: TokenProvider

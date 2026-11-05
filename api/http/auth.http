@@ -468,3 +468,55 @@ client.test("logs in again with the same account after logout", function () {
     assertSetCookieHttpOnly(client, response, "auth_token")
 })
 %}
+
+### Google — missing credential (400)
+POST {{baseUrl}}/api/auth/google
+Content-Type: application/json
+Accept: application/json
+
+{}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects a request without credential", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### Google — invalid existingAccount (400)
+POST {{baseUrl}}/api/auth/google
+Content-Type: application/json
+Accept: application/json
+
+{
+  "credential": "not-a-google-token",
+  "existingAccount": "MERGE"
+}
+
+> {%
+import { assertError } from './scripts/assert.js'
+
+client.test("rejects an unknown existingAccount choice", function () {
+    assertError(client, response, 400, "Invalid request data")
+})
+%}
+
+### Google — forged credential (401, no cookie)
+# The happy path and the 409 need a real Google ID token: they are covered by GoogleLoginControllerTest.
+POST {{baseUrl}}/api/auth/google
+Content-Type: application/json
+Accept: application/json
+
+{
+  "credential": "not-a-google-token"
+}
+
+> {%
+import { assertError, setCookieHeader } from './scripts/assert.js'
+
+client.test("rejects a credential Google did not sign", function () {
+    assertError(client, response, 401, "Invalid credentials")
+    client.assert(!setCookieHeader(response).includes("auth_token"), "must not set a session cookie")
+})
+%}

@@ -5,6 +5,7 @@ import edu.austral.splitit.server.application.exception.InvalidRequestException
 import edu.austral.splitit.server.application.port.AuthGuest
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
+import edu.austral.splitit.server.application.service.GoogleLoginService
 import edu.austral.splitit.server.application.service.LoginService
 import edu.austral.splitit.server.application.service.SignUpService
 import edu.austral.splitit.server.domain.model.user.Email
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController
 class AuthController(
     private val signUpService: SignUpService,
     private val loginService: LoginService,
+    private val googleLoginService: GoogleLoginService,
     private val tokenProvider: TokenProvider,
     private val sessionCookieWriter: SessionCookieWriter,
 ) {
@@ -59,6 +61,17 @@ class AuthController(
                 ?: throw InvalidRequestException()
 
         val user = loginService.login(email, request.password)
+
+        writeCookieSession(user, response)
+        return UserResponse.of(user)
+    }
+
+    @PostMapping("/google")
+    fun googleLogin(
+        @Valid @RequestBody request: GoogleLoginRequest,
+        response: HttpServletResponse,
+    ): UserResponse {
+        val user = googleLoginService.login(request.credential, request.existingAccount)
 
         writeCookieSession(user, response)
         return UserResponse.of(user)

@@ -1,7 +1,9 @@
 package edu.austral.splitit.server.infrastructure.persistence
 
 import edu.austral.splitit.server.domain.model.event.Event
+import edu.austral.splitit.server.domain.model.user.User
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.time.Instant
@@ -18,6 +20,13 @@ interface EventRepository : JpaRepository<Event, Long> {
     fun findDistinctByOwnerIdOrMemberUserId(
         @Param("userId") userId: Long,
     ): List<Event>
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Event e SET e.owner = :to WHERE e.owner = :from")
+    fun transferOwnership(
+        @Param("from") from: User,
+        @Param("to") to: User,
+    ): Int
 
     @Query("SELECT COUNT(x) FROM Expense x WHERE x.event.id = :eventId")
     fun countExpensesByEventId(

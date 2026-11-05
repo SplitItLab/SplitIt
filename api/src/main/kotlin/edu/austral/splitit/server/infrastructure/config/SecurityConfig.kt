@@ -46,6 +46,7 @@ class SecurityConfig(
                     .requestMatchers(
                         HttpMethod.POST,
                         "/api/auth/login",
+                        "/api/auth/google",
                         "/api/auth/register",
                         "/api/auth/logout",
                         "/api/invite-links/*/guest-session",
