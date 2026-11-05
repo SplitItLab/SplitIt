@@ -26,10 +26,7 @@ describe("Home", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "Compartí el link y listo."
     );
-    expect(screen.getByRole("link", { name: /crear un evento/i })).toHaveAttribute(
-      "href",
-      "/register"
-    );
+    expect(screen.getByRole("link", { name: /comenzar/i })).toHaveAttribute("href", "/register");
     expect(screen.queryByRole("status", { name: "Cargando" })).toBeNull();
     expect(replace).not.toHaveBeenCalled();
   });
@@ -40,10 +37,7 @@ describe("Home", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "Compartí el link y listo."
     );
-    expect(screen.getByRole("link", { name: /crear un evento/i })).toHaveAttribute(
-      "href",
-      "/register"
-    );
+    expect(screen.getByRole("link", { name: /comenzar/i })).toHaveAttribute("href", "/register");
     expect(replace).not.toHaveBeenCalled();
   });
 

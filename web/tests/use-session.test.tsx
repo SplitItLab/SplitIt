@@ -117,10 +117,7 @@ describe("Landing page fallback con backend no disponible", () => {
       );
     });
 
-    expect(screen.getByRole("link", { name: /crear un evento/i })).toHaveAttribute(
-      "href",
-      "/register"
-    );
+    expect(screen.getByRole("link", { name: /comenzar/i })).toHaveAttribute("href", "/register");
     expect(replace).not.toHaveBeenCalled();
   });
 });

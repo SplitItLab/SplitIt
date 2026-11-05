@@ -91,7 +91,7 @@ function LandingHero() {
               Tus amigos cargan gastos y ven sus saldos sin crear cuenta ni bajar nada.
             </p>
             <PrimaryLink href="/register">
-              Crear un evento
+              Comenzar
               <ArrowRight className="size-6" aria-hidden="true" />
             </PrimaryLink>
           </div>
