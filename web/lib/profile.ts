@@ -5,12 +5,13 @@ import { SessionUser } from "@/lib/auth";
 const USE_MOCK = process.env.NEXT_PUBLIC_MOCK_AUTH === "true";
 const MOCK_PROFILE_KEY = "mock_profile_user";
 
-export type Profile = SessionUser;
+// Google accounts keep the email Google gave them: it is shown but never edited.
+export type Profile = SessionUser & { signsInWithGoogle: boolean };
 
 function readMockProfile(): Profile {
   const raw = sessionStorage.getItem(MOCK_PROFILE_KEY);
   if (raw) return JSON.parse(raw) as Profile;
-  return { id: 1, name: "Ada Lovelace", email: "ada@example.com" };
+  return { id: 1, name: "Ada Lovelace", email: "ada@example.com", signsInWithGoogle: false };
 }
 
 async function mockGetProfile(): Promise<Profile> {
@@ -36,7 +37,7 @@ export const profileSchema = z.object({
 export type ProfileInput = z.infer<typeof profileSchema>;
 
 export type ProfileErrorType =
-  "validation" | "email-taken" | "unauthorized" | "network" | "server-error";
+  "validation" | "email-taken" | "email-locked" | "unauthorized" | "network" | "server-error";
 
 export class ProfileError extends Error {
   constructor(
@@ -67,6 +68,13 @@ function toProfileError(err: unknown): never {
     }
     if (err.status === 409) {
       throw new ProfileError("email-taken", "Ese email ya está registrado.", "email");
+    }
+    if (err.status === 422) {
+      throw new ProfileError(
+        "email-locked",
+        "El email de una cuenta de Google no se puede cambiar.",
+        "email"
+      );
     }
     if (err.status === 400) {
       const message = err.message || "Revisá los datos ingresados.";
