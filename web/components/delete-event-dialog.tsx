@@ -99,7 +99,7 @@ export function DeleteEventDialog({
           >
             {hasExpenses ? "Cerrar" : "Cancelar"}
           </Button>
-          {!hasExpenses && (
+          {expenseCount === 0 && (
             <Button
               type="button"
               disabled={isDeleting}

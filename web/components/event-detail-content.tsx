@@ -25,11 +25,13 @@ export function EventDetailContent({
   onUnauthorized,
   onNotFound,
   onExpenseCountChange,
+  refreshExpenses,
 }: {
   event: EventDetail;
   onUnauthorized: () => void;
   onNotFound: () => void;
   onExpenseCountChange: (count: number | null) => void;
+  refreshExpenses: boolean;
 }) {
   const [active, setActive] = useState<TabId>("gastos");
   const expenses = useEventExpenses({ event, onUnauthorized, onNotFound });
@@ -37,6 +39,11 @@ export function EventDetailContent({
   useEffect(() => {
     onExpenseCountChange(expenseCount);
   }, [expenseCount, onExpenseCountChange]);
+  const { load: reloadExpenses } = expenses;
+  // Otro integrante pudo cambiar los gastos: se recarga al abrir el diálogo de eliminar.
+  useEffect(() => {
+    if (refreshExpenses) reloadExpenses();
+  }, [refreshExpenses, reloadExpenses]);
   const baseId = useId();
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 

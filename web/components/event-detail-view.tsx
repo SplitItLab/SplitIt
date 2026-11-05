@@ -145,6 +145,7 @@ export function EventDetailView({ id }: { id: string }) {
           onUnauthorized={handleUnauthorized}
           onNotFound={handleNotFound}
           onExpenseCountChange={setExpenseCount}
+          refreshExpenses={deleting}
         />
 
         <InviteEventDialog

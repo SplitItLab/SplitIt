@@ -265,6 +265,40 @@ describe("EventDetailView", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("recarga los gastos al abrir el diálogo de eliminar", async () => {
+    vi.mocked(getEventById).mockResolvedValue(eventDetail);
+    vi.mocked(listExpenses)
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([
+        {
+          id: 1,
+          eventId: 1,
+          name: "Gasto de otro integrante",
+          originalAmount: 100,
+          originalCurrency: "ARS",
+          baseAmount: 100,
+          baseCurrency: "ARS",
+          paidByMember: { id: 11, name: "Juan" },
+          expenseDate: "2026-01-10",
+        },
+      ]);
+    const user = userEvent.setup();
+
+    render(<EventDetailView id="1" />);
+    await screen.findByText("Todavía no hay gastos");
+    await user.click(screen.getByRole("button", { name: "Eliminar evento" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText(
+        "Este evento tiene 1 gasto. Para eliminarlo, primero borrá sus gastos."
+      )
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("button", { name: "Eliminar evento" })
+    ).not.toBeInTheDocument();
+  });
+
   it("ofrece eliminar el evento en el diálogo cuando no tiene gastos", async () => {
     vi.mocked(getEventById).mockResolvedValue(eventDetail);
     const user = userEvent.setup();

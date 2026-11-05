@@ -159,11 +159,13 @@ describe("DeleteEventDialog", () => {
     expect(deleteEvent).not.toHaveBeenCalled();
   });
 
-  it("si todavía no se conocen los gastos, el diálogo queda como siempre", async () => {
+  it("si todavía no se conocen los gastos, no ofrece eliminar", async () => {
     renderDialog(() => {}, null);
     const dialog = await screen.findByRole("dialog");
 
     expect(within(dialog).getByText(/Esta acción no se puede deshacer/)).toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: "Eliminar evento" })).toBeInTheDocument();
+    expect(
+      within(dialog).queryByRole("button", { name: "Eliminar evento" })
+    ).not.toBeInTheDocument();
   });
 });
