@@ -2,9 +2,10 @@
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 
+import { GoogleAccountChoiceDialog } from "@/components/google-account-choice-dialog";
 import { LoadingIndicator } from "@/components/loading-indicator";
 import { Separator } from "@/components/ui/separator";
-import { loginWithGoogle } from "@/lib/auth";
+import { GoogleAccountExistsError, loginWithGoogle, type ExistingAccountChoice } from "@/lib/auth";
 
 const GOOGLE_SCRIPT_ID = "google-identity-services";
 const GOOGLE_SCRIPT_SRC = "https://accounts.google.com/gsi/client";
@@ -71,21 +72,37 @@ function GoogleButton({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const [isUnavailable, setIsUnavailable] = useState(false);
+  // Google's credential, kept while the person decides what to do with their existing account.
+  const [pendingCredential, setPendingCredential] = useState<string | null>(null);
+
+  const signIn = async (credential: string, existingAccount?: ExistingAccountChoice) => {
+    setIsSigningIn(true);
+    try {
+      await loginWithGoogle(credential, existingAccount);
+      onSuccess();
+    } catch (err) {
+      setIsSigningIn(false);
+      if (err instanceof GoogleAccountExistsError) {
+        setPendingCredential(credential);
+        return;
+      }
+      onError();
+    }
+  };
 
   const handleCredential = useEffectEvent(async ({ credential }: GoogleCredentialResponse) => {
     if (!credential) {
       onError();
       return;
     }
-    setIsSigningIn(true);
-    try {
-      await loginWithGoogle(credential);
-      onSuccess();
-    } catch {
-      setIsSigningIn(false);
-      onError();
-    }
+    await signIn(credential);
   });
+
+  const handleChoice = (choice: ExistingAccountChoice) => {
+    if (!pendingCredential) return;
+    setPendingCredential(null);
+    void signIn(pendingCredential, choice);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -131,6 +148,11 @@ function GoogleButton({
           <LoadingIndicator message="Ingresando con Google…" />
         </p>
       )}
+      <GoogleAccountChoiceDialog
+        open={pendingCredential !== null}
+        onChoose={handleChoice}
+        onCancel={() => setPendingCredential(null)}
+      />
     </div>
   );
 }

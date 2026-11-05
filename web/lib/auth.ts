@@ -203,15 +203,35 @@ export function googleLoginErrorPath(redirect: string | null): string {
   return `${path}${path.includes("?") ? "&" : "?"}error=google`;
 }
 
+export type ExistingAccountChoice = "LINK" | "REPLACE";
+
+// The email already has a password account, so the person has to say what to do with it.
+export class GoogleAccountExistsError extends Error {
+  constructor() {
+    super("Ya existe una cuenta con ese email.");
+    this.name = "GoogleAccountExistsError";
+  }
+}
+
 // `credential` is the ID token Google returns; the API verifies it and opens the session.
-export async function loginWithGoogle(credential: string): Promise<void> {
+export async function loginWithGoogle(
+  credential: string,
+  existingAccount?: ExistingAccountChoice
+): Promise<void> {
   if (USE_MOCK) {
     return mockLoginWithGoogle();
   }
-  await request<void>("/api/auth/google", {
-    method: "POST",
-    body: JSON.stringify({ credential }),
-  });
+  try {
+    await request<void>("/api/auth/google", {
+      method: "POST",
+      body: JSON.stringify({ credential, existingAccount }),
+    });
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 409) {
+      throw new GoogleAccountExistsError();
+    }
+    throw err;
+  }
 }
 
 export async function getSession(): Promise<SessionUser | GuestSession | null> {
