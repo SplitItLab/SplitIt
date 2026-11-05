@@ -32,6 +32,17 @@ describe("useSession", () => {
     });
   });
 
+  it("resuelve a guest cuando getSession devuelve un invitado", async () => {
+    const guest = { type: "guest" as const, eventId: 3, memberId: 7, name: "Juan" };
+    vi.mocked(getSession).mockResolvedValueOnce(guest);
+
+    const { result } = renderHook(() => useSession());
+
+    await waitFor(() => {
+      expect(result.current).toEqual({ status: "guest", guest });
+    });
+  });
+
   it("resuelve a unauthenticated cuando getSession devuelve null", async () => {
     vi.mocked(getSession).mockResolvedValueOnce(null);
 

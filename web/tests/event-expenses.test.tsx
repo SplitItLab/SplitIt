@@ -54,10 +54,10 @@ function money(amount: number, currency: string) {
   return formatMoney(amount, currency).replaceAll("\u00a0", " ");
 }
 
-function renderExpenses() {
+function renderExpenses(current: EventDetail = event) {
   const onUnauthorized = vi.fn();
   const onNotFound = vi.fn();
-  render(<EventExpenses event={event} onUnauthorized={onUnauthorized} onNotFound={onNotFound} />);
+  render(<EventExpenses event={current} onUnauthorized={onUnauthorized} onNotFound={onNotFound} />);
   return { onUnauthorized, onNotFound };
 }
 
@@ -85,6 +85,26 @@ describe("EventExpenses", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Agregar gasto" })).toBeInTheDocument();
     expect(screen.queryByText("Total de gastos")).not.toBeInTheDocument();
+  });
+
+  it("al invitado le deja agregar gastos pero no editarlos ni eliminarlos", async () => {
+    vi.mocked(listExpenses).mockResolvedValue([cena]);
+
+    renderExpenses({ ...event, isOwner: false, guestMemberId: 12 });
+
+    expect(await screen.findByText("Cena")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Agregar gasto" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Editar gasto Cena" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Eliminar gasto Cena" })).not.toBeInTheDocument();
+  });
+
+  it("al usuario le muestra editar y eliminar en cada gasto", async () => {
+    vi.mocked(listExpenses).mockResolvedValue([cena]);
+
+    renderExpenses();
+
+    expect(await screen.findByRole("button", { name: "Editar gasto Cena" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Eliminar gasto Cena" })).toBeInTheDocument();
   });
 
   it("muestra nombre, fecha y pagador de cada gasto", async () => {

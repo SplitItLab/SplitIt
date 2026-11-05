@@ -49,7 +49,7 @@ export function AddExpenseDialog({
   const [amount, setAmount] = useState(expense ? String(expense.originalAmount) : "");
   const [currency, setCurrency] = useState(expense?.originalCurrency ?? event.baseCurrency);
   const [payerId, setPayerId] = useState(
-    expense ? String(expense.paidByMember.id) : memberId(event)
+    expense ? String(expense.paidByMember.id) : defaultPayerId(event)
   );
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -72,7 +72,7 @@ export function AddExpenseDialog({
     setName("");
     setAmount("");
     setCurrency(event.baseCurrency);
-    setPayerId(memberId(event));
+    setPayerId(defaultPayerId(event));
     setFormError(null);
     setSubmitting(false);
     setQuote(null);
@@ -298,6 +298,8 @@ export function AddExpenseDialog({
               <select
                 id="expense-payer"
                 value={payerId}
+                // El backend solo acepta que el invitado cargue gastos pagados por él.
+                disabled={event.guestMemberId != null}
                 className={`${selectClassName} h-11`}
                 onChange={(event_) => {
                   setPayerId(event_.target.value);
@@ -349,7 +351,8 @@ export function AddExpenseDialog({
   );
 }
 
-function memberId(event: EventDetail) {
+function defaultPayerId(event: EventDetail) {
+  if (event.guestMemberId != null) return String(event.guestMemberId);
   return event.members[0] ? String(event.members[0].id) : "";
 }
 

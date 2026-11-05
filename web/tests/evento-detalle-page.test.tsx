@@ -7,6 +7,8 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace }),
 }));
 
+vi.mock("@/lib/use-session", () => ({ useSession: vi.fn() }));
+
 vi.mock("@/lib/events", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/events")>();
   return { ...actual, getEventById: vi.fn(), getEventInviteToken: vi.fn() };
@@ -31,6 +33,7 @@ import { EventError, getEventById, type EventDetail, getEventInviteToken } from 
 import { listExpenses, type Expense } from "@/lib/expenses";
 import { listBalances } from "@/lib/balances";
 import { listSuggestedPayments } from "@/lib/settlements";
+import { useSession } from "@/lib/use-session";
 import { EventDetailView } from "../components/event-detail-view";
 
 const eventDetail: EventDetail = {
@@ -50,6 +53,10 @@ const eventDetail: EventDetail = {
 describe("EventDetailView", () => {
   beforeEach(() => {
     replace.mockClear();
+    vi.mocked(useSession).mockReturnValue({
+      status: "authenticated",
+      user: { id: 1, name: "Ana", email: "ana@mail.com" },
+    });
     vi.mocked(getEventById).mockReset();
     vi.mocked(listExpenses).mockReset();
     vi.mocked(listExpenses).mockResolvedValue([]);
@@ -115,6 +122,17 @@ describe("EventDetailView", () => {
 
     expect(await screen.findByRole("heading", { name: "Viaje a Bariloche" })).toBeInTheDocument();
     expect(getEventById).toHaveBeenCalledTimes(2);
+  });
+
+  it("vuelve a la invitación si el invitado pierde el acceso al evento", async () => {
+    localStorage.setItem("splitit:guest-event:1", "tok-123");
+    vi.mocked(getEventById).mockRejectedValue(new EventError("unauthorized", "Tu sesión expiró."));
+
+    render(<EventDetailView id="1" />);
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/eventos/invitacion/tok-123"));
+    expect(replace).not.toHaveBeenCalledWith("/login");
+    localStorage.clear();
   });
 
   it("redirige al login cuando la sesión no es válida", async () => {
@@ -243,6 +261,61 @@ describe("EventDetailView", () => {
     expect(screen.queryByRole("button", { name: "Invitar" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Editar evento" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Eliminar evento" })).not.toBeInTheDocument();
+  });
+
+  it("al invitado no le muestra volver a eventos ni opciones del dueño", async () => {
+    vi.mocked(getEventById).mockResolvedValue({
+      ...eventDetail,
+      isOwner: false,
+      guestMemberId: 11,
+    });
+
+    render(<EventDetailView id="1" />);
+
+    expect(await screen.findByRole("heading", { name: "Viaje a Bariloche" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Volver a eventos" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Invitar" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Editar evento" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Eliminar evento" })).not.toBeInTheDocument();
+  });
+
+  it("al invitado no le muestra volver a eventos si falla la carga del evento", async () => {
+    vi.mocked(useSession).mockReturnValue({
+      status: "guest",
+      guest: { type: "guest", eventId: 1, memberId: 11, name: "Juan" },
+    });
+    vi.mocked(getEventById).mockRejectedValue(
+      new EventError("network", "No pudimos conectar con el servidor.")
+    );
+
+    render(<EventDetailView id="1" />);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "No pudimos conectar con el servidor."
+    );
+    expect(screen.queryByRole("link", { name: "Volver a eventos" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reintentar" })).toBeInTheDocument();
+  });
+
+  it("al usuario le sigue mostrando volver a eventos si falla la carga del evento", async () => {
+    vi.mocked(getEventById).mockRejectedValue(
+      new EventError("network", "No pudimos conectar con el servidor.")
+    );
+
+    render(<EventDetailView id="1" />);
+
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Volver a eventos" })).toBeInTheDocument();
+  });
+
+  it("al usuario le sigue mostrando volver a eventos", async () => {
+    vi.mocked(getEventById).mockResolvedValue(eventDetail);
+
+    render(<EventDetailView id="1" />);
+
+    // Mientras carga también hay un enlace de volver: se espera al evento ya cargado.
+    expect(await screen.findByRole("heading", { name: "Viaje a Bariloche" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Volver a eventos" })).toBeInTheDocument();
   });
 
   it("abre el modal de invitación y pide el token", async () => {

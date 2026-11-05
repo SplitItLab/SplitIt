@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getSession, SessionUser } from "@/lib/auth";
+import { getSession, GuestSession, SessionUser } from "@/lib/auth";
 
 export type SessionState =
   | { status: "loading" }
   | { status: "authenticated"; user: SessionUser }
+  | { status: "guest"; guest: GuestSession }
   | { status: "unauthenticated" };
 
 export function useSession(): SessionState {
@@ -15,9 +16,14 @@ export function useSession(): SessionState {
     let cancelled = false;
 
     getSession()
-      .then((user) => {
+      .then((session) => {
         if (cancelled) return;
-        setState(user ? { status: "authenticated", user } : { status: "unauthenticated" });
+        if (!session) return setState({ status: "unauthenticated" });
+        setState(
+          "type" in session
+            ? { status: "guest", guest: session }
+            : { status: "authenticated", user: session }
+        );
       })
       .catch(() => {
         if (cancelled) return;

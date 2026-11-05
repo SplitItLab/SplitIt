@@ -257,6 +257,8 @@ function ExpenseList({
               key={expense.id}
               expense={expense}
               baseCurrency={event.baseCurrency}
+              // El invitado solo carga gastos propios: editar y borrar son del dueño y los integrantes con cuenta.
+              readOnly={event.guestMemberId != null}
               onUpdate={() => setEditingExpense(expense)}
               onDelete={() => setDeletingExpense(expense)}
             />
@@ -280,11 +282,13 @@ function ExpenseList({
 function ExpenseCard({
   expense,
   baseCurrency,
+  readOnly,
   onUpdate,
   onDelete,
 }: {
   expense: Expense;
   baseCurrency: string;
+  readOnly: boolean;
   onUpdate: () => void;
   onDelete: () => void;
 }) {
@@ -317,28 +321,30 @@ function ExpenseCard({
               {formatMoney(expense.originalAmount, expense.originalCurrency)}
             </p>
           )}
-          <div className="mt-3 flex justify-end gap-1">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label={`Editar gasto ${expense.name}`}
-              onClick={onUpdate}
-              className="text-muted-foreground hover:text-foreground size-8 rounded-full"
-            >
-              <Pencil className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label={`Eliminar gasto ${expense.name}`}
-              onClick={onDelete}
-              className="text-muted-foreground hover:text-foreground size-8 rounded-full"
-            >
-              <Trash2 className="size-4" />
-            </Button>
-          </div>
+          {!readOnly && (
+            <div className="mt-3 flex justify-end gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={`Editar gasto ${expense.name}`}
+                onClick={onUpdate}
+                className="text-muted-foreground hover:text-foreground size-8 rounded-full"
+              >
+                <Pencil className="size-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={`Eliminar gasto ${expense.name}`}
+                onClick={onDelete}
+                className="text-muted-foreground hover:text-foreground size-8 rounded-full"
+              >
+                <Trash2 className="size-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </article>

@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { PrimaryLink } from "@/components/primary-link";
 import { SplitItLogo } from "@/components/splitit-logo";
-import { useSession } from "@/lib/use-session";
+import { useSession, type SessionState } from "@/lib/use-session";
 
 function NotFoundBackground() {
   return (
@@ -116,11 +116,19 @@ function NotFoundBackground() {
   );
 }
 
+function notFoundAction(session: SessionState): { href: string; ctaLabel: string } {
+  if (session.status === "authenticated") {
+    return { href: "/eventos", ctaLabel: "Volver a mis eventos" };
+  }
+  if (session.status === "guest") {
+    return { href: `/eventos/${session.guest.eventId}`, ctaLabel: "Volver a mi evento" };
+  }
+  return { href: "/login", ctaLabel: "Iniciar sesión" };
+}
+
 export default function NotFound() {
   const session = useSession();
-  const isAuthenticated = session.status === "authenticated";
-  const href = isAuthenticated ? "/eventos" : "/login";
-  const ctaLabel = isAuthenticated ? "Volver a mis eventos" : "Iniciar sesión";
+  const { href, ctaLabel } = notFoundAction(session);
 
   return (
     <div className="bg-card relative flex min-h-screen flex-col overflow-hidden">

@@ -16,6 +16,7 @@ import {
   type InvitationMember,
 } from "@/lib/invitations";
 import { showAppToast } from "@/lib/toast";
+import { InvitationMemberSelect } from "@/components/invitation-member-select";
 import { LoadingIndicator } from "@/components/loading-indicator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -163,25 +164,16 @@ export function LinkMemberForm({ token, user }: { token: string; user: SessionUs
         <label htmlFor="link-member" className="text-foreground text-sm font-medium">
           ¿Quién sos en este evento?
         </label>
-        <select
+        <InvitationMemberSelect
           id="link-member"
+          members={state.members}
           value={selectedMemberId}
-          onChange={(event) => {
-            setSelectedMemberId(event.target.value);
+          onChange={(value) => {
+            setSelectedMemberId(value);
             setSubmitError(null);
           }}
-          aria-invalid={!!submitError}
-          className="border-border text-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive h-auto w-full rounded-[6px] border bg-white px-3 py-2 text-base leading-6 outline-none focus-visible:ring-3"
-        >
-          <option value="" disabled>
-            Elegite de la lista
-          </option>
-          {state.members.map((member) => (
-            <option key={member.id} value={member.id} disabled={member.isLinked}>
-              {member.isLinked ? `${member.name} · ya entró con su cuenta` : member.name}
-            </option>
-          ))}
-        </select>
+          invalid={!!submitError}
+        />
         <p className="text-muted-foreground text-sm font-medium">
           Entrás con la cuenta de {user.email}. El evento te va a quedar entre tus eventos.
         </p>

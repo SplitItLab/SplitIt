@@ -1,9 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Menu, LayoutGrid, User } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
+import { Menu, LayoutGrid, LogOut, User } from "lucide-react";
+import { LogoutError, logout } from "@/lib/auth";
+import { showAppToast } from "@/lib/toast";
 import { useSession } from "@/lib/use-session";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,14 +23,32 @@ const NAV_ITEMS = [
 export function AppHeader() {
   const session = useSession();
   const pathname = usePathname();
+  const router = useRouter();
+  const [leaving, setLeaving] = useState(false);
   const user = session.status === "authenticated" ? session.user : null;
+  const guest = session.status === "guest" ? session.guest : null;
+
+  const handleLeave = async () => {
+    if (leaving) return;
+    setLeaving(true);
+    try {
+      await logout();
+      router.replace("/");
+    } catch (err) {
+      showAppToast(
+        "error",
+        err instanceof LogoutError ? err.message : "Ocurrió un error inesperado."
+      );
+      setLeaving(false);
+    }
+  };
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <header className="flex items-center justify-between px-4 py-3 sm:px-6">
       <Link
-        href="/eventos"
+        href={guest ? `/eventos/${guest.eventId}` : "/eventos"}
         className="border-border flex items-center gap-0 rounded-full border px-3 py-2"
       >
         <span className="bg-primary text-primary-foreground flex h-[34px] w-[57px] items-center justify-center rounded-[8px] text-[24px] leading-[115%] font-extrabold">
@@ -34,6 +56,24 @@ export function AppHeader() {
         </span>
         <span className="text-[24px] leading-[115%] font-extrabold text-black">It</span>
       </Link>
+
+      {guest && (
+        <div className="flex items-center gap-3">
+          <span className="text-text-primary max-w-40 truncate text-sm font-extrabold">
+            {guest.name}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={leaving}
+            onClick={handleLeave}
+            className="h-10 gap-2 rounded-[12px]"
+          >
+            <LogOut aria-hidden="true" className="size-4" />
+            Salir
+          </Button>
+        </div>
+      )}
 
       {user && (
         <DropdownMenu>
