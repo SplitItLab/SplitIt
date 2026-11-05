@@ -1,8 +1,10 @@
 package edu.austral.splitit.server.infrastructure.api.auth
 
 import edu.austral.splitit.server.Helpers
+import edu.austral.splitit.server.application.exception.GoogleAccountLoginRequiredException
 import edu.austral.splitit.server.application.exception.InvalidCredentialsException
 import edu.austral.splitit.server.application.port.TokenProvider
+import edu.austral.splitit.server.application.service.GoogleLoginService
 import edu.austral.splitit.server.application.service.LoginService
 import edu.austral.splitit.server.application.service.SignUpService
 import edu.austral.splitit.server.domain.model.user.User
@@ -65,6 +67,9 @@ class LoginControllerTest(
 
     @MockitoBean
     private lateinit var loginService: LoginService
+
+    @MockitoBean
+    private lateinit var googleLoginService: GoogleLoginService
 
     @MockitoBean
     private lateinit var tokenProvider: TokenProvider
@@ -199,6 +204,22 @@ class LoginControllerTest(
             ).andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.message").value("Invalid credentials"))
             .andExpect(jsonPath("$.password").doesNotExist())
+            .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE))
+
+        verify(tokenProvider, never()).issue(any())
+    }
+
+    @Test
+    fun `login returns 409 when the account signs in with Google`() {
+        whenever(loginService.login(any(), any())).thenThrow(GoogleAccountLoginRequiredException())
+
+        mockMvc
+            .perform(
+                post("/api/auth/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"email":"ada@example.com","password":"una-clave-segura"}"""),
+            ).andExpect(status().isConflict)
+            .andExpect(jsonPath("$.message").value("Account signs in with Google"))
             .andExpect(header().doesNotExist(HttpHeaders.SET_COOKIE))
 
         verify(tokenProvider, never()).issue(any())

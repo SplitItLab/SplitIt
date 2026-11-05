@@ -7,12 +7,15 @@ import edu.austral.splitit.server.application.exception.EventDeletionConflictExc
 import edu.austral.splitit.server.application.exception.EventNotFoundException
 import edu.austral.splitit.server.application.exception.ExchangeRateUnavailableException
 import edu.austral.splitit.server.application.exception.ExpenseNotFoundException
+import edu.austral.splitit.server.application.exception.GoogleAccountLoginRequiredException
 import edu.austral.splitit.server.application.exception.InvalidCredentialsException
 import edu.austral.splitit.server.application.exception.InvalidRequestException
 import edu.austral.splitit.server.application.exception.InviteLinkNotFoundException
 import edu.austral.splitit.server.application.exception.MemberHasAccountException
 import edu.austral.splitit.server.application.exception.MemberNotInEventException
+import edu.austral.splitit.server.application.exception.PasswordAccountExistsException
 import edu.austral.splitit.server.domain.model.event.MemberAlreadyLinkedException
+import edu.austral.splitit.server.domain.model.user.GoogleAccountEmailLockedException
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -62,8 +65,8 @@ class GlobalExceptionHandler {
     fun handleNotFound(exception: RuntimeException): ResponseEntity<ErrorMessage> =
         error(HttpStatus.NOT_FOUND, exception.message ?: NOT_FOUND_MESSAGE)
 
-    @ExceptionHandler(MemberNotInEventException::class)
-    fun handleMemberNotInEvent(exception: MemberNotInEventException): ResponseEntity<ErrorMessage> =
+    @ExceptionHandler(MemberNotInEventException::class, GoogleAccountEmailLockedException::class)
+    fun handleUnprocessable(exception: RuntimeException): ResponseEntity<ErrorMessage> =
         error(HttpStatus.UNPROCESSABLE_CONTENT, exception.message ?: MEMBER_NOT_IN_EVENT_MESSAGE)
 
     @ExceptionHandler(
@@ -72,6 +75,8 @@ class GlobalExceptionHandler {
         MemberHasAccountException::class,
         MemberAlreadyLinkedException::class,
         AccountAlreadyLinkedException::class,
+        PasswordAccountExistsException::class,
+        GoogleAccountLoginRequiredException::class,
     )
     fun handleConflict(exception: RuntimeException): ResponseEntity<ErrorMessage> =
         error(HttpStatus.CONFLICT, exception.message ?: CONFLICT_MESSAGE)

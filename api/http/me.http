@@ -98,6 +98,8 @@ client.test("returns the authenticated account and ignores a client-supplied id"
         email: client.global.get("meEmail"),
     })
     client.assert(String(response.body.id) === client.global.get("meId"), "Expected the session user id")
+    // A Google account would answer true and get a read-only email; it can't be seeded without a real Google token.
+    client.assert(response.body.signsInWithGoogle === false, "Expected a password account")
 })
 %}
 

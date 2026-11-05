@@ -40,6 +40,10 @@ jwt:
   secret: ${JWT_SECRET}
   expiration-hours: ${JWT_EXPIRATION_HOURS:8}
 
+google:
+  # Falls back to the web build variable so one value serves local; production sets GOOGLE_CLIENT_ID.
+  client-id: ${GOOGLE_CLIENT_ID:${NEXT_PUBLIC_GOOGLE_CLIENT_ID:}}
+
 auth:
   cookie:
     name: ${AUTH_COOKIE_NAME:auth_token}

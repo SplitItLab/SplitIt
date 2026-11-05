@@ -1,6 +1,7 @@
 package edu.austral.splitit.server.application.service
 
 import edu.austral.splitit.server.Helpers
+import edu.austral.splitit.server.application.exception.GoogleAccountLoginRequiredException
 import edu.austral.splitit.server.application.exception.InvalidCredentialsException
 import edu.austral.splitit.server.domain.model.user.User
 import edu.austral.splitit.server.domain.service.UserService
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -69,6 +71,28 @@ class LoginServiceTest {
         }
 
         verify(passwordEncoder).matches(eq("una-clave-segura"), any())
+    }
+
+    @Test
+    fun `password login on an account that signs in with Google is refused without checking the password`() {
+        whenever(userService.findByEmail(Helpers.emailOf("ada@example.com"))).thenReturn(Helpers.googleUser())
+
+        assertFailsWith<GoogleAccountLoginRequiredException> {
+            loginService.login(Helpers.emailOf("ada@example.com"), "una-clave-segura")
+        }
+
+        verify(passwordEncoder, never()).matches(any(), any())
+    }
+
+    @Test
+    fun `the old password stops working once the account is linked to Google`() {
+        val linked = Helpers.user()
+        linked.linkGoogle("google-subject-1")
+        whenever(userService.findByEmail(Helpers.emailOf("ada@example.com"))).thenReturn(linked)
+
+        assertFailsWith<GoogleAccountLoginRequiredException> {
+            loginService.login(Helpers.emailOf("ada@example.com"), "una-clave-segura")
+        }
     }
 
     private fun ada(): User = Helpers.user()

@@ -31,7 +31,12 @@ vi.mock("@/lib/auth", async (importOriginal) => {
 import { getProfile, updateProfile } from "@/lib/profile";
 import { logout } from "@/lib/auth";
 
-const profile = { id: 1, name: "Ada Lovelace", email: "ada@example.com" };
+const profile = {
+  id: 1,
+  name: "Ada Lovelace",
+  email: "ada@example.com",
+  signsInWithGoogle: false,
+};
 
 describe("ProfilePage", () => {
   beforeEach(() => {
@@ -50,6 +55,48 @@ describe("ProfilePage", () => {
     expect(await screen.findByText("Ada Lovelace")).toBeInTheDocument();
     expect(screen.getByText("ada@example.com")).toBeInTheDocument();
     expect(screen.getByText("AL")).toBeInTheDocument();
+  });
+
+  it("deja editar el email de una cuenta con contraseña", async () => {
+    const user = userEvent.setup();
+    vi.mocked(getProfile).mockResolvedValue(profile);
+    render(<ProfilePage />);
+
+    await user.click(await screen.findByRole("button", { name: "Editar" }));
+
+    expect(screen.getByLabelText("Email")).not.toHaveAttribute("readonly");
+    expect(screen.queryByText("Tu email viene de Google y no se puede cambiar.")).toBeNull();
+  });
+
+  it("muestra el email de una cuenta de Google como solo lectura", async () => {
+    const user = userEvent.setup();
+    vi.mocked(getProfile).mockResolvedValue({ ...profile, signsInWithGoogle: true });
+    render(<ProfilePage />);
+
+    await user.click(await screen.findByRole("button", { name: "Editar" }));
+
+    expect(screen.getByLabelText("Email")).toHaveAttribute("readonly");
+    expect(screen.getByText("Tu email viene de Google y no se puede cambiar.")).toBeInTheDocument();
+  });
+
+  it("en una cuenta de Google guardar manda el email sin cambios", async () => {
+    const user = userEvent.setup();
+    vi.mocked(getProfile).mockResolvedValue({ ...profile, signsInWithGoogle: true });
+    vi.mocked(updateProfile).mockResolvedValue({
+      ...profile,
+      name: "Ada Byron",
+      signsInWithGoogle: true,
+    });
+    render(<ProfilePage />);
+
+    await user.click(await screen.findByRole("button", { name: "Editar" }));
+    await user.clear(screen.getByLabelText("Nombre completo"));
+    await user.type(screen.getByLabelText("Nombre completo"), "Ada Byron");
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
+
+    await waitFor(() =>
+      expect(updateProfile).toHaveBeenCalledWith({ name: "Ada Byron", email: "ada@example.com" })
+    );
   });
 
   it("redirige a /login si GET /me responde 401", async () => {

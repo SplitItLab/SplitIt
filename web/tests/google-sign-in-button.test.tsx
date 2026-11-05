@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, waitFor, cleanup } from "@testing-library/react";
+import { render, waitFor, cleanup, screen, fireEvent } from "@testing-library/react";
 
 vi.mock("@/lib/auth", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/auth")>();
   return { ...actual, loginWithGoogle: vi.fn() };
 });
 
-import { loginWithGoogle } from "@/lib/auth";
+import { GoogleAccountExistsError, loginWithGoogle } from "@/lib/auth";
 import { GoogleSignInButton } from "@/components/google-sign-in-button";
 
 type Callback = (response: { credential?: string }) => void;
@@ -78,7 +78,7 @@ describe("GoogleSignInButton", () => {
     callback({ credential: "id-token" });
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());
-    expect(loginWithGoogle).toHaveBeenCalledWith("id-token");
+    expect(loginWithGoogle).toHaveBeenCalledWith("id-token", undefined);
     expect(onError).not.toHaveBeenCalled();
   });
 
@@ -99,5 +99,53 @@ describe("GoogleSignInButton", () => {
 
     await waitFor(() => expect(onError).toHaveBeenCalled());
     expect(loginWithGoogle).not.toHaveBeenCalled();
+  });
+
+  describe("cuando el email ya tiene una cuenta con contraseña", () => {
+    async function signInWithExistingAccount() {
+      vi.mocked(loginWithGoogle).mockRejectedValueOnce(new GoogleAccountExistsError());
+      const rendered = await renderAndGetCallback();
+      rendered.callback({ credential: "id-token" });
+      await screen.findByText("Ya tenés una cuenta con este email");
+      return rendered;
+    }
+
+    it("pregunta qué hacer en vez de ingresar o avisar un error", async () => {
+      const { onSuccess, onError } = await signInWithExistingAccount();
+
+      expect(onSuccess).not.toHaveBeenCalled();
+      expect(onError).not.toHaveBeenCalled();
+    });
+
+    it("vincula la cuenta con la misma credencial", async () => {
+      const { onSuccess } = await signInWithExistingAccount();
+
+      fireEvent.click(screen.getByRole("button", { name: "Vincular" }));
+
+      await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+      expect(loginWithGoogle).toHaveBeenLastCalledWith("id-token", "LINK");
+    });
+
+    it("reemplaza la cuenta con la misma credencial", async () => {
+      const { onSuccess } = await signInWithExistingAccount();
+
+      fireEvent.click(screen.getByRole("button", { name: "Reemplazar" }));
+
+      await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+      expect(loginWithGoogle).toHaveBeenLastCalledWith("id-token", "REPLACE");
+    });
+
+    it("al cancelar no ingresa ni avisa error", async () => {
+      const { onSuccess, onError } = await signInWithExistingAccount();
+
+      fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+
+      await waitFor(() =>
+        expect(screen.queryByText("Ya tenés una cuenta con este email")).not.toBeInTheDocument()
+      );
+      expect(loginWithGoogle).toHaveBeenCalledTimes(1);
+      expect(onSuccess).not.toHaveBeenCalled();
+      expect(onError).not.toHaveBeenCalled();
+    });
   });
 });

@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { loginSchema, login, loginWithGoogle, googleLoginErrorPath } from "../lib/auth";
+import {
+  loginSchema,
+  login,
+  loginWithGoogle,
+  googleLoginErrorPath,
+  GoogleAccountExistsError,
+} from "../lib/auth";
 import { ApiError } from "../lib/api";
 
 vi.mock("../lib/api", async (importOriginal) => {
@@ -84,9 +90,25 @@ describe("loginWithGoogle", () => {
     });
   });
 
+  it("manda la elección sobre la cuenta existente", async () => {
+    vi.mocked(request).mockResolvedValueOnce(undefined);
+
+    await loginWithGoogle("id-token", "LINK");
+
+    expect(request).toHaveBeenCalledWith("/api/auth/google", {
+      method: "POST",
+      body: JSON.stringify({ credential: "id-token", existingAccount: "LINK" }),
+    });
+  });
+
   it("propaga el rechazo de la API", async () => {
     vi.mocked(request).mockRejectedValueOnce(new ApiError(401, "unauthorized"));
     await expect(loginWithGoogle("id-token")).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it("traduce un 409 a que hay que elegir qué hacer con la cuenta existente", async () => {
+    vi.mocked(request).mockRejectedValueOnce(new ApiError(409, "conflict"));
+    await expect(loginWithGoogle("id-token")).rejects.toBeInstanceOf(GoogleAccountExistsError);
   });
 });
 

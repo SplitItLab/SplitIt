@@ -62,6 +62,9 @@ dependencies {
     runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
     runtimeOnly("io.jsonwebtoken:jjwt-orgjson:0.12.6")
 
+    // Verifica la firma del comprobante de Google con sus claves públicas (JWKS)
+    implementation("org.springframework.security:spring-security-oauth2-jose")
+
     // Hot reload en desarrollo
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 

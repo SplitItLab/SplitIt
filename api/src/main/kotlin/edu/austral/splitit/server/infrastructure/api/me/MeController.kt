@@ -5,7 +5,6 @@ import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.AccountService
 import edu.austral.splitit.server.domain.model.user.Email
-import edu.austral.splitit.server.infrastructure.api.auth.UserResponse
 import edu.austral.splitit.server.infrastructure.security.SessionCookieWriter
 import jakarta.servlet.http.HttpServletResponse
 import jakarta.validation.Valid
@@ -26,14 +25,14 @@ class MeController(
     @GetMapping
     fun get(
         @AuthenticationPrincipal user: AuthUser,
-    ): UserResponse = UserResponse.of(accountService.get(user.id))
+    ): MeResponse = MeResponse.of(accountService.get(user.id))
 
     @PatchMapping
     fun update(
         @AuthenticationPrincipal user: AuthUser,
         @Valid @RequestBody request: UpdateMeRequest,
         response: HttpServletResponse,
-    ): UserResponse {
+    ): MeResponse {
         val email =
             Email.create(request.email).getOrNull()
                 ?: throw InvalidRequestException()
@@ -57,6 +56,6 @@ class MeController(
             )
 
         sessionCookieWriter.write(response, token)
-        return UserResponse.of(updated)
+        return MeResponse.of(updated)
     }
 }

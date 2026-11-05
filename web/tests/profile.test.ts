@@ -72,6 +72,14 @@ describe("updateProfile", () => {
     });
   });
 
+  it("traduce un 422 a email-locked apuntando al campo email", async () => {
+    vi.mocked(request).mockRejectedValueOnce(new ApiError(422, "locked"));
+    await expect(updateProfile(input)).rejects.toMatchObject({
+      type: "email-locked",
+      field: "email",
+    });
+  });
+
   it("traduce un 401 a unauthorized", async () => {
     vi.mocked(request).mockRejectedValueOnce(new ApiError(401, "unauthorized"));
     await expect(updateProfile(input)).rejects.toMatchObject({ type: "unauthorized" });
