@@ -48,7 +48,7 @@ function RegisterForm() {
     try {
       await registerUser(data);
       showAppToast("success", "¡Cuenta creada con éxito!");
-      router.push(loginPath);
+      router.push(postLoginPath(redirect));
     } catch (err) {
       if (err instanceof RegisterError) {
         if (err.type === "email-taken") {

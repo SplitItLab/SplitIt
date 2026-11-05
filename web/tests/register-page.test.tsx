@@ -57,7 +57,7 @@ describe("RegisterPage", () => {
     window.history.replaceState(null, "", "/");
   });
 
-  it("después de registrarse vuelve al login con la ruta pedida", async () => {
+  it("después de registrarse entra directo a la ruta pedida", async () => {
     window.history.replaceState(
       null,
       "",
@@ -66,7 +66,7 @@ describe("RegisterPage", () => {
 
     await submitRegister();
 
-    await waitFor(() => expect(push).toHaveBeenCalledWith(LOGIN_WITH_REDIRECT));
+    await waitFor(() => expect(push).toHaveBeenCalledWith(INVITATION_PATH));
   });
 
   it("el link para iniciar sesión conserva la ruta pedida", () => {
@@ -83,12 +83,12 @@ describe("RegisterPage", () => {
     );
   });
 
-  it("sin ruta pedida vuelve al login como siempre", async () => {
+  it("sin ruta pedida entra a sus eventos", async () => {
     window.history.replaceState(null, "", "/register");
 
     await submitRegister();
 
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/login"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/eventos"));
   });
 
   it("ignora una ruta pedida hacia otro sitio", async () => {
@@ -100,7 +100,7 @@ describe("RegisterPage", () => {
 
     await submitRegister();
 
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/login"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/eventos"));
   });
 
   it("después de ingresar con Google entra directo a la ruta pedida", async () => {

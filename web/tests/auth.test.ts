@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import { postLoginPath, registerSchema, withRedirect } from "@/lib/auth";
 
 const unsafeRedirects = [
+  // SPT-110: el caso del ticket, tal como llega desde ?redirect=.
+  decodeURIComponent("/%09/sitio.com"),
   "/\t/otro-sitio.com",
   "/\n/otro-sitio.com",
   "/\r/otro-sitio.com",
