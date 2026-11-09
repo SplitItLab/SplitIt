@@ -53,6 +53,13 @@ class SecurityConfig(
                     ).permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/status")
                     .permitAll()
+                    // Only served when API_DOCS_ENABLED=true; otherwise these paths do not exist (404).
+                    .requestMatchers(
+                        HttpMethod.GET,
+                        "/api/swagger-ui.html",
+                        "/api/swagger-ui/**",
+                        "/api/v3/api-docs/**",
+                    ).permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/auth/session")
                     .hasAnyRole(USER_ROLE, GUEST_ROLE)
                     .requestMatchers(HttpMethod.GET, "/api/invitations/*", "/api/invitations/*/members")

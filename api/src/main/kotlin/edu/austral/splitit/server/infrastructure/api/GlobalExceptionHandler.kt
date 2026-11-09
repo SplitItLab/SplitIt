@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.method.annotation.HandlerMethodValidationException
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
+import org.springframework.web.servlet.resource.NoResourceFoundException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
@@ -61,9 +62,13 @@ class GlobalExceptionHandler {
         EventNotFoundException::class,
         ExpenseNotFoundException::class,
         InviteLinkNotFoundException::class,
+        NoResourceFoundException::class, // an unknown route is a 404, not the catch-all 500
     )
-    fun handleNotFound(exception: RuntimeException): ResponseEntity<ErrorMessage> =
-        error(HttpStatus.NOT_FOUND, exception.message ?: NOT_FOUND_MESSAGE)
+    fun handleNotFound(exception: Exception): ResponseEntity<ErrorMessage> =
+        error(
+            HttpStatus.NOT_FOUND,
+            exception.message.takeUnless { exception is NoResourceFoundException } ?: NOT_FOUND_MESSAGE,
+        )
 
     @ExceptionHandler(MemberNotInEventException::class, GoogleAccountEmailLockedException::class)
     fun handleUnprocessable(exception: RuntimeException): ResponseEntity<ErrorMessage> =
