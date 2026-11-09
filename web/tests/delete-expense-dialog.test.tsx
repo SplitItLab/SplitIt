@@ -17,6 +17,7 @@ vi.mock("@/lib/toast", () => ({
 
 import { EventError, type EventDetail } from "@/lib/events";
 import { deleteExpense, formatMoney, listExpenses, type Expense } from "@/lib/expenses";
+import { expensePage } from "./expense-page";
 import { showAppToast } from "@/lib/toast";
 import { DeleteExpenseDialog } from "../components/delete-expense-dialog";
 import { EventExpenses } from "../components/event-expenses";
@@ -200,7 +201,7 @@ describe("EventExpenses — eliminar gasto", () => {
   }
 
   it("cancelar deja el gasto en la lista y el total igual", async () => {
-    vi.mocked(listExpenses).mockResolvedValue([carne, bebidas]);
+    vi.mocked(listExpenses).mockResolvedValue(expensePage([carne, bebidas]));
     const user = userEvent.setup();
     renderExpenses();
 
@@ -216,7 +217,7 @@ describe("EventExpenses — eliminar gasto", () => {
   });
 
   it("confirmar saca el gasto de la lista, recalcula el total y avisa sin recargar", async () => {
-    vi.mocked(listExpenses).mockResolvedValue([carne, bebidas]);
+    vi.mocked(listExpenses).mockResolvedValue(expensePage([carne, bebidas]));
     vi.mocked(deleteExpense).mockResolvedValue(undefined);
     const user = userEvent.setup();
     renderExpenses();
@@ -239,8 +240,8 @@ describe("EventExpenses — eliminar gasto", () => {
 
   it("si el gasto ya fue eliminado en otra pestaña, actualiza la lista y mantiene el evento", async () => {
     vi.mocked(listExpenses)
-      .mockResolvedValueOnce([carne, bebidas])
-      .mockResolvedValueOnce([bebidas]);
+      .mockResolvedValueOnce(expensePage([carne, bebidas]))
+      .mockResolvedValueOnce(expensePage([bebidas]));
     vi.mocked(deleteExpense).mockRejectedValue(
       new EventError("not-found", "No encontramos este evento.")
     );
@@ -265,7 +266,7 @@ describe("EventExpenses — eliminar gasto", () => {
 
   it("si lo que ya no existe es el evento, lo trata como evento no encontrado", async () => {
     vi.mocked(listExpenses)
-      .mockResolvedValueOnce([carne, bebidas])
+      .mockResolvedValueOnce(expensePage([carne, bebidas]))
       .mockRejectedValueOnce(new EventError("not-found", "No encontramos este evento."));
     vi.mocked(deleteExpense).mockRejectedValue(
       new EventError("not-found", "No encontramos este evento.")

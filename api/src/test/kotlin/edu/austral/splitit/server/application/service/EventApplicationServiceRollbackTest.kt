@@ -255,7 +255,8 @@ class EventApplicationServiceRollbackTest(
             ),
         )
 
-        val expenses = expenseApplicationService.listExpenses(Helpers.authUser(requireNotNull(owner.id)), event.id)
+        val expenses =
+            expenseApplicationService.listExpenses(Helpers.authUser(requireNotNull(owner.id)), event.id, 20, null).items
 
         assertEquals(1, expenses.size)
         assertEquals("Cena", expenses[0].name)
@@ -276,9 +277,10 @@ class EventApplicationServiceRollbackTest(
 
         expenseApplicationService.deleteExpense(ownerId, event.id, dinner.id)
 
-        val remaining = expenseApplicationService.listExpenses(Helpers.authUser(ownerId), event.id)
+        val page = expenseApplicationService.listExpenses(Helpers.authUser(ownerId), event.id, 20, null)
+        val remaining = page.items
         assertEquals(listOf("Bebidas"), remaining.map { it.name })
-        assertEquals(0, BigDecimal("1500").compareTo(remaining.sumOf { it.baseAmount }))
+        assertEquals(0, BigDecimal("1500").compareTo(page.totalAmount))
         assertFailsWith<ExpenseNotFoundException> {
             expenseApplicationService.deleteExpense(ownerId, event.id, dinner.id)
         }

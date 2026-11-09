@@ -7,8 +7,12 @@ vi.mock("@/lib/expenses", async (importOriginal) => {
   return { ...actual, listExpenses: vi.fn() };
 });
 
+vi.mock("@/lib/toast", () => ({ showAppToast: vi.fn() }));
+
 import { EventError, type EventDetail } from "@/lib/events";
 import { formatMoney, listExpenses, type Expense } from "@/lib/expenses";
+import { showAppToast } from "@/lib/toast";
+import { expensePage } from "./expense-page";
 import { EventExpenses } from "../components/event-expenses";
 
 const event: EventDetail = {
@@ -71,7 +75,7 @@ describe("EventExpenses", () => {
   });
 
   it("muestra el vacío actual cuando el evento no tiene gastos", async () => {
-    vi.mocked(listExpenses).mockResolvedValue([]);
+    vi.mocked(listExpenses).mockResolvedValue(expensePage([]));
 
     renderExpenses();
 
@@ -88,7 +92,7 @@ describe("EventExpenses", () => {
   });
 
   it("al invitado le deja agregar gastos pero no editarlos ni eliminarlos", async () => {
-    vi.mocked(listExpenses).mockResolvedValue([cena]);
+    vi.mocked(listExpenses).mockResolvedValue(expensePage([cena]));
 
     renderExpenses({ ...event, isOwner: false, guestMemberId: 12 });
 
@@ -99,7 +103,7 @@ describe("EventExpenses", () => {
   });
 
   it("al usuario le muestra editar y eliminar en cada gasto", async () => {
-    vi.mocked(listExpenses).mockResolvedValue([cena]);
+    vi.mocked(listExpenses).mockResolvedValue(expensePage([cena]));
 
     renderExpenses();
 
@@ -108,7 +112,7 @@ describe("EventExpenses", () => {
   });
 
   it("muestra nombre, fecha y pagador de cada gasto", async () => {
-    vi.mocked(listExpenses).mockResolvedValue([cena]);
+    vi.mocked(listExpenses).mockResolvedValue(expensePage([cena]));
 
     renderExpenses();
 
@@ -118,7 +122,7 @@ describe("EventExpenses", () => {
   });
 
   it("calcula el total solo con el importe en la moneda base", async () => {
-    vi.mocked(listExpenses).mockResolvedValue([cena, taxi]);
+    vi.mocked(listExpenses).mockResolvedValue(expensePage([cena, taxi]));
 
     renderExpenses();
 
@@ -128,8 +132,62 @@ describe("EventExpenses", () => {
     expect(visibleText(total)).not.toContain("USD");
   });
 
+  it("muestra el total que informa la API aunque haya gastos sin cargar", async () => {
+    vi.mocked(listExpenses).mockResolvedValue(
+      expensePage([cena], { hasNext: true, totalAmount: 5000 })
+    );
+
+    renderExpenses();
+
+    const total = (await screen.findByText("Total de gastos")).closest("article");
+    expect(visibleText(total)).toContain(money(5000, "ARS"));
+  });
+
+  it("no ofrece ver más cuando ya llegaron todos los gastos", async () => {
+    vi.mocked(listExpenses).mockResolvedValue(expensePage([cena]));
+
+    renderExpenses();
+
+    await screen.findByText("Cena");
+    expect(screen.queryByRole("button", { name: "Ver más gastos" })).not.toBeInTheDocument();
+  });
+
+  it("ver más pide la página que sigue al último gasto, sin repetir ni perder gastos", async () => {
+    vi.mocked(listExpenses)
+      .mockResolvedValueOnce(expensePage([taxi], { hasNext: true, totalAmount: 12.5 }))
+      // El servidor puede devolver de nuevo el último gasto si cambió la lista entre páginas.
+      .mockResolvedValueOnce(expensePage([taxi, cena], { totalAmount: 12.5 }));
+    const user = userEvent.setup();
+
+    renderExpenses();
+    await screen.findByText("Taxi");
+    await user.click(screen.getByRole("button", { name: "Ver más gastos" }));
+
+    expect(await screen.findByText("Cena")).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { name: "Taxi" })).toHaveLength(1);
+    expect(listExpenses).toHaveBeenLastCalledWith(7, taxi);
+    expect(screen.queryByRole("button", { name: "Ver más gastos" })).not.toBeInTheDocument();
+    const total = screen.getByText("Total de gastos").closest("article");
+    expect(visibleText(total)).toContain(money(12.5, "ARS"));
+  });
+
+  it("si falla ver más, avisa y deja reintentar sin perder lo cargado", async () => {
+    vi.mocked(listExpenses)
+      .mockResolvedValueOnce(expensePage([taxi], { hasNext: true, totalAmount: 12.5 }))
+      .mockRejectedValueOnce(new EventError("network", "No pudimos conectar con el servidor."));
+    const user = userEvent.setup();
+
+    renderExpenses();
+    await screen.findByText("Taxi");
+    await user.click(screen.getByRole("button", { name: "Ver más gastos" }));
+
+    expect(await screen.findByRole("button", { name: "Ver más gastos" })).toBeEnabled();
+    expect(showAppToast).toHaveBeenCalledWith("error", "No pudimos conectar con el servidor.");
+    expect(screen.getByText("Taxi")).toBeInTheDocument();
+  });
+
   it("muestra el importe original solo cuando la moneda es otra", async () => {
-    vi.mocked(listExpenses).mockResolvedValue([cena, taxi]);
+    vi.mocked(listExpenses).mockResolvedValue(expensePage([cena, taxi]));
 
     renderExpenses();
 
@@ -146,7 +204,7 @@ describe("EventExpenses", () => {
   it("vuelve a pedir los gastos al reintentar", async () => {
     vi.mocked(listExpenses)
       .mockRejectedValueOnce(new EventError("network", "No pudimos conectar con el servidor."))
-      .mockResolvedValueOnce([cena]);
+      .mockResolvedValueOnce(expensePage([cena]));
 
     renderExpenses();
 

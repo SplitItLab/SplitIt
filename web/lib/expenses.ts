@@ -22,6 +22,13 @@ export type Expense = {
   expenseDate: string;
 };
 
+export type ExpensePage = {
+  items: Expense[];
+  hasNext: boolean;
+  totalCount: number;
+  totalAmount: number;
+};
+
 export type ExpenseQuote = {
   originalAmount: number;
   originalCurrency: string;
@@ -77,13 +84,19 @@ export function formatExpenseDate(isoDate: string): string {
   });
 }
 
-export function expenseTotal(expenses: Expense[]): number {
-  return expenses.reduce((sum, expense) => sum + expense.baseAmount, 0);
-}
-
-export async function listExpenses(eventId: number | string): Promise<Expense[]> {
+// Trae una página; con `after` (el último gasto ya cargado) trae la siguiente.
+export async function listExpenses(
+  eventId: number | string,
+  after?: Expense
+): Promise<ExpensePage> {
+  const params = new URLSearchParams();
+  if (after) {
+    params.set("beforeDate", after.expenseDate.split("T")[0]);
+    params.set("beforeId", String(after.id));
+  }
+  const query = params.size > 0 ? `?${params}` : "";
   try {
-    return await request<Expense[]>(`/api/events/${eventId}/expenses`);
+    return await request<ExpensePage>(`/api/events/${eventId}/expenses${query}`);
   } catch (err) {
     toEventError(err, LIST_UNAVAILABLE);
   }
