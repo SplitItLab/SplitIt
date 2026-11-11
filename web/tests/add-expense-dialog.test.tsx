@@ -262,14 +262,42 @@ describe("AddExpenseDialog", () => {
   });
 
   it("ofrece como pagador solo a los integrantes del evento", async () => {
+    const user = userEvent.setup();
     renderDialog();
 
+    await user.click(await screen.findByRole("button", { name: "Ver integrantes" }));
+
+    expect((await screen.findAllByRole("option")).map((option) => option.textContent)).toEqual([
+      "Ana",
+      "Luis",
+    ]);
+  });
+
+  // SPT-124: con muchos integrantes, "Pagó" permite buscar escribiendo el nombre.
+  it("permite buscar al pagador escribiendo su nombre", async () => {
+    vi.mocked(createExpense).mockResolvedValue(created);
+    const user = userEvent.setup();
+    const members = Array.from({ length: 43 }, (_, index) => ({
+      id: 100 + index,
+      name: `Integrante ${index + 1}`,
+      email: null,
+      isGuest: true,
+    }));
+    members[30] = { ...members[30], name: "Valentina" };
+    renderDialog({}, { ...event, members, memberCount: members.length });
+
     const payer = await screen.findByLabelText("Pago");
-    expect(
-      within(payer)
-        .getAllByRole("option")
-        .map((option) => option.textContent)
-    ).toEqual(["Ana", "Luis"]);
+    await user.clear(payer);
+    await user.type(payer, "valen");
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "Valentina",
+    ]);
+    await user.click(screen.getByRole("option", { name: "Valentina" }));
+    await user.type(screen.getByLabelText("Nombre"), "Supermercado");
+    await user.type(screen.getByLabelText("Monto"), "10");
+    await user.click(screen.getByRole("button", { name: "Guardar gasto" }));
+
+    expect(createExpense).toHaveBeenCalledWith(7, expect.objectContaining({ paidByMemberId: 130 }));
   });
 
   it("el invitado solo puede cargar gastos pagados por él", async () => {
@@ -282,7 +310,7 @@ describe("AddExpenseDialog", () => {
 
     const payer = await screen.findByLabelText("Pago");
     expect(payer).toBeDisabled();
-    expect(payer).toHaveValue("13");
+    expect(payer).toHaveValue("Luis");
     await user.type(screen.getByLabelText("Nombre"), "Supermercado");
     await user.type(screen.getByLabelText("Monto"), "5");
     await user.click(screen.getByRole("button", { name: "Guardar gasto" }));
@@ -406,13 +434,14 @@ describe("AddExpenseDialog en modo edición", () => {
     expect(screen.getByLabelText("Nombre")).toHaveValue("Cena");
     expect(screen.getByLabelText("Monto")).toHaveValue("10");
     expect(screen.getByLabelText("Moneda")).toHaveValue("ARS");
-    expect(screen.getByLabelText("Pago")).toHaveValue("12");
+    expect(screen.getByLabelText("Pago")).toHaveValue("Ana");
 
     await user.clear(screen.getByLabelText("Nombre"));
     await user.type(screen.getByLabelText("Nombre"), "Cena larga");
     await user.clear(screen.getByLabelText("Monto"));
     await user.type(screen.getByLabelText("Monto"), "25");
-    await user.selectOptions(screen.getByLabelText("Pago"), "13");
+    await user.click(screen.getByRole("button", { name: "Ver integrantes" }));
+    await user.click(await screen.findByRole("option", { name: "Luis" }));
     await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
     expect(updateExpense).toHaveBeenCalledWith(7, 1, {

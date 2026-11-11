@@ -73,6 +73,20 @@ function signedIn() {
   vi.mocked(useSession).mockReturnValue({ status: "authenticated", user: sofia });
 }
 
+const MEMBER_LABEL = "¿Quién sos en este evento?";
+
+// El selector permite buscar por nombre: la lista se ve al abrirlo.
+async function openMembers(user = userEvent.setup()) {
+  await user.click(await screen.findByLabelText(MEMBER_LABEL));
+  await screen.findAllByRole("option");
+  return user;
+}
+
+async function chooseMember(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await user.type(await screen.findByLabelText(MEMBER_LABEL), name);
+  await user.click(screen.getByRole("option", { name }));
+}
+
 describe("EventInvitationView", () => {
   beforeEach(() => {
     push.mockClear();
@@ -130,11 +144,12 @@ describe("EventInvitationView", () => {
   it("con sesión, muestra a los ya vinculados pero no deja elegirlos", async () => {
     signedIn();
     render(<EventInvitationView token={TOKEN} />);
+    await openMembers();
 
-    const taken = await screen.findByRole("option", { name: /Nicolas/ });
-    expect(taken).toBeDisabled();
-    expect(taken).toHaveTextContent("ya entró con su cuenta");
-    expect(screen.getByRole("option", { name: "Francisco" })).toBeEnabled();
+    const taken = screen.getByRole("option", { name: /Nicolas/ });
+    expect(taken).toHaveAttribute("aria-disabled", "true");
+    expect(taken).toHaveTextContent("Ya entró con su cuenta");
+    expect(screen.getByRole("option", { name: "Francisco" })).not.toHaveAttribute("aria-disabled");
     expect(screen.getByText(/Entrás con la cuenta de sofia@email.com/)).toBeInTheDocument();
   });
 
@@ -148,15 +163,20 @@ describe("EventInvitationView", () => {
     expect(
       await screen.findByText("Todos los integrantes ya tienen una cuenta vinculada")
     ).toBeInTheDocument();
-    expect(screen.getByRole("option", { name: /Francisco/ })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Soy esta persona" })).toBeDisabled();
+    await openMembers();
+    expect(screen.getByRole("option", { name: /Francisco/ })).toHaveAttribute(
+      "aria-disabled",
+      "true"
+    );
   });
 
   it("no muestra el aviso mientras quede algún integrante disponible", async () => {
     signedIn();
     render(<EventInvitationView token={TOKEN} />);
 
-    await screen.findByRole("option", { name: "Francisco" });
+    await openMembers();
+    expect(screen.getByRole("option", { name: "Francisco" })).toBeInTheDocument();
     expect(
       screen.queryByText("Todos los integrantes ya tienen una cuenta vinculada")
     ).not.toBeInTheDocument();
@@ -171,10 +191,7 @@ describe("EventInvitationView", () => {
     const user = userEvent.setup();
     render(<EventInvitationView token={TOKEN} />);
 
-    await user.selectOptions(
-      await screen.findByLabelText("¿Quién sos en este evento?"),
-      "Francisco"
-    );
+    await chooseMember(user, "Francisco");
     await user.click(screen.getByRole("button", { name: "Soy esta persona" }));
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/eventos/10"));
@@ -200,10 +217,7 @@ describe("EventInvitationView", () => {
     const user = userEvent.setup();
     render(<EventInvitationView token={TOKEN} />);
 
-    await user.selectOptions(
-      await screen.findByLabelText("¿Quién sos en este evento?"),
-      "Francisco"
-    );
+    await chooseMember(user, "Francisco");
     await user.click(screen.getByRole("button", { name: "Soy esta persona" }));
 
     expect(
@@ -265,10 +279,7 @@ describe("EventInvitationView", () => {
       vi.mocked(enterAsGuest).mockResolvedValue(francisco);
       const user = await openGuestForm();
 
-      await user.selectOptions(
-        await screen.findByLabelText("¿Quién sos en este evento?"),
-        "Francisco"
-      );
+      await chooseMember(user, "Francisco");
       await user.click(screen.getByRole("button", { name: "Entrar como invitado" }));
 
       await waitFor(() => expect(push).toHaveBeenCalledWith("/eventos/10"));
@@ -288,11 +299,12 @@ describe("EventInvitationView", () => {
 
     it("no permite elegir a los integrantes que ya tienen cuenta", async () => {
       vi.mocked(useSession).mockReturnValue({ status: "unauthenticated" });
-      await openGuestForm();
+      const user = await openGuestForm();
+      await openMembers(user);
 
-      const taken = await screen.findByRole("option", { name: /Nicolas/ });
-      expect(taken).toBeDisabled();
-      expect(taken).toHaveTextContent("ya entró con su cuenta");
+      const taken = screen.getByRole("option", { name: /Nicolas/ });
+      expect(taken).toHaveAttribute("aria-disabled", "true");
+      expect(taken).toHaveTextContent("Ya entró con su cuenta");
     });
 
     it("avisa y no deja entrar cuando todos los integrantes ya tienen cuenta", async () => {
@@ -315,8 +327,7 @@ describe("EventInvitationView", () => {
       );
       const user = await openGuestForm();
 
-      const select = await screen.findByLabelText("¿Quién sos en este evento?");
-      await user.selectOptions(select, "Francisco");
+      await chooseMember(user, "Francisco");
       await user.click(screen.getByRole("button", { name: "Entrar como invitado" }));
 
       expect(
@@ -345,7 +356,7 @@ describe("EventInvitationView", () => {
       localStorage.setItem(`splitit:guest-member:${TOKEN}`, "3");
       render(<EventInvitationView token={TOKEN} />);
 
-      expect(await screen.findByLabelText("¿Quién sos en este evento?")).toHaveValue("3");
+      expect(await screen.findByLabelText("¿Quién sos en este evento?")).toHaveValue("Lucas");
     });
 
     it("ignora un integrante recordado que ya tiene cuenta o no existe", async () => {
@@ -368,8 +379,11 @@ describe("EventInvitationView", () => {
       expect(await screen.findByText(/ya está vinculado a una cuenta/)).toHaveTextContent(
         "Nicolas ya está vinculado a una cuenta"
       );
-      expect(screen.getByRole("option", { name: "Francisco" })).toBeEnabled();
       expect(screen.getByRole("button", { name: "Entrar como invitado" })).toBeEnabled();
+      await openMembers();
+      expect(screen.getByRole("option", { name: "Francisco" })).not.toHaveAttribute(
+        "aria-disabled"
+      );
     });
 
     it("no avisa si el integrante que el dispositivo recuerda sigue disponible", async () => {
