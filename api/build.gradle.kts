@@ -65,6 +65,9 @@ dependencies {
     // Verifica la firma del comprobante de Google con sus claves públicas (JWKS)
     implementation("org.springframework.security:spring-security-oauth2-jose")
 
+    // Documentación interactiva de la API (Swagger UI), apagada salvo API_DOCS_ENABLED=true
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.2.0")
+
     // Hot reload en desarrollo
     developmentOnly("org.springframework.boot:spring-boot-devtools")
 
