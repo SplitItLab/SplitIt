@@ -2033,7 +2033,10 @@ client.test("la primera página respeta el límite e informa los totales del eve
     assertStatus(client, response, 200)
     const page = jsonBody(response)
     client.assert(page.items.length === 1, "Expected exactly one item")
-    client.assert(page.hasNext === (page.totalCount > 1), "Expected hasNext to match totalCount")
+    // En este punto el evento tiene un único gasto: el de USD pasado a 15000 ARS en el paso 77.
+    client.assert(page.totalCount === 1, "Expected totalCount 1 but got " + page.totalCount)
+    client.assert(Number(page.totalAmount) === 15000, "Expected totalAmount 15000 but got " + page.totalAmount)
+    client.assert(page.hasNext === false, "Expected no next page")
     const last = page.items[0]
     client.global.set("expensePageCursorDate", String(last.expenseDate))
     client.global.set("expensePageCursorId", String(last.id))
@@ -2056,6 +2059,9 @@ client.test("la página con cursor no repite el gasto del cursor", function () {
         !page.items.some(e => String(e.id) === client.global.get("expensePageCursorId")),
         "Expected cursor expense to be excluded",
     )
+    client.assert(page.totalCount === 1, "Expected totalCount 1 but got " + page.totalCount)
+    client.assert(Number(page.totalAmount) === 15000, "Expected totalAmount 15000 but got " + page.totalAmount)
+    client.assert(page.hasNext === false, "Expected no next page")
 })
 %}
 
