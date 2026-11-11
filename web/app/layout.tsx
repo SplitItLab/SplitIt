@@ -13,9 +13,17 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const DESCRIPTION =
+  "Armá un evento, cargá los gastos y SplitIt calcula quién le debe a quién. Sin planillas ni discusiones.";
+
 export const metadata: Metadata = {
+  // Las imágenes de la vista previa necesitan URL absoluta; sin la variable, Next usa la de Vercel.
+  ...(process.env.NEXT_PUBLIC_SITE_URL && {
+    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL),
+  }),
   title: "SplitIt",
-  description: "SplitIt",
+  description: DESCRIPTION,
+  openGraph: { title: "SplitIt", description: DESCRIPTION, siteName: "SplitIt", type: "website" },
   manifest: "/site.webmanifest",
   icons: {
     icon: [
