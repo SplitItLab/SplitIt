@@ -267,10 +267,13 @@ describe("AddExpenseDialog", () => {
 
     await user.click(await screen.findByRole("button", { name: "Ver integrantes" }));
 
-    expect((await screen.findAllByRole("option")).map((option) => option.textContent)).toEqual([
-      "Ana",
-      "Luis",
-    ]);
+    // Se espera la lista de "Pago": el select de Moneda también tiene opciones en la página.
+    const payerList = await screen.findByRole("listbox");
+    expect(
+      within(payerList)
+        .getAllByRole("option")
+        .map((option) => option.textContent)
+    ).toEqual(["Ana", "Luis"]);
   });
 
   // SPT-124: con muchos integrantes, "Pagó" permite buscar escribiendo el nombre.
