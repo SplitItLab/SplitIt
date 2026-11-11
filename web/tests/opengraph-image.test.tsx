@@ -15,7 +15,7 @@ describe("vista previa del link", () => {
     expect(contentType).toBe("image/png");
     expect(alt).toContain("SplitIt");
 
-    const response = OpengraphImage();
+    const response = await OpengraphImage();
     expect(response.headers.get("content-type")).toBe("image/png");
     const bytes = new Uint8Array(await response.arrayBuffer());
     expect(Array.from(bytes.slice(1, 4))).toEqual([0x50, 0x4e, 0x47]);
