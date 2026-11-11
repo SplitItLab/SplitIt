@@ -56,7 +56,7 @@ class SecurityConfig(
                     // Only served when API_DOCS_ENABLED=true; otherwise these paths do not exist (404).
                     .requestMatchers(
                         HttpMethod.GET,
-                        "/api/swagger-ui.html",
+                        "/api/docs",
                         "/api/swagger-ui/**",
                         "/api/v3/api-docs/**",
                     ).permitAll()

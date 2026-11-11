@@ -643,7 +643,7 @@ A task is complete only when:
 The API contract is generated from the code with springdoc-openapi and is served only when enabled.
 
 * Turn it on with the environment variable `API_DOCS_ENABLED=true`. Unset means off (the default, and what production must keep): its routes answer 404.
-* Swagger UI: `http://localhost:8080/api/swagger-ui.html`. OpenAPI JSON: `/api/v3/api-docs`. Both live under `/api/` so they also reach the backend in QA (Vercel).
+* Swagger UI: `http://localhost:8080/api/docs`. OpenAPI JSON: `/api/v3/api-docs`. Both live under `/api/` so they also reach the backend in QA (Vercel).
 * The docs routes are public when enabled. To try a private endpoint, run `POST /api/auth/login` from the UI first: it sets the session cookie.
 * **Every PR that adds or changes an endpoint must document it** (springdoc annotations on the controller and DTOs: summary, request, responses and error cases with status and shape). The `.http` files in `http/` stay and are still required.
 
