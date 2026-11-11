@@ -83,6 +83,23 @@ describe("EditEventDialog", () => {
     );
   });
 
+  // SPT-119: la descripción tiene un máximo de 500 caracteres, validado antes de enviar.
+  it("no guarda cuando la descripción supera el máximo", async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    const dialog = await screen.findByRole("dialog");
+
+    const description = within(dialog).getByLabelText(/Descripción/);
+    await user.clear(description);
+    await user.paste("X".repeat(501));
+    await user.click(within(dialog).getByRole("button", { name: /Guardar cambios/ }));
+
+    expect(
+      await within(dialog).findByText("La descripción puede tener hasta 500 caracteres.")
+    ).toBeInTheDocument();
+    expect(updateEvent).not.toHaveBeenCalled();
+  });
+
   it("muestra un error claro y conserva los valores si falla el guardado", async () => {
     vi.mocked(updateEvent).mockRejectedValue(
       new EventError("forbidden", "Solo el dueño puede editar este evento.")

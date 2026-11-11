@@ -155,4 +155,34 @@ class EventTest {
             event.update(name = "   ")
         }
     }
+
+    @Test
+    fun `create accepts a description of exactly the max length`() {
+        val description = "X".repeat(EventDescription.EVENT_DESCRIPTION_MAX)
+
+        val event = Event.create(owner = owner, name = "Asado", description = description, baseCurrency = "ARS")
+
+        assertEquals(description, event.description)
+    }
+
+    @Test
+    fun `create fails when description is longer than the max`() {
+        assertFailsWith<IllegalArgumentException> {
+            Event.create(
+                owner = owner,
+                name = "Asado",
+                description = "X".repeat(EventDescription.EVENT_DESCRIPTION_MAX + 1),
+                baseCurrency = "ARS",
+            )
+        }
+    }
+
+    @Test
+    fun `update fails when description is longer than the max`() {
+        val event = Event.create(owner = owner, name = "Asado", baseCurrency = "ARS")
+
+        assertFailsWith<IllegalArgumentException> {
+            event.update(description = "X".repeat(EventDescription.EVENT_DESCRIPTION_MAX + 1))
+        }
+    }
 }
