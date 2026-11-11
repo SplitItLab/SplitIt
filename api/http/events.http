@@ -874,8 +874,8 @@ import { assertStatus, jsonBody, assertExpense } from './scripts/assert.js'
 
 client.test("lista los gastos del evento e incluye el gasto creado", function () {
     assertStatus(client, response, 200)
-    const list = jsonBody(response)
-    client.assert(Array.isArray(list), "Expected array of expenses")
+    const list = jsonBody(response).items
+    client.assert(Array.isArray(list), "Expected items array of expenses")
     const found = list.find(e => String(e.id) === client.global.get("firstExpenseId"))
     client.assert(found !== undefined, "Expected created expense in list")
     assertExpense(client, found, {
@@ -1234,7 +1234,7 @@ import { assertStatus, jsonBody, assertExpense } from './scripts/assert.js'
 
 client.test("el gasto en USD aparece en el listado con su conversión", function () {
     assertStatus(client, response, 200)
-    const found = jsonBody(response).find(e => String(e.id) === client.global.get("usdExpenseId"))
+    const found = jsonBody(response).items.find(e => String(e.id) === client.global.get("usdExpenseId"))
     client.assert(found !== undefined, "Expected USD expense in list")
     assertExpense(client, found, {
         id: client.global.get("usdExpenseId"),
@@ -1258,7 +1258,7 @@ import { assertStatus, jsonBody } from './scripts/assert.js'
 
 client.test("los gastos permanecen aislados entre eventos", function () {
     assertStatus(client, response, 200)
-    const ids = jsonBody(response).map(e => String(e.id))
+    const ids = jsonBody(response).items.map(e => String(e.id))
     client.assert(!ids.includes(client.global.get("firstExpenseId")), "Expected base currency expense to be isolated")
     client.assert(!ids.includes(client.global.get("usdExpenseId")), "Expected USD expense to be isolated")
 })
@@ -1406,7 +1406,7 @@ import { assertStatus, jsonBody, assertExpense } from './scripts/assert.js'
 
 client.test("el listado devuelve el gasto con los datos editados", function () {
     assertStatus(client, response, 200)
-    const found = jsonBody(response).find(e => String(e.id) === client.global.get("firstExpenseId"))
+    const found = jsonBody(response).items.find(e => String(e.id) === client.global.get("firstExpenseId"))
     client.assert(found !== undefined, "Expected edited expense in list")
     assertExpense(client, found, {
         id: client.global.get("firstExpenseId"),
@@ -1429,7 +1429,7 @@ import { assertStatus, jsonBody } from './scripts/assert.js'
 
 client.test("guarda la tasa y el importe base con los que se registró el gasto en USD", function () {
     assertStatus(client, response, 200)
-    const found = jsonBody(response).find(e => String(e.id) === client.global.get("usdExpenseId"))
+    const found = jsonBody(response).items.find(e => String(e.id) === client.global.get("usdExpenseId"))
     client.assert(found !== undefined, "Expected USD expense in list")
     client.global.set("usdExpenseExchangeRate", String(found.exchangeRate))
     client.global.set("usdExpenseBaseAmount", String(found.baseAmount))
@@ -1834,7 +1834,7 @@ import { assertStatus, jsonBody } from './scripts/assert.js'
 
 client.test("el gasto eliminado deja de aparecer en la lista", function () {
     assertStatus(client, response, 200)
-    const found = jsonBody(response).find(e => String(e.id) === client.global.get("firstExpenseId"))
+    const found = jsonBody(response).items.find(e => String(e.id) === client.global.get("firstExpenseId"))
     client.assert(found === undefined, "Expected deleted expense to be absent")
 })
 %}
@@ -1862,9 +1862,9 @@ import { assertStatus, jsonBody } from './scripts/assert.js'
 
 client.test("guarda cantidad y total de gastos antes de consultar pagos sugeridos", function () {
     assertStatus(client, response, 200)
-    const list = jsonBody(response)
-    client.global.set("expenseCountBeforeSuggestions", String(list.length))
-    client.global.set("expenseTotalBeforeSuggestions", String(list.reduce((sum, e) => sum + e.baseAmount, 0)))
+    const page = jsonBody(response)
+    client.global.set("expenseCountBeforeSuggestions", String(page.totalCount))
+    client.global.set("expenseTotalBeforeSuggestions", String(page.totalAmount))
 })
 %}
 
@@ -1938,10 +1938,9 @@ import { assertStatus, jsonBody } from './scripts/assert.js'
 
 client.test("consultar pagos sugeridos deja los gastos como estaban", function () {
     assertStatus(client, response, 200)
-    const list = jsonBody(response)
-    const total = list.reduce((sum, e) => sum + e.baseAmount, 0)
-    client.assert(String(list.length) === client.global.get("expenseCountBeforeSuggestions"), "Expected same expense count")
-    client.assert(String(total) === client.global.get("expenseTotalBeforeSuggestions"), "Expected same expense total")
+    const page = jsonBody(response)
+    client.assert(String(page.totalCount) === client.global.get("expenseCountBeforeSuggestions"), "Expected same expense count")
+    client.assert(String(page.totalAmount) === client.global.get("expenseTotalBeforeSuggestions"), "Expected same expense total")
 })
 %}
 
@@ -2020,4 +2019,87 @@ client.test("retoma sesión del dueño", function () {
     assertStatus(client, response, 200)
 })
 saveAuthToken(client, response, "auth_token")
+%}
+
+### 108. Events — GET lista de gastos paginada: primera página (200)
+GET {{baseUrl}}/api/events/{{firstEventId}}/expenses?limit=1
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("la primera página respeta el límite e informa los totales del evento", function () {
+    assertStatus(client, response, 200)
+    const page = jsonBody(response)
+    client.assert(page.items.length === 1, "Expected exactly one item")
+    // En este punto el evento tiene un único gasto: el de USD pasado a 15000 ARS en el paso 77.
+    client.assert(page.totalCount === 1, "Expected totalCount 1 but got " + page.totalCount)
+    client.assert(Number(page.totalAmount) === 15000, "Expected totalAmount 15000 but got " + page.totalAmount)
+    client.assert(page.hasNext === false, "Expected no next page")
+    const last = page.items[0]
+    client.global.set("expensePageCursorDate", String(last.expenseDate))
+    client.global.set("expensePageCursorId", String(last.id))
+})
+%}
+
+### 109. Events — GET lista de gastos paginada: página con cursor (200)
+GET {{baseUrl}}/api/events/{{firstEventId}}/expenses?limit=1&beforeDate={{expensePageCursorDate}}&beforeId={{expensePageCursorId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus, jsonBody } from './scripts/assert.js'
+
+client.test("la página con cursor no repite el gasto del cursor", function () {
+    assertStatus(client, response, 200)
+    const page = jsonBody(response)
+    client.assert(Array.isArray(page.items), "Expected items array")
+    client.assert(
+        !page.items.some(e => String(e.id) === client.global.get("expensePageCursorId")),
+        "Expected cursor expense to be excluded",
+    )
+    client.assert(page.totalCount === 1, "Expected totalCount 1 but got " + page.totalCount)
+    client.assert(Number(page.totalAmount) === 15000, "Expected totalAmount 15000 but got " + page.totalAmount)
+    client.assert(page.hasNext === false, "Expected no next page")
+})
+%}
+
+### 110. Events — GET lista de gastos con límite fuera de rango (400)
+GET {{baseUrl}}/api/events/{{firstEventId}}/expenses?limit=101
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus } from './scripts/assert.js'
+
+client.test("rechaza un límite mayor al máximo", function () {
+    assertStatus(client, response, 400)
+})
+%}
+
+### 111. Events — GET lista de gastos con límite cero (400)
+GET {{baseUrl}}/api/events/{{firstEventId}}/expenses?limit=0
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus } from './scripts/assert.js'
+
+client.test("rechaza un límite menor a uno", function () {
+    assertStatus(client, response, 400)
+})
+%}
+
+### 112. Events — GET lista de gastos con cursor incompleto (400)
+GET {{baseUrl}}/api/events/{{firstEventId}}/expenses?beforeId={{expensePageCursorId}}
+Accept: application/json
+Cookie: auth_token={{authToken}}
+
+> {%
+import { assertStatus } from './scripts/assert.js'
+
+client.test("rechaza un cursor sin beforeDate", function () {
+    assertStatus(client, response, 400)
+})
 %}

@@ -5,6 +5,7 @@ import edu.austral.splitit.server.application.port.AuthGuest
 import edu.austral.splitit.server.application.port.AuthPrincipal
 import edu.austral.splitit.server.domain.model.event.ExchangeQuote
 import edu.austral.splitit.server.domain.service.EventMemberService
+import edu.austral.splitit.server.domain.service.ExpenseCursor
 import edu.austral.splitit.server.domain.service.ExpenseService
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.stereotype.Service
@@ -54,6 +55,13 @@ data class ExpenseSummary(
     val baseCurrency: String,
     val paidByMember: ExpensePayerSummary,
     val expenseDate: LocalDate,
+)
+
+data class ExpensePageSummary(
+    val items: List<ExpenseSummary>,
+    val hasNext: Boolean,
+    val totalCount: Long,
+    val totalAmount: BigDecimal,
 )
 
 @Service
@@ -197,26 +205,37 @@ class ExpenseApplicationService(
     fun listExpenses(
         principal: AuthPrincipal,
         eventId: Long,
-    ): List<ExpenseSummary> {
+        size: Int,
+        after: ExpenseCursor?,
+    ): ExpensePageSummary {
         val event = eventAccessService.findEventFor(principal, eventId)
 
-        return expenseService.findByEventId(eventId).map { expense ->
-            ExpenseSummary(
-                id = requireNotNull(expense.id),
-                eventId = requireNotNull(event.id),
-                name = expense.name,
-                originalAmount = expense.originalAmount,
-                originalCurrency = expense.originalCurrency,
-                exchangeRate = expense.exchangeRate,
-                baseAmount = expense.baseAmount,
-                baseCurrency = event.baseCurrency,
-                paidByMember =
-                    ExpensePayerSummary(
-                        id = requireNotNull(expense.paidByMember.id),
-                        name = expense.paidByMember.displayName,
-                    ),
-                expenseDate = expense.expenseDate,
-            )
-        }
+        // One extra row tells whether there is a next page.
+        val fetched = expenseService.findPageByEventId(eventId, size + 1, after)
+
+        return ExpensePageSummary(
+            items =
+                fetched.take(size).map { expense ->
+                    ExpenseSummary(
+                        id = requireNotNull(expense.id),
+                        eventId = requireNotNull(event.id),
+                        name = expense.name,
+                        originalAmount = expense.originalAmount,
+                        originalCurrency = expense.originalCurrency,
+                        exchangeRate = expense.exchangeRate,
+                        baseAmount = expense.baseAmount,
+                        baseCurrency = event.baseCurrency,
+                        paidByMember =
+                            ExpensePayerSummary(
+                                id = requireNotNull(expense.paidByMember.id),
+                                name = expense.paidByMember.displayName,
+                            ),
+                        expenseDate = expense.expenseDate,
+                    )
+                },
+            hasNext = fetched.size > size,
+            totalCount = expenseService.countByEventId(eventId),
+            totalAmount = expenseService.totalBaseAmountByEventId(eventId),
+        )
     }
 }

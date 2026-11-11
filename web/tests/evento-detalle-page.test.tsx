@@ -30,7 +30,8 @@ vi.mock("@/lib/settlements", async (importOriginal) => {
 });
 
 import { EventError, getEventById, type EventDetail, getEventInviteToken } from "@/lib/events";
-import { listExpenses, type Expense } from "@/lib/expenses";
+import { listExpenses, type Expense, type ExpensePage } from "@/lib/expenses";
+import { expensePage } from "./expense-page";
 import { listBalances } from "@/lib/balances";
 import { listSuggestedPayments } from "@/lib/settlements";
 import { useSession } from "@/lib/use-session";
@@ -59,7 +60,7 @@ describe("EventDetailView", () => {
     });
     vi.mocked(getEventById).mockReset();
     vi.mocked(listExpenses).mockReset();
-    vi.mocked(listExpenses).mockResolvedValue([]);
+    vi.mocked(listExpenses).mockResolvedValue(expensePage([]));
     vi.mocked(listBalances).mockReset();
     vi.mocked(listBalances).mockResolvedValue([]);
     vi.mocked(listSuggestedPayments).mockReset();
@@ -212,7 +213,7 @@ describe("EventDetailView", () => {
 
   it("comparte la consulta pendiente de gastos sin bloquear los pagos sugeridos", async () => {
     vi.mocked(getEventById).mockResolvedValue(eventDetail);
-    const pending = Promise.withResolvers<Expense[]>();
+    const pending = Promise.withResolvers<ExpensePage>();
     vi.mocked(listExpenses).mockReturnValue(pending.promise);
 
     render(<EventDetailView id="1" />);
@@ -221,7 +222,7 @@ describe("EventDetailView", () => {
     expect(await screen.findByText("No hay pagos pendientes.")).toBeInTheDocument();
 
     await act(async () => {
-      pending.resolve([]);
+      pending.resolve(expensePage([]));
     });
 
     expect(await screen.findByText("Todavía no hay pagos sugeridos")).toBeInTheDocument();
@@ -265,7 +266,7 @@ describe("EventDetailView", () => {
       expenseDate: "2026-01-10",
     });
     vi.mocked(getEventById).mockResolvedValue(eventDetail);
-    vi.mocked(listExpenses).mockResolvedValue([expense(1), expense(2), expense(3)]);
+    vi.mocked(listExpenses).mockResolvedValue(expensePage([expense(1), expense(2), expense(3)]));
     const user = userEvent.setup();
 
     render(<EventDetailView id="1" />);
@@ -286,20 +287,22 @@ describe("EventDetailView", () => {
   it("recarga los gastos al abrir el diálogo de eliminar", async () => {
     vi.mocked(getEventById).mockResolvedValue(eventDetail);
     vi.mocked(listExpenses)
-      .mockResolvedValueOnce([])
-      .mockResolvedValue([
-        {
-          id: 1,
-          eventId: 1,
-          name: "Gasto de otro integrante",
-          originalAmount: 100,
-          originalCurrency: "ARS",
-          baseAmount: 100,
-          baseCurrency: "ARS",
-          paidByMember: { id: 11, name: "Juan" },
-          expenseDate: "2026-01-10",
-        },
-      ]);
+      .mockResolvedValueOnce(expensePage([]))
+      .mockResolvedValue(
+        expensePage([
+          {
+            id: 1,
+            eventId: 1,
+            name: "Gasto de otro integrante",
+            originalAmount: 100,
+            originalCurrency: "ARS",
+            baseAmount: 100,
+            baseCurrency: "ARS",
+            paidByMember: { id: 11, name: "Juan" },
+            expenseDate: "2026-01-10",
+          },
+        ])
+      );
     const user = userEvent.setup();
 
     render(<EventDetailView id="1" />);
@@ -319,8 +322,8 @@ describe("EventDetailView", () => {
 
   it("no ofrece eliminar mientras se recargan los gastos al abrir el diálogo", async () => {
     vi.mocked(getEventById).mockResolvedValue(eventDetail);
-    const pending = Promise.withResolvers<Expense[]>();
-    vi.mocked(listExpenses).mockResolvedValueOnce([]).mockReturnValue(pending.promise);
+    const pending = Promise.withResolvers<ExpensePage>();
+    vi.mocked(listExpenses).mockResolvedValueOnce(expensePage([])).mockReturnValue(pending.promise);
     const user = userEvent.setup();
 
     render(<EventDetailView id="1" />);
