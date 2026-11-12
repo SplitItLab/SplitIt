@@ -1,7 +1,7 @@
 "use client";
 
 import { createElement, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, Pencil, X } from "lucide-react";
 
@@ -44,13 +44,27 @@ export function EditEventDialog({
   const [iconOpen, setIconOpen] = useState(false);
   const [generalError, setGeneralError] = useState<string | null>(null);
 
+  // Un evento guardado antes del límite puede tener una descripción más larga que el máximo: si
+  // no se tocó, no se valida ni se manda, así se puede editar el resto del evento.
+  const resolver: Resolver<UpdateEventInput, unknown, UpdateEventPayload> = (
+    values,
+    context,
+    options
+  ) => {
+    const descriptionChanged = values.description !== (event.description ?? "");
+    const schema = descriptionChanged
+      ? updateEventSchema
+      : updateEventSchema.omit({ description: true });
+    return zodResolver(schema)(values, context, options);
+  };
+
   const {
     register,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<UpdateEventInput, unknown, UpdateEventPayload>({
-    resolver: zodResolver(updateEventSchema),
+    resolver,
     defaultValues: {
       name: event.name,
       description: event.description ?? "",

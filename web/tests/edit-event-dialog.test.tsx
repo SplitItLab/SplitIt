@@ -100,6 +100,36 @@ describe("EditEventDialog", () => {
     expect(updateEvent).not.toHaveBeenCalled();
   });
 
+  // SPT-119: un evento guardado antes del límite puede tener más de 500 caracteres de descripción.
+  it("permite editar el nombre sin tocar una descripción guardada más larga que el máximo", async () => {
+    const longDescription = "X".repeat(600);
+    const eventWithLongDescription: EventDetail = { ...event, description: longDescription };
+    vi.mocked(updateEvent).mockResolvedValue({
+      ...eventWithLongDescription,
+      name: "Viaje a Mendoza",
+    });
+    const user = userEvent.setup();
+    render(
+      <EditEventDialog
+        open
+        onOpenChange={() => {}}
+        event={eventWithLongDescription}
+        onUpdated={() => {}}
+        onUnauthorized={() => {}}
+      />
+    );
+    const dialog = await screen.findByRole("dialog");
+
+    await user.clear(within(dialog).getByLabelText("Nombre del evento"));
+    await user.type(within(dialog).getByLabelText("Nombre del evento"), "Viaje a Mendoza");
+    await user.click(within(dialog).getByRole("button", { name: /Guardar cambios/ }));
+
+    await waitFor(() => expect(updateEvent).toHaveBeenCalledTimes(1));
+    const [, payload] = vi.mocked(updateEvent).mock.calls[0];
+    expect(payload).toEqual(expect.objectContaining({ name: "Viaje a Mendoza" }));
+    expect(payload).not.toHaveProperty("description");
+  });
+
   it("muestra un error claro y conserva los valores si falla el guardado", async () => {
     vi.mocked(updateEvent).mockRejectedValue(
       new EventError("forbidden", "Solo el dueño puede editar este evento.")
