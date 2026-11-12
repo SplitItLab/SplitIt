@@ -11,6 +11,7 @@ Monorepo full-stack: frontend en Next.js, API en Spring Boot + Kotlin, y Postgre
 
 ## Documentación
 
+- [Manual de usuario](docs/MANUAL_DE_USUARIO.md): cómo usar SplitIt paso a paso, con capturas.
 - [Arquitectura](docs/ARCHITECTURE.md): sesión e invitados, acceso por link, KPIs y despliegue.
 - [Manual de desarrollo](docs/DEVELOPER_MANUAL.md): cómo levantarlo, variables de entorno, comandos, estructura, modelo de datos y CI/CD.
 - [ADRs](docs/adr/): decisiones puntuales.
@@ -30,7 +31,7 @@ Monorepo full-stack: frontend en Next.js, API en Spring Boot + Kotlin, y Postgre
 SplitIt/
 ├── web/                 # Next.js
 ├── api/                 # Spring Boot (Kotlin)
-├── docs/                # arquitectura, manual de desarrollo y ADRs
+├── docs/                # manual de usuario, arquitectura, manual de desarrollo y ADRs
 ├── hooks/               # git hooks (pre-commit)
 ├── docker-compose.yml
 └── .env.example
