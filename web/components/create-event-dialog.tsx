@@ -126,10 +126,10 @@ export function CreateEventDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      {/* El diálogo no scrollea entero: el título y "Crear evento" quedan fijos, y con muchos
-          integrantes solo la lista se achica y scrollea. Si la pantalla es tan baja que ni así
-          entran los campos, scrollean los campos en vez de quedar cortados. */}
-      <DialogContent aria-label="Crear evento" className="overflow-hidden">
+      {/* El diálogo no scrollea entero: el título, el nombre del integrante con "Agregar" y
+          "Crear evento" quedan fijos, y con muchos integrantes solo la lista scrollea.
+          dvh: en iOS el vh no se achica al abrir el teclado y taparía "Crear evento". */}
+      <DialogContent aria-label="Crear evento" className="max-h-[90dvh] overflow-hidden">
         <div className="flex shrink-0 items-start justify-between gap-3">
           <DialogTitle>Crear evento</DialogTitle>
           <DialogClose
@@ -145,8 +145,7 @@ export function CreateEventDialog({
           onSubmit={handleSubmit(onSubmit)}
           noValidate
         >
-          {/* -mx-1 px-1: el scroll no recorta los anillos de foco de los campos. */}
-          <div className="-mx-1 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain px-1 pb-1">
+          <div className="flex shrink-0 flex-col gap-4">
             <Popover open={iconOpen} onOpenChange={setIconOpen}>
               <PopoverTrigger
                 aria-label="Cambiar icono del evento"
@@ -228,77 +227,73 @@ export function CreateEventDialog({
                 </p>
               )}
             </div>
+          </div>
 
-            <div className="flex min-h-0 flex-1 flex-col gap-[6px]">
-              <Label htmlFor="event-member">Integrantes</Label>
-              <p className="text-text-secondary text-sm font-medium">
-                Las personas que entren al evento lo harán con alguno de estos nombres
-              </p>
-              <div className="flex gap-2">
-                <Input
-                  id="event-member"
-                  placeholder="Nombre"
-                  value={memberDraft}
-                  onChange={(event) => {
-                    setMemberDraft(event.target.value);
-                    setMemberError(null);
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      addParticipant();
-                    }
-                  }}
-                  aria-invalid={Boolean(memberError)}
-                  className="h-auto rounded-[6px] px-3 py-2 text-base"
-                />
-                <Button
-                  type="button"
-                  onClick={addParticipant}
-                  className="h-auto rounded-[6px] px-4"
-                >
-                  Agregar
-                </Button>
-              </div>
-              {memberError && (
-                <p role="alert" className="text-destructive text-sm">
-                  {memberError}
-                </p>
-              )}
-              <ul
-                aria-label="Integrantes agregados"
-                className="mt-1 flex min-h-12 flex-col gap-1 overflow-y-auto overscroll-contain"
-              >
-                {currentUserName && (
-                  <li className="bg-muted flex items-center justify-between gap-2 rounded-[8px] py-1 pr-1 pl-3">
-                    <span className="text-text-primary truncate text-sm font-medium">
-                      {currentUserName}
-                      <span className="text-text-secondary ml-2 text-sm font-medium">vos</span>
-                    </span>
-                    <span className="text-primary flex size-9 shrink-0 items-center justify-center">
-                      <Check className="size-4" />
-                    </span>
-                  </li>
-                )}
-                {participants.map((name) => (
-                  <li
-                    key={name}
-                    className="bg-muted flex items-center justify-between gap-2 rounded-[8px] py-1 pr-1 pl-3"
-                  >
-                    <span className="text-text-primary truncate text-sm font-medium">{name}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label={"Quitar a " + name}
-                      onClick={() => removeParticipant(name)}
-                    >
-                      <X className="size-4" />
-                    </Button>
-                  </li>
-                ))}
-              </ul>
+          <div className="flex min-h-0 flex-1 flex-col gap-[6px]">
+            <Label htmlFor="event-member">Integrantes</Label>
+            <p className="text-text-secondary text-sm font-medium">
+              Las personas que entren al evento lo harán con alguno de estos nombres
+            </p>
+            <div className="flex shrink-0 gap-2">
+              <Input
+                id="event-member"
+                placeholder="Nombre"
+                value={memberDraft}
+                onChange={(event) => {
+                  setMemberDraft(event.target.value);
+                  setMemberError(null);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    addParticipant();
+                  }
+                }}
+                aria-invalid={Boolean(memberError)}
+                className="h-auto rounded-[6px] px-3 py-2 text-base"
+              />
+              <Button type="button" onClick={addParticipant} className="h-auto rounded-[6px] px-4">
+                Agregar
+              </Button>
             </div>
+            {memberError && (
+              <p role="alert" className="text-destructive text-sm">
+                {memberError}
+              </p>
+            )}
+            <ul
+              aria-label="Integrantes agregados"
+              className="mt-1 flex min-h-12 flex-col gap-1 overflow-y-auto overscroll-contain"
+            >
+              {currentUserName && (
+                <li className="bg-muted flex items-center justify-between gap-2 rounded-[8px] py-1 pr-1 pl-3">
+                  <span className="text-text-primary truncate text-sm font-medium">
+                    {currentUserName}
+                    <span className="text-text-secondary ml-2 text-sm font-medium">vos</span>
+                  </span>
+                  <span className="text-primary flex size-9 shrink-0 items-center justify-center">
+                    <Check className="size-4" />
+                  </span>
+                </li>
+              )}
+              {participants.map((name) => (
+                <li
+                  key={name}
+                  className="bg-muted flex items-center justify-between gap-2 rounded-[8px] py-1 pr-1 pl-3"
+                >
+                  <span className="text-text-primary truncate text-sm font-medium">{name}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={"Quitar a " + name}
+                    onClick={() => removeParticipant(name)}
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </li>
+              ))}
+            </ul>
           </div>
 
           {generalError && (
