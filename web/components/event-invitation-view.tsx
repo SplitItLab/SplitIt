@@ -139,7 +139,7 @@ function AnonymousAccess({
         <UserRoundCheck aria-hidden="true" />
         Continuar con mi cuenta
       </Link>
-      <p className="text-muted-foreground text-center text-sm">
+      <p className="text-muted-foreground text-center text-sm wrap-anywhere">
         Con cuenta, el evento «{invitationName}» te queda guardado entre tus eventos.
       </p>
       {choosing ? (
