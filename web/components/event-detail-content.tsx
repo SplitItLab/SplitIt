@@ -35,7 +35,7 @@ export function EventDetailContent({
 }) {
   const [active, setActive] = useState<TabId>("gastos");
   const expenses = useEventExpenses({ event, onUnauthorized, onNotFound });
-  const expenseCount = expenses.state.status === "ready" ? expenses.state.expenses.length : null;
+  const expenseCount = expenses.state.status === "ready" ? expenses.state.totalCount : null;
   useEffect(() => {
     onExpenseCountChange(expenseCount);
   }, [expenseCount, onExpenseCountChange]);
@@ -79,7 +79,7 @@ export function EventDetailContent({
             {event.name}
           </h1>
           {event.description && (
-            <p className="text-text-secondary mt-1 max-w-xl text-sm font-medium">
+            <p className="text-text-secondary mt-1 max-w-xl text-sm font-medium break-words">
               {event.description}
             </p>
           )}

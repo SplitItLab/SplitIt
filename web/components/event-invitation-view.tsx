@@ -167,10 +167,14 @@ function InvitationHeader({ invitation }: { invitation: Invitation }) {
   return (
     <div className="flex flex-col items-center gap-3">
       <EventIcon iconKey={invitation.iconKey} className="size-16 rounded-[18px]" />
+      {/* wrap-anywhere y no break-words: en celular la columna de la grilla toma el ancho mínimo
+          del contenido, y con break-words una palabra larga sin espacios igual la ensancha. */}
       <div className="flex flex-col items-center justify-center gap-2 text-center">
-        <h1 className="text-[32px] font-extrabold text-black">{invitation.name}</h1>
+        <h1 className="text-[32px] font-extrabold wrap-anywhere text-black">{invitation.name}</h1>
         {invitation.description && (
-          <p className="text-muted-foreground text-sm font-medium">{invitation.description}</p>
+          <p className="text-muted-foreground text-sm font-medium wrap-anywhere">
+            {invitation.description}
+          </p>
         )}
       </div>
       <p className="text-muted-foreground text-sm font-medium">

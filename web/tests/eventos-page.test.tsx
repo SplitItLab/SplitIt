@@ -170,6 +170,28 @@ describe("EventsPage", () => {
     expect(createEvent).not.toHaveBeenCalled();
   });
 
+  // SPT-119: la descripción tiene un máximo de 500 caracteres, validado antes de enviar.
+  it("no envía la request cuando la descripción supera el máximo", async () => {
+    vi.mocked(listEvents).mockResolvedValue(events);
+    const user = userEvent.setup();
+
+    render(<EventsPage />);
+    await screen.findByText("Viaje a Bariloche");
+
+    await user.click(screen.getByRole("button", { name: /Crear evento/ }));
+    const dialog = await screen.findByRole("dialog");
+    await user.type(within(dialog).getByLabelText("Nombre del evento"), "Asado");
+    await user.click(within(dialog).getByLabelText(/Descripción/));
+    await user.paste("X".repeat(501));
+    await user.click(within(dialog).getByRole("button", { name: /Crear evento/ }));
+
+    expect(
+      await within(dialog).findByText("La descripción puede tener hasta 500 caracteres.")
+    ).toBeInTheDocument();
+    expect(within(dialog).getByLabelText(/Descripción/)).toHaveAttribute("aria-invalid", "true");
+    expect(createEvent).not.toHaveBeenCalled();
+  });
+
   it("crea un evento con una sola request y lo agrega a la lista", async () => {
     vi.mocked(listEvents).mockResolvedValue(events);
     vi.mocked(createEvent).mockResolvedValue({

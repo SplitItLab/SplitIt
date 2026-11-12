@@ -8,6 +8,7 @@ import edu.austral.splitit.server.application.port.TokenProvider
 import edu.austral.splitit.server.application.service.CreateExpenseCommand
 import edu.austral.splitit.server.application.service.EventApplicationService
 import edu.austral.splitit.server.application.service.ExpenseApplicationService
+import edu.austral.splitit.server.application.service.ExpensePageSummary
 import edu.austral.splitit.server.application.service.ExpensePayerSummary
 import edu.austral.splitit.server.application.service.ExpenseSummary
 import edu.austral.splitit.server.application.service.GuestAccessService
@@ -15,6 +16,7 @@ import edu.austral.splitit.server.application.service.QuoteExpenseQuery
 import edu.austral.splitit.server.application.service.UpdateExpenseCommand
 import edu.austral.splitit.server.domain.model.event.Currency
 import edu.austral.splitit.server.domain.model.event.ExchangeQuote
+import edu.austral.splitit.server.domain.service.ExpenseCursor
 import edu.austral.splitit.server.infrastructure.api.GlobalExceptionHandler
 import edu.austral.splitit.server.infrastructure.config.SecurityConfig
 import jakarta.servlet.http.Cookie
@@ -22,6 +24,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.check
 import org.mockito.kotlin.doNothing
 import org.mockito.kotlin.doThrow
@@ -221,23 +224,74 @@ class EventExpensesControllerTest(
     }
 
     @Test
-    fun `get expenses returns list of event expenses with 200`() {
+    fun `get expenses returns the first page with hasNext and the total of all expenses`() {
         whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
-        whenever(expenseApplicationService.listExpenses(authUser, 7L)).thenReturn(listOf(expenseSummary()))
+        whenever(expenseApplicationService.listExpenses(authUser, 7L, 20, null))
+            .thenReturn(
+                ExpensePageSummary(
+                    items = listOf(expenseSummary()),
+                    hasNext = true,
+                    totalCount = 30L,
+                    totalAmount = BigDecimal("9000.0000"),
+                ),
+            )
 
         mockMvc
             .perform(
                 get("/api/events/7/expenses")
                     .cookie(Cookie("auth_token", "good-token")),
             ).andExpect(status().isOk)
-            .andExpect(jsonPath("$[0].id").value(34))
-            .andExpect(jsonPath("$[0].name").value("Cena"))
-            .andExpect(jsonPath("$[0].originalAmount").value(5000))
-            .andExpect(jsonPath("$[0].exchangeRate").value(1.0))
-            .andExpect(jsonPath("$[0].baseAmount").value(5000.0))
-            .andExpect(jsonPath("$[0].paidByMember.name").value("Ana"))
+            .andExpect(jsonPath("$.items[0].id").value(34))
+            .andExpect(jsonPath("$.items[0].name").value("Cena"))
+            .andExpect(jsonPath("$.items[0].originalAmount").value(5000))
+            .andExpect(jsonPath("$.items[0].exchangeRate").value(1.0))
+            .andExpect(jsonPath("$.items[0].baseAmount").value(5000.0))
+            .andExpect(jsonPath("$.items[0].paidByMember.name").value("Ana"))
+            .andExpect(jsonPath("$.hasNext").value(true))
+            .andExpect(jsonPath("$.totalCount").value(30))
+            .andExpect(jsonPath("$.totalAmount").value(9000.0))
 
-        verify(expenseApplicationService).listExpenses(authUser, 7L)
+        verify(expenseApplicationService).listExpenses(authUser, 7L, 20, null)
+    }
+
+    @Test
+    fun `get expenses passes the limit and the cursor of the last expense seen`() {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+        whenever(expenseApplicationService.listExpenses(any(), any(), any(), anyOrNull()))
+            .thenReturn(ExpensePageSummary(emptyList(), false, 0L, BigDecimal.ZERO))
+
+        mockMvc
+            .perform(
+                get("/api/events/7/expenses?limit=5&beforeDate=2026-09-24&beforeId=34")
+                    .cookie(Cookie("auth_token", "good-token")),
+            ).andExpect(status().isOk)
+            .andExpect(jsonPath("$.hasNext").value(false))
+
+        verify(expenseApplicationService)
+            .listExpenses(authUser, 7L, 5, ExpenseCursor(LocalDate.of(2026, 9, 24), 34L))
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings = [
+            "limit=0",
+            "limit=101",
+            "limit=abc",
+            "beforeDate=2026-09-24",
+            "beforeId=34",
+            "beforeDate=ayer&beforeId=34",
+        ],
+    )
+    fun `get expenses returns 400 for an invalid page request`(query: String) {
+        whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
+
+        mockMvc
+            .perform(
+                get("/api/events/7/expenses?$query")
+                    .cookie(Cookie("auth_token", "good-token")),
+            ).andExpect(status().isBadRequest)
+
+        verify(expenseApplicationService, never()).listExpenses(any(), any(), any(), anyOrNull())
     }
 
     @Test
@@ -247,13 +301,13 @@ class EventExpensesControllerTest(
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.message").value("Unauthorized"))
 
-        verify(expenseApplicationService, never()).listExpenses(any(), any())
+        verify(expenseApplicationService, never()).listExpenses(any(), any(), any(), anyOrNull())
     }
 
     @Test
     fun `get expenses returns 403 when user has no access to the event`() {
         whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
-        whenever(expenseApplicationService.listExpenses(any(), any()))
+        whenever(expenseApplicationService.listExpenses(any(), any(), any(), anyOrNull()))
             .thenThrow(AccessDeniedException("Forbidden"))
 
         mockMvc
@@ -267,7 +321,7 @@ class EventExpensesControllerTest(
     @Test
     fun `get expenses returns 404 when event does not exist`() {
         whenever(tokenProvider.parse("good-token")).thenReturn(authUser)
-        whenever(expenseApplicationService.listExpenses(any(), any()))
+        whenever(expenseApplicationService.listExpenses(any(), any(), any(), anyOrNull()))
             .thenThrow(EventNotFoundException())
 
         mockMvc

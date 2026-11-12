@@ -126,11 +126,8 @@ export function CreateEventDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      {/* El diálogo no scrollea entero: el título, el nombre del integrante con "Agregar" y
-          "Crear evento" quedan fijos, y con muchos integrantes solo la lista scrollea.
-          dvh: en iOS el vh no se achica al abrir el teclado y taparía "Crear evento". */}
-      <DialogContent aria-label="Crear evento" className="max-h-[90dvh] overflow-hidden">
-        <div className="flex shrink-0 items-start justify-between gap-3">
+      <DialogContent aria-label="Crear evento">
+        <div className="flex items-start justify-between gap-3">
           <DialogTitle>Crear evento</DialogTitle>
           <DialogClose
             aria-label="Cerrar"
@@ -140,101 +137,101 @@ export function CreateEventDialog({
           </DialogClose>
         </div>
 
-        <form
-          className="flex min-h-0 flex-1 flex-col gap-4"
-          onSubmit={handleSubmit(onSubmit)}
-          noValidate
-        >
-          <div className="flex shrink-0 flex-col gap-4">
-            <Popover open={iconOpen} onOpenChange={setIconOpen}>
-              <PopoverTrigger
-                aria-label="Cambiar icono del evento"
-                className="focus-visible:ring-ring/50 relative w-fit rounded-[16px] outline-none focus-visible:ring-3"
-              >
-                <span className="bg-primary/10 text-primary flex size-14 items-center justify-center rounded-[16px]">
-                  {createElement(eventIconFor(iconKey), { className: "size-6" })}
-                </span>
-                <span className="border-card bg-primary text-primary-foreground absolute -right-1 -bottom-1 flex size-6 items-center justify-center rounded-full border-2">
-                  <Pencil className="size-3" />
-                </span>
-              </PopoverTrigger>
-              <PopoverContent>
-                <div className="grid grid-cols-4 gap-1">
-                  {EVENT_ICON_OPTIONS.map(({ key, label, Icon }) => (
-                    <button
-                      key={key}
-                      type="button"
-                      aria-label={label}
-                      aria-pressed={key === iconKey}
-                      onClick={() => {
-                        setIconKey(key);
-                        setIconOpen(false);
-                      }}
-                      className="text-text-primary hover:bg-muted focus-visible:ring-ring/50 aria-pressed:bg-primary/10 aria-pressed:text-primary flex size-12 items-center justify-center rounded-[12px] outline-none focus-visible:ring-3"
-                    >
-                      <Icon className="size-5" />
-                    </button>
-                  ))}
-                </div>
-              </PopoverContent>
-            </Popover>
-
-            <div className="flex flex-col gap-[6px]">
-              <Label htmlFor="event-name">Nombre del evento</Label>
-              <Input
-                id="event-name"
-                placeholder="Viaje a la cordillera"
-                aria-invalid={Boolean(errors.name)}
-                className="h-auto rounded-[6px] px-3 py-2 text-base"
-                {...register("name")}
-              />
-              {errors.name && (
-                <p role="alert" className="text-destructive text-sm">
-                  {errors.name.message}
-                </p>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-[6px]">
-              <Label htmlFor="event-description">
-                Descripción <span className="text-text-secondary font-medium">(opcional)</span>
-              </Label>
-              <Textarea
-                id="event-description"
-                placeholder="Datos importantes para la distinción del evento"
-                className="min-h-24 rounded-[6px] px-3 py-2 text-base"
-                {...register("description")}
-              />
-            </div>
-
-            <div className="flex flex-col gap-[6px]">
-              <Label htmlFor="event-currency">Moneda del evento</Label>
-              <select
-                id="event-currency"
-                aria-invalid={Boolean(errors.baseCurrency)}
-                className="border-input focus-visible:border-ring focus-visible:ring-ring/50 text-text-primary w-fit rounded-[6px] border bg-transparent px-3 py-2 text-base outline-none focus-visible:ring-3"
-                {...register("baseCurrency")}
-              >
-                {EVENT_CURRENCIES.map(({ code, label }) => (
-                  <option key={code} value={code}>
-                    {label}
-                  </option>
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)} noValidate>
+          <Popover open={iconOpen} onOpenChange={setIconOpen}>
+            <PopoverTrigger
+              aria-label="Cambiar icono del evento"
+              className="focus-visible:ring-ring/50 relative w-fit rounded-[16px] outline-none focus-visible:ring-3"
+            >
+              <span className="bg-primary/10 text-primary flex size-14 items-center justify-center rounded-[16px]">
+                {createElement(eventIconFor(iconKey), { className: "size-6" })}
+              </span>
+              <span className="border-card bg-primary text-primary-foreground absolute -right-1 -bottom-1 flex size-6 items-center justify-center rounded-full border-2">
+                <Pencil className="size-3" />
+              </span>
+            </PopoverTrigger>
+            <PopoverContent>
+              <div className="grid grid-cols-4 gap-1">
+                {EVENT_ICON_OPTIONS.map(({ key, label, Icon }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    aria-label={label}
+                    aria-pressed={key === iconKey}
+                    onClick={() => {
+                      setIconKey(key);
+                      setIconOpen(false);
+                    }}
+                    className="text-text-primary hover:bg-muted focus-visible:ring-ring/50 aria-pressed:bg-primary/10 aria-pressed:text-primary flex size-12 items-center justify-center rounded-[12px] outline-none focus-visible:ring-3"
+                  >
+                    <Icon className="size-5" />
+                  </button>
                 ))}
-              </select>
-              {errors.baseCurrency && (
-                <p role="alert" className="text-destructive text-sm">
-                  {errors.baseCurrency.message}
-                </p>
-              )}
-            </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <div className="flex flex-col gap-[6px]">
+            <Label htmlFor="event-name">Nombre del evento</Label>
+            <Input
+              id="event-name"
+              placeholder="Viaje a la cordillera"
+              aria-invalid={Boolean(errors.name)}
+              className="h-auto rounded-[6px] px-3 py-2 text-base"
+              {...register("name")}
+            />
+            {errors.name && (
+              <p role="alert" className="text-destructive text-sm">
+                {errors.name.message}
+              </p>
+            )}
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col gap-[6px]">
+          <div className="flex flex-col gap-[6px]">
+            <Label htmlFor="event-description">
+              Descripción <span className="text-text-secondary font-medium">(opcional)</span>
+            </Label>
+            <Textarea
+              id="event-description"
+              placeholder="Datos importantes para la distinción del evento"
+              aria-invalid={Boolean(errors.description)}
+              className="min-h-24 rounded-[6px] px-3 py-2 text-base"
+              {...register("description")}
+            />
+            {errors.description && (
+              <p role="alert" className="text-destructive text-sm">
+                {errors.description.message}
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-[6px]">
+            <Label htmlFor="event-currency">Moneda del evento</Label>
+            <select
+              id="event-currency"
+              aria-invalid={Boolean(errors.baseCurrency)}
+              className="border-input focus-visible:border-ring focus-visible:ring-ring/50 text-text-primary w-fit rounded-[6px] border bg-transparent px-3 py-2 text-base outline-none focus-visible:ring-3"
+              {...register("baseCurrency")}
+            >
+              {EVENT_CURRENCIES.map(({ code, label }) => (
+                <option key={code} value={code}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            {errors.baseCurrency && (
+              <p role="alert" className="text-destructive text-sm">
+                {errors.baseCurrency.message}
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-[6px]">
             <Label htmlFor="event-member">Integrantes</Label>
             <p className="text-text-secondary text-sm font-medium">
               Las personas que entren al evento lo harán con alguno de estos nombres
             </p>
-            <div className="flex shrink-0 gap-2">
+            <div className="flex gap-2">
               <Input
                 id="event-member"
                 placeholder="Nombre"
@@ -261,10 +258,7 @@ export function CreateEventDialog({
                 {memberError}
               </p>
             )}
-            <ul
-              aria-label="Integrantes agregados"
-              className="mt-1 flex min-h-12 flex-col gap-1 overflow-y-auto overscroll-contain"
-            >
+            <ul className="mt-1 flex flex-col gap-1">
               {currentUserName && (
                 <li className="bg-muted flex items-center justify-between gap-2 rounded-[8px] py-1 pr-1 pl-3">
                   <span className="text-text-primary truncate text-sm font-medium">
@@ -297,12 +291,12 @@ export function CreateEventDialog({
           </div>
 
           {generalError && (
-            <Alert variant="destructive" className="shrink-0">
+            <Alert variant="destructive">
               <AlertDescription>{generalError}</AlertDescription>
             </Alert>
           )}
 
-          <div className="flex shrink-0 pt-2 sm:justify-end">
+          <div className="flex pt-2 sm:justify-end">
             <Button
               type="submit"
               disabled={isSubmitting}

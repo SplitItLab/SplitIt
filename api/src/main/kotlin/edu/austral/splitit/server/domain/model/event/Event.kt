@@ -60,7 +60,7 @@ class Event private constructor(
             return Event(
                 owner = owner,
                 name = eventName.get(),
-                description = description?.trim()?.takeIf { it.isNotEmpty() },
+                description = description?.let { EventDescription(it).get() }?.takeIf { it.isNotEmpty() },
                 iconKey = iconKey?.trim()?.takeIf { it.isNotEmpty() },
                 baseCurrency = currency.get(),
                 createdAt = now,
@@ -75,7 +75,7 @@ class Event private constructor(
         iconKey: String? = null,
     ): Event {
         name?.let { this.name = EventName(it).get() }
-        description?.let { this.description = it.trim().takeIf { d -> d.isNotEmpty() } }
+        description?.let { this.description = EventDescription(it).get().takeIf { d -> d.isNotEmpty() } }
         iconKey?.let { this.iconKey = it.trim().takeIf { k -> k.isNotEmpty() } }
         this.updatedAt = Instant.now()
         return this

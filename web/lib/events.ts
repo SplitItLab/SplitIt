@@ -46,9 +46,20 @@ const optionalText = z
   .transform((value) => (value === "" ? undefined : value))
   .optional();
 
+/** Igual al máximo de la API (`EventDescription.EVENT_DESCRIPTION_MAX`). */
+export const EVENT_DESCRIPTION_MAX = 500;
+
 export const createEventSchema = z.object({
   name: z.string().trim().min(1, "El nombre es obligatorio."),
-  description: optionalText,
+  description: z
+    .string()
+    .trim()
+    .max(
+      EVENT_DESCRIPTION_MAX,
+      `La descripción puede tener hasta ${EVENT_DESCRIPTION_MAX} caracteres.`
+    )
+    .transform((value) => (value === "" ? undefined : value))
+    .optional(),
   iconKey: optionalText,
   baseCurrency: z.enum(currencyCodes, { message: "Elegí una moneda válida." }),
   participantNames: z

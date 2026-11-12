@@ -27,6 +27,7 @@ import {
   updateExpense,
   type Expense,
 } from "@/lib/expenses";
+import { expensePage } from "./expense-page";
 import { showAppToast } from "@/lib/toast";
 import { AddExpenseDialog } from "../components/add-expense-dialog";
 import { EventExpenses } from "../components/event-expenses";
@@ -322,7 +323,7 @@ describe("AddExpenseDialog", () => {
   });
 
   it("antepone el gasto creado, actualiza el total y confirma", async () => {
-    vi.mocked(listExpenses).mockResolvedValue([cena]);
+    vi.mocked(listExpenses).mockResolvedValue(expensePage([cena]));
     vi.mocked(createExpense).mockResolvedValue(created);
     const user = userEvent.setup();
     render(<EventExpenses event={event} onUnauthorized={vi.fn()} onNotFound={vi.fn()} />);
@@ -389,7 +390,7 @@ describe("AddExpenseDialog", () => {
   });
 
   it("se recorre con teclado y se cierra con Escape", async () => {
-    vi.mocked(listExpenses).mockResolvedValue([]);
+    vi.mocked(listExpenses).mockResolvedValue(expensePage([]));
     const user = userEvent.setup();
     render(<EventExpenses event={event} onUnauthorized={vi.fn()} onNotFound={vi.fn()} />);
 
@@ -489,7 +490,7 @@ describe("AddExpenseDialog en modo edición", () => {
   });
 
   it("edita desde el lápiz de la tarjeta, reemplaza el gasto, actualiza el total y confirma", async () => {
-    vi.mocked(listExpenses).mockResolvedValue([created, cena]);
+    vi.mocked(listExpenses).mockResolvedValue(expensePage([created, cena]));
     vi.mocked(updateExpense).mockResolvedValue({
       ...cena,
       name: "Cena larga",

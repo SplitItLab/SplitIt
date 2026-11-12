@@ -4,13 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Pencil, Plus, Receipt, Trash2 } from "lucide-react";
 
 import { EventError, type EventDetail } from "@/lib/events";
-import {
-  expenseTotal,
-  formatExpenseDate,
-  formatMoney,
-  listExpenses,
-  type Expense,
-} from "@/lib/expenses";
+import { formatExpenseDate, formatMoney, listExpenses, type Expense } from "@/lib/expenses";
 import { showAppToast } from "@/lib/toast";
 import { AddExpenseDialog } from "@/components/add-expense-dialog";
 import { DeleteExpenseDialog } from "@/components/delete-expense-dialog";
@@ -20,7 +14,14 @@ import { LoadingIndicator } from "@/components/loading-indicator";
 
 type LoadState =
   | { status: "loading" }
-  | { status: "ready"; expenses: Expense[] }
+  | {
+      status: "ready";
+      expenses: Expense[];
+      hasNext: boolean;
+      totalCount: number;
+      totalAmount: number;
+      loadingMore: boolean;
+    }
   | { status: "error"; message: string };
 
 type EventExpensesProps = {
@@ -36,9 +37,16 @@ export function useEventExpenses({ event, onUnauthorized, onNotFound }: EventExp
   const load = useCallback(() => {
     const current = ++requestId.current;
     listExpenses(event.id)
-      .then((expenses) => {
+      .then((page) => {
         if (current !== requestId.current) return;
-        setState({ status: "ready", expenses });
+        setState({
+          status: "ready",
+          expenses: page.items,
+          hasNext: page.hasNext,
+          totalCount: page.totalCount,
+          totalAmount: page.totalAmount,
+          loadingMore: false,
+        });
       })
       .catch((err: unknown) => {
         if (current !== requestId.current) return;
@@ -73,7 +81,51 @@ export function useEventExpenses({ event, onUnauthorized, onNotFound }: EventExp
     load();
   };
 
-  return { state, setState, load, retry };
+  const loadMore = useCallback(() => {
+    if (state.status !== "ready" || state.loadingMore || !state.hasNext) return;
+    const current = requestId.current;
+    setState({ ...state, loadingMore: true });
+    listExpenses(event.id, state.expenses[state.expenses.length - 1])
+      .then((page) => {
+        if (current !== requestId.current) return;
+        setState((latest) =>
+          latest.status === "ready"
+            ? {
+                ...latest,
+                expenses: [
+                  ...latest.expenses,
+                  // Un gasto cargado entre páginas no debe repetirse.
+                  ...page.items.filter((item) => !latest.expenses.some((e) => e.id === item.id)),
+                ],
+                hasNext: page.hasNext,
+                totalCount: page.totalCount,
+                totalAmount: page.totalAmount,
+                loadingMore: false,
+              }
+            : latest
+        );
+      })
+      .catch((err: unknown) => {
+        if (current !== requestId.current) return;
+        if (err instanceof EventError && err.type === "unauthorized") {
+          onUnauthorized();
+          return;
+        }
+        if (err instanceof EventError && (err.type === "forbidden" || err.type === "not-found")) {
+          onNotFound();
+          return;
+        }
+        setState((latest) =>
+          latest.status === "ready" ? { ...latest, loadingMore: false } : latest
+        );
+        showAppToast(
+          "error",
+          err instanceof EventError ? err.message : "No pudimos cargar más gastos. Probá de nuevo."
+        );
+      });
+  }, [event.id, onNotFound, onUnauthorized, state]);
+
+  return { state, setState, load, retry, loadMore };
 }
 
 export function EventExpenses(props: EventExpensesProps) {
@@ -89,6 +141,7 @@ export function EventExpensesContent({
   setState,
   load,
   retry,
+  loadMore,
 }: EventExpensesProps & ReturnType<typeof useEventExpenses>) {
   return (
     <div className="space-y-4">
@@ -119,10 +172,19 @@ export function EventExpensesContent({
         <ExpenseList
           event={event}
           expenses={state.expenses}
+          totalAmount={state.totalAmount}
+          hasNext={state.hasNext}
+          loadingMore={state.loadingMore}
+          onLoadMore={loadMore}
           onCreated={(expense) => {
             setState((current) =>
               current.status === "ready"
-                ? { status: "ready", expenses: [expense, ...current.expenses] }
+                ? {
+                    ...current,
+                    expenses: [expense, ...current.expenses],
+                    totalCount: current.totalCount + 1,
+                    totalAmount: current.totalAmount + expense.baseAmount,
+                  }
                 : current
             );
             showAppToast("success", `Agregamos «${expense.name}»`);
@@ -131,10 +193,15 @@ export function EventExpensesContent({
             setState((current) =>
               current.status === "ready"
                 ? {
-                    status: "ready",
+                    ...current,
                     expenses: current.expenses.map((expense) =>
                       expense.id === updated.id ? updated : expense
                     ),
+                    totalAmount:
+                      current.totalAmount -
+                      (current.expenses.find((expense) => expense.id === updated.id)?.baseAmount ??
+                        updated.baseAmount) +
+                      updated.baseAmount,
                   }
                 : current
             );
@@ -144,8 +211,10 @@ export function EventExpensesContent({
             setState((current) =>
               current.status === "ready"
                 ? {
-                    status: "ready",
+                    ...current,
                     expenses: current.expenses.filter((expense) => expense.id !== deleted.id),
+                    totalCount: current.totalCount - 1,
+                    totalAmount: current.totalAmount - deleted.baseAmount,
                   }
                 : current
             );
@@ -167,6 +236,10 @@ export function EventExpensesContent({
 function ExpenseList({
   event,
   expenses,
+  totalAmount,
+  hasNext,
+  loadingMore,
+  onLoadMore,
   onCreated,
   onUnauthorized,
   onNotFound,
@@ -176,6 +249,10 @@ function ExpenseList({
 }: {
   event: EventDetail;
   expenses: Expense[];
+  totalAmount: number;
+  hasNext: boolean;
+  loadingMore: boolean;
+  onLoadMore: () => void;
   onCreated: (expense: Expense) => void;
   onUnauthorized: () => void;
   onNotFound: () => void;
@@ -192,7 +269,7 @@ function ExpenseList({
         <article className="border-border rounded-[24px] border p-4">
           <p className="text-text-secondary text-xs font-bold">Total de gastos</p>
           <p className="text-text-primary mt-1 text-2xl font-extrabold">
-            {formatMoney(expenseTotal(expenses), event.baseCurrency)}
+            {formatMoney(totalAmount, event.baseCurrency)}
           </p>
         </article>
       )}
@@ -251,19 +328,26 @@ function ExpenseList({
         />
       )}
       {expenses.length > 0 ? (
-        <div className="grid gap-3 xl:grid-cols-2">
-          {expenses.map((expense) => (
-            <ExpenseCard
-              key={expense.id}
-              expense={expense}
-              baseCurrency={event.baseCurrency}
-              // El invitado solo carga gastos propios: editar y borrar son del dueño y los integrantes con cuenta.
-              readOnly={event.guestMemberId != null}
-              onUpdate={() => setEditingExpense(expense)}
-              onDelete={() => setDeletingExpense(expense)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-3 xl:grid-cols-2">
+            {expenses.map((expense) => (
+              <ExpenseCard
+                key={expense.id}
+                expense={expense}
+                baseCurrency={event.baseCurrency}
+                // El invitado solo carga gastos propios: editar y borrar son del dueño y los integrantes con cuenta.
+                readOnly={event.guestMemberId != null}
+                onUpdate={() => setEditingExpense(expense)}
+                onDelete={() => setDeletingExpense(expense)}
+              />
+            ))}
+          </div>
+          {hasNext && (
+            <Button type="button" variant="outline" disabled={loadingMore} onClick={onLoadMore}>
+              {loadingMore ? "Cargando…" : "Ver más gastos"}
+            </Button>
+          )}
+        </>
       ) : (
         <div className="border-border rounded-[24px] border p-6 sm:p-8">
           <div className="mx-auto max-w-sm text-center">
