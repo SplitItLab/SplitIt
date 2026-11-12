@@ -1,5 +1,6 @@
 package edu.austral.splitit.server.infrastructure.api.event
 
+import edu.austral.splitit.server.domain.model.event.EventDescription.Companion.EVENT_DESCRIPTION_MAX
 import jakarta.validation.Validation
 import org.junit.jupiter.api.Test
 import kotlin.test.assertTrue
@@ -44,6 +45,18 @@ class UpdateEventRequestValidationTest {
 
         val violations = validator.validate(request)
         assertTrue(violations.any { it.propertyPath.toString() == "name" })
+    }
+
+    @Test
+    fun `description longer than the max violates description`() {
+        val request =
+            UpdateEventRequest(
+                name = null,
+                description = "X".repeat(EVENT_DESCRIPTION_MAX + 1),
+                iconKey = null,
+            )
+
+        assertTrue(validator.validate(request).any { it.propertyPath.toString() == "description" })
     }
 
     @Test

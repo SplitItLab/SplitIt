@@ -79,7 +79,7 @@ export function EventDetailContent({
             {event.name}
           </h1>
           {event.description && (
-            <p className="text-text-secondary mt-1 max-w-xl text-sm font-medium">
+            <p className="text-text-secondary mt-1 max-w-xl text-sm font-medium break-words">
               {event.description}
             </p>
           )}

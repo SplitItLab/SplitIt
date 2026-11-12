@@ -194,9 +194,15 @@ export function CreateEventDialog({
             <Textarea
               id="event-description"
               placeholder="Datos importantes para la distinción del evento"
+              aria-invalid={Boolean(errors.description)}
               className="min-h-24 rounded-[6px] px-3 py-2 text-base"
               {...register("description")}
             />
+            {errors.description && (
+              <p role="alert" className="text-destructive text-sm">
+                {errors.description.message}
+              </p>
+            )}
           </div>
 
           <div className="flex flex-col gap-[6px]">
