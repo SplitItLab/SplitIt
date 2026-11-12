@@ -150,7 +150,12 @@ export function EventDetailContent({
       {active === "integrantes" && (
         <section role="tabpanel" id={panelId("integrantes")} aria-labelledby={tabId("integrantes")}>
           <h2 className="text-text-primary text-2xl font-extrabold">Integrantes</h2>
-          <ul className="mt-4 grid gap-3 md:grid-cols-2">
+          {/* Con muchos integrantes la lista scrollea dentro de su bloque y no estira la página. */}
+          <ul
+            aria-label={`Integrantes del evento (${event.members.length})`}
+            tabIndex={0}
+            className="focus-visible:ring-ring/50 mt-4 grid max-h-[60vh] gap-3 overflow-y-auto overscroll-contain rounded-[24px] outline-none focus-visible:ring-3 md:grid-cols-2"
+          >
             {event.members.map((member) => (
               <MemberCard key={member.id} member={member} />
             ))}

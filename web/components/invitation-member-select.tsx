@@ -1,4 +1,5 @@
 import type { InvitationMember } from "@/lib/invitations";
+import { MemberCombobox } from "@/components/member-combobox";
 
 export function InvitationMemberSelect({
   id,
@@ -14,21 +15,18 @@ export function InvitationMemberSelect({
   invalid: boolean;
 }) {
   return (
-    <select
+    <MemberCombobox
       id={id}
+      members={members.map((member) => ({
+        id: member.id,
+        name: member.name,
+        disabled: member.isLinked,
+        hint: member.isLinked ? "Ya entró con su cuenta" : undefined,
+      }))}
       value={value}
-      onChange={(event) => onChange(event.target.value)}
-      aria-invalid={invalid}
-      className="border-border text-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive h-auto w-full rounded-[6px] border bg-white px-3 py-2 text-base leading-6 outline-none focus-visible:ring-3"
-    >
-      <option value="" disabled>
-        Elegite de la lista
-      </option>
-      {members.map((member) => (
-        <option key={member.id} value={member.id} disabled={member.isLinked}>
-          {member.isLinked ? `${member.name} · ya entró con su cuenta` : member.name}
-        </option>
-      ))}
-    </select>
+      onChange={onChange}
+      invalid={invalid}
+      placeholder="Buscá tu nombre"
+    />
   );
 }

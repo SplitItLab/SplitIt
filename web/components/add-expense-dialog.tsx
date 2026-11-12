@@ -19,6 +19,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingIndicator } from "@/components/loading-indicator";
+import { MemberCombobox } from "@/components/member-combobox";
 
 const QUOTE_ERROR = "No pudimos obtener el tipo de cambio.";
 const selectClassName =
@@ -294,26 +295,19 @@ export function AddExpenseDialog({
 
           <div className="space-y-2">
             <Label htmlFor="expense-payer">Pago</Label>
-            <div className="relative w-fit">
-              <select
-                id="expense-payer"
-                value={payerId}
-                // El backend solo acepta que el invitado cargue gastos pagados por él.
-                disabled={event.guestMemberId != null}
-                className={`${selectClassName} h-11`}
-                onChange={(event_) => {
-                  setPayerId(event_.target.value);
-                  setFormError(null);
-                }}
-              >
-                {event.members.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown aria-hidden="true" className={selectChevronClassName} />
-            </div>
+            <MemberCombobox
+              id="expense-payer"
+              members={event.members}
+              value={payerId}
+              // El backend solo acepta que el invitado cargue gastos pagados por él.
+              disabled={event.guestMemberId != null}
+              onChange={(value) => {
+                setPayerId(value);
+                setFormError(null);
+              }}
+              placeholder="Buscá quién pagó"
+              className="sm:w-72"
+            />
           </div>
 
           {formError && (
