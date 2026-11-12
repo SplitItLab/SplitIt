@@ -69,7 +69,7 @@ export function DeleteExpenseDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         aria-label="Eliminar gasto"
-        className="border-border h-[255px] px-8 py-6 shadow-none sm:max-w-[512px]"
+        className="border-border px-8 py-6 shadow-none sm:max-w-[512px]"
       >
         <div>
           <span
@@ -81,7 +81,7 @@ export function DeleteExpenseDialog({
           <DialogTitle className="text-[18px]">
             ¿Estás seguro que querés eliminar este gasto?
           </DialogTitle>
-          <DialogDescription className="text-muted-foreground text-sm">
+          <DialogDescription className="text-muted-foreground text-sm break-words">
             Vas a eliminar {expense.name}. Esta acción también actualiza los saldos del evento.
           </DialogDescription>
         </div>

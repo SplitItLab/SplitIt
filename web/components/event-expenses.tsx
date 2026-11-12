@@ -329,7 +329,8 @@ function ExpenseList({
       )}
       {expenses.length > 0 ? (
         <>
-          <div className="grid gap-3 xl:grid-cols-2">
+          {/* grid-cols-1 (minmax(0,1fr)): sin columna explícita, un nombre largo ensancha la grilla. */}
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
             {expenses.map((expense) => (
               <ExpenseCard
                 key={expense.id}
