@@ -176,7 +176,7 @@ export default function EventsPage() {
       )}
 
       {state.status === "loaded" && visibleEvents.length > 0 && (
-        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {visibleEvents.map((event) => (
             <Link key={event.id} href={`/eventos/${event.id}`}>
               <article className="border-border flex items-center gap-4 rounded-[24px] border p-4 sm:p-5">

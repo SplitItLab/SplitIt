@@ -69,7 +69,7 @@ export function DeleteEventDialog({
           >
             <Trash2 className="size-6" />
           </span>
-          <DialogTitle className="text-[28px]">Eliminar «{event.name}»</DialogTitle>
+          <DialogTitle className="text-[28px] break-words">Eliminar «{event.name}»</DialogTitle>
           <DialogDescription className="text-muted-foreground text-sm leading-6 font-medium">
             {hasExpenses ? (
               `Este evento tiene ${expenseCount === 1 ? "1 gasto" : `${expenseCount} gastos`}. Para eliminarlo, primero borrá sus gastos.`
