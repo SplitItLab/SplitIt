@@ -1,5 +1,6 @@
 package edu.austral.splitit.server.infrastructure.api.event
 
+import edu.austral.splitit.server.application.exception.InvalidRequestException
 import edu.austral.splitit.server.application.port.AuthPrincipal
 import edu.austral.splitit.server.application.port.AuthUser
 import edu.austral.splitit.server.application.service.CreateEventCommand
@@ -9,6 +10,7 @@ import edu.austral.splitit.server.application.service.ExpenseApplicationService
 import edu.austral.splitit.server.application.service.QuoteExpenseQuery
 import edu.austral.splitit.server.application.service.UpdateEventCommand
 import edu.austral.splitit.server.application.service.UpdateExpenseCommand
+import edu.austral.splitit.server.domain.service.ExpenseCursor
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import java.math.BigDecimal
+import java.time.LocalDate
 
 @RestController
 @RequestMapping("/api/events")
@@ -157,10 +160,16 @@ class EventController(
     fun listExpenses(
         @AuthenticationPrincipal principal: AuthPrincipal,
         @PathVariable eventId: Long,
-    ): List<ExpenseResponse> {
-        val summaries = expenseApplicationService.listExpenses(principal, eventId)
+        @RequestParam(defaultValue = DEFAULT_PAGE_SIZE.toString()) limit: Int,
+        @RequestParam(required = false) beforeDate: LocalDate?,
+        @RequestParam(required = false) beforeId: Long?,
+    ): ExpensePageResponse {
+        if (limit !in 1..MAX_PAGE_SIZE || (beforeDate == null) != (beforeId == null)) {
+            throw InvalidRequestException()
+        }
+        val after = if (beforeDate != null && beforeId != null) ExpenseCursor(beforeDate, beforeId) else null
 
-        return summaries.map { ExpenseResponse.of(it) }
+        return ExpensePageResponse.of(expenseApplicationService.listExpenses(principal, eventId, limit, after))
     }
 
     @PutMapping("/{id}")
@@ -189,5 +198,10 @@ class EventController(
         @PathVariable id: Long,
     ) {
         eventApplicationService.deleteEvent(user.id, id)
+    }
+
+    private companion object {
+        const val DEFAULT_PAGE_SIZE = 20
+        const val MAX_PAGE_SIZE = 100
     }
 }

@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EventError } from "../lib/events";
 import {
   createExpense,
-  expenseTotal,
   formatExpenseDate,
   formatMoney,
   listExpenses,
@@ -32,7 +31,7 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-describe("formatMoney, formatExpenseDate y expenseTotal", () => {
+describe("formatMoney, formatExpenseDate", () => {
   it("formatea el importe en pesos argentinos con decimales", () => {
     expect(formatMoney(69900, "ARS")).toBe("$\u00a069.900,00");
     expect(formatMoney(2.5, "ARS")).toBe("$\u00a02,50");
@@ -50,22 +49,6 @@ describe("formatMoney, formatExpenseDate y expenseTotal", () => {
   it("formatea la fecha del gasto en español", () => {
     expect(formatExpenseDate("2024-03-16")).toBe("16 de mar de 2024");
   });
-
-  it("suma solo el importe en la moneda base", () => {
-    const expenses: Expense[] = [
-      expense,
-      {
-        ...expense,
-        id: 2,
-        originalAmount: 9000,
-        originalCurrency: "USD",
-        baseAmount: 2.5,
-        baseCurrency: "ARS",
-      },
-    ];
-
-    expect(expenseTotal(expenses)).toBe(5002.5);
-  });
 });
 
 describe("listExpenses, quoteExpense y createExpense", () => {
@@ -77,15 +60,27 @@ describe("listExpenses, quoteExpense y createExpense", () => {
     vi.unstubAllGlobals();
   });
 
-  it("pide GET /api/events/:id/expenses y devuelve la lista", async () => {
-    vi.mocked(fetch).mockResolvedValue(jsonResponse([expense]));
+  it("pide GET /api/events/:id/expenses y devuelve la página con el total", async () => {
+    const page = { items: [expense], hasNext: true, totalCount: 30, totalAmount: 9000 };
+    vi.mocked(fetch).mockResolvedValue(jsonResponse(page));
 
-    await expect(listExpenses(7)).resolves.toEqual([expense]);
+    await expect(listExpenses(7)).resolves.toEqual(page);
 
     const [url, init] = vi.mocked(fetch).mock.calls[0];
     expect(String(url)).toContain("/api/events/7/expenses");
     expect(String(url)).not.toContain("/quote");
     expect(init?.method ?? "GET").toBe("GET");
+  });
+
+  it("pide la página siguiente a partir del último gasto cargado", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({ items: [], hasNext: false, totalCount: 0, totalAmount: 0 })
+    );
+
+    await listExpenses(7, { ...expense, id: 34, expenseDate: "2024-03-16" });
+
+    const [url] = vi.mocked(fetch).mock.calls[0];
+    expect(String(url)).toContain("/api/events/7/expenses?beforeDate=2024-03-16&beforeId=34");
   });
 
   it("pide la cotización con monto y moneda", async () => {

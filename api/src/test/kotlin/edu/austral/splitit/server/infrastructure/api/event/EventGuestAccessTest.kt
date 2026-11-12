@@ -8,6 +8,7 @@ import edu.austral.splitit.server.application.service.CreateExpenseCommand
 import edu.austral.splitit.server.application.service.EventApplicationService
 import edu.austral.splitit.server.application.service.EventDetail
 import edu.austral.splitit.server.application.service.ExpenseApplicationService
+import edu.austral.splitit.server.application.service.ExpensePageSummary
 import edu.austral.splitit.server.application.service.ExpensePayerSummary
 import edu.austral.splitit.server.application.service.ExpenseSummary
 import edu.austral.splitit.server.application.service.GuestAccessService
@@ -116,12 +117,20 @@ class EventGuestAccessTest(
 
     @Test
     fun `a guest sees the expenses`() {
-        whenever(expenseApplicationService.listExpenses(guest, 10L)).thenReturn(listOf(expenseSummary()))
+        whenever(expenseApplicationService.listExpenses(guest, 10L, 20, null))
+            .thenReturn(
+                ExpensePageSummary(
+                    items = listOf(expenseSummary()),
+                    hasNext = false,
+                    totalCount = 1L,
+                    totalAmount = BigDecimal("5000"),
+                ),
+            )
 
         mockMvc
             .perform(get("/api/events/10/expenses").cookie(guestCookie()))
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$[0].id").value(34))
+            .andExpect(jsonPath("$.items[0].id").value(34))
     }
 
     @Test

@@ -1,5 +1,6 @@
 package edu.austral.splitit.server.infrastructure.api.event
 
+import edu.austral.splitit.server.application.service.ExpensePageSummary
 import edu.austral.splitit.server.application.service.ExpenseSummary
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -38,6 +39,23 @@ data class ExpenseResponse(
                         name = summary.paidByMember.name,
                     ),
                 expenseDate = summary.expenseDate,
+            )
+    }
+}
+
+data class ExpensePageResponse(
+    val items: List<ExpenseResponse>,
+    val hasNext: Boolean,
+    val totalCount: Long,
+    val totalAmount: BigDecimal,
+) {
+    companion object {
+        fun of(page: ExpensePageSummary): ExpensePageResponse =
+            ExpensePageResponse(
+                items = page.items.map { ExpenseResponse.of(it) },
+                hasNext = page.hasNext,
+                totalCount = page.totalCount,
+                totalAmount = page.totalAmount,
             )
     }
 }

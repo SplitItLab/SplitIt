@@ -513,7 +513,7 @@ import { assertStatus, jsonBody } from './scripts/assert.js'
 
 client.test("el invitado ve el gasto que cargó", function () {
     assertStatus(client, response, 200)
-    const expense = jsonBody(response).find(e => String(e.id) === client.global.get("guestExpenseId"))
+    const expense = jsonBody(response).items.find(e => String(e.id) === client.global.get("guestExpenseId"))
     client.assert(expense !== undefined, "Expected the guest expense in the list")
 })
 %}
